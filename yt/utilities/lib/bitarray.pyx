@@ -68,6 +68,7 @@ cdef class bitarray:
             for i in range(self.buf_size):
                 self.buf[i] = 0
 
+    @cython.initializedcheck(False)
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
@@ -82,7 +83,6 @@ cdef class bitarray:
         """
         cdef np.uint64_t i, j
         cdef np.uint8_t *btemp = self.buf
-        arr = np.ascontiguousarray(arr)
         j = 0
         for i in range(self.size):
             btemp[i >> 3] = btemp[i >> 3] | (arr[i] << (j))
