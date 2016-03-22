@@ -21,6 +21,7 @@ class GridIndex(Index, abc.ABC):
 
     float_type = "float64"
     _preload_implemented = False
+    _grid_tree = None
     _index_properties = (
         "grid_left_edge",
         "grid_right_edge",
@@ -293,6 +294,8 @@ class GridIndex(Index, abc.ABC):
         return self.grids[ind], ind
 
     def _get_grid_tree(self):
+        if self._grid_tree is not None:
+            return self._grid_tree
 
         left_edge = self.ds.arr(np.zeros((self.num_grids, 3)), "code_length")
         right_edge = self.ds.arr(np.zeros((self.num_grids, 3)), "code_length")
@@ -311,9 +314,9 @@ class GridIndex(Index, abc.ABC):
             else:
                 parent_ind[i] = grid.Parent.id - grid.Parent._id_offset
             num_children[i] = np.int64(len(grid.Children))
-            dimensions[i, :] = grid.ActiveDimensions
+            dimensions[i,:] = grid.ActiveDimensions
 
-        return GridTree(
+        self._grid_tree = GridTree(
             self.num_grids,
             left_edge,
             right_edge,
@@ -322,6 +325,7 @@ class GridIndex(Index, abc.ABC):
             level,
             num_children,
         )
+        return self._grid_tree
 
     def convert(self, unit):
         return self.dataset.conversion_factors[unit]
@@ -344,8 +348,8 @@ class GridIndex(Index, abc.ABC):
             for i, g in enumerate(grids):
                 dobj._chunk_info[i] = g
         # These next two lines, when uncommented, turn "on" the fast index.
-        # if dobj._type_name != "grid":
-        #    fast_index = self._get_grid_tree()
+        if dobj._type_name != "grid":
+            fast_index = self._get_grid_tree()
         if getattr(dobj, "size", None) is None:
             dobj.size = self._count_selection(dobj, fast_index=fast_index)
         if getattr(dobj, "shape", None) is None:
@@ -410,6 +414,7 @@ class GridIndex(Index, abc.ABC):
         gfiles = defaultdict(list)
         gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
         fast_index = dobj._current_chunk._fast_index
+        fast_index = None
         for g in gobjs:
             # Force to be a string because sometimes g.filename is None.
             gfiles[str(g.filename)].append(g)
