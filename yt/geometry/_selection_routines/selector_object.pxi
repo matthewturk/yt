@@ -408,8 +408,8 @@ cdef class SelectorObject:
     @cython.wraparound(False)
     @cython.cdivision(True)
     cdef void visit_grid_cells(self, GridVisitor visitor,
-                              GridTreeNode *grid,
-                              np.uint8_t[:] cached_mask = None):
+                              GridTreeNode *grid, int use_cache,
+                              np.uint8_t[:] cached_mask):
         # This function accepts a grid visitor function, the data that
         # corresponds to the current grid being examined (the most important
         # aspect of which is the .grid attribute, along with index values and
@@ -445,7 +445,7 @@ cdef class SelectorObject:
                         # We short-circuit if we have a cache; if we don't, we
                         # only set selected to true if it's *not* masked by a
                         # child and it *is* selected.
-                        if have_cache:
+                        if use_cache:
                             selected = cached_mask[visitor.global_index]
                         else:
                             if this_level == 1:
