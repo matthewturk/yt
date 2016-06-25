@@ -383,7 +383,8 @@ class YTDataChunk:
         if self.data_size == 0:
             return cdt
         ind = 0
-        for obj in self._fast_index or self.objs:
+        # Until we implement a fast_index version, use this
+        for obj in self.objs:
             gdt, gt = obj.select_tcoords(self.dobj)
             if gt.size == 0:
                 continue
