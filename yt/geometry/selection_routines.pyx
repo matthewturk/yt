@@ -14,11 +14,11 @@ import numpy as np
 cimport cython
 cimport numpy as np
 cimport oct_visitors
+from cython.view cimport array as cvarray
 from cython cimport floating
 from libc.math cimport sqrt
 from libc.stdlib cimport free, malloc
 
-from yt.utilities.lib.bitarray cimport ba_get_value, ba_set_value
 from yt.utilities.lib.fnv_hash cimport c_fnv_hash as fnv_hash
 from yt.utilities.lib.fp_utils cimport fclip, fmax, fmin, iclip, imax, imin
 from yt.utilities.lib.geometry_utils cimport (

@@ -432,11 +432,10 @@ cdef class SelectorObject:
             right_edge[i] = grid.right_edge[i]
             dds[i] = (right_edge[i] - left_edge[i])/grid.dims[i]
             dim[i] = grid.dims[i]
-        cdef void *_cmdata = malloc(
-            grid.dims[0]*grid.dims[1]*grid.dims[2]*sizeof(np.uint8_t))
-        cdef np.uint8_t[:,:,:] child_mask = <np.uint8_t[:grid.dims[0],
-                                                        :grid.dims[1],
-                                                        :grid.dims[2]]> _cmdata
+        cdef np.uint8_t[:,:,:] child_mask
+        child_mask = cvarray(format="c",
+                             shape=(grid.dims[0], grid.dims[1], grid.dims[2]),
+                             itemsize=sizeof(np.uint8_t))
         visitor.expand_mask(child_mask)
         with nogil:
             pos[0] = left_edge[0] + dds[0] * 0.5
@@ -470,7 +469,6 @@ cdef class SelectorObject:
                     visitor.pos[1] += 1
                 pos[0] += dds[0]
                 visitor.pos[0] += 1
-        free(_cmdata)
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
