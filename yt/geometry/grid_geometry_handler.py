@@ -343,14 +343,23 @@ class GridIndex(Index, abc.ABC):
             gi = dobj.selector.select_grids(
                 self.grid_left_edge, self.grid_right_edge, self.grid_levels
             )
-            if any([g.filename is not None for g in self.grids[gi]]):
-                _gsort = _grid_sort_mixed
-            else:
-                _gsort = _grid_sort_id
-            grids = list(sorted(self.grids[gi], key=_gsort))
-            dobj._chunk_info = np.empty(len(grids), dtype="object")
-            for i, g in enumerate(grids):
-                dobj._chunk_info[i] = g
+            # TODO: This version was added and sorts grids based on ID rather
+            # than visitation order, need to determine which is the correct
+            # order
+            # if any([g.filename is not None for g in self.grids[gi]]):
+            #     _gsort = _grid_sort_mixed
+            # else:
+            #     _gsort = _grid_sort_id
+            # grids = list(sorted(self.grids[gi], key=_gsort))
+            # dobj._chunk_info = np.empty(len(grids), dtype="object")
+            # for i, g in enumerate(grids):
+            #     dobj._chunk_info[i] = g
+            # TODO: gi is redefined in the loop and is not used by grid_order
+            # so it might be possible that _chunk_info will be initialized
+            # smaller if the selector does not select all grids
+            dobj._chunk_info = np.empty(gi.sum(), dtype='object')
+            for i, gi in enumerate(self.grid_tree.grid_order()):
+                dobj._chunk_info[i] = self.grids[gi]
         # These next two lines, when uncommented, turn "on" the fast index.
         if dobj._type_name != "grid":
             fast_index = self.grid_tree.selector()
@@ -418,9 +427,13 @@ class GridIndex(Index, abc.ABC):
         gfiles = defaultdict(list)
         gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
         fast_index = dobj._current_chunk._fast_index
+        file_order = []
         for g in gobjs:
             # Force to be a string because sometimes g.filename is None.
-            gfiles[str(g.filename)].append(g)
+            filename_s = str(g.filename)
+            if filename_s not in file_order:
+                file_order.append(filename_s)
+            gfiles[filename_s].append(g)
         # We can apply a heuristic here to make sure we aren't loading too
         # many grids all at once.
         if chunk_sizing == "auto":
@@ -443,7 +456,7 @@ class GridIndex(Index, abc.ABC):
             raise RuntimeError(
                 f"{chunk_sizing} is an invalid value for the 'chunk_sizing' argument."
             )
-        for fn in sorted(gfiles):
+        for fn in file_order:
             gs = gfiles[fn]
             for grids in (gs[pos : pos + size] for pos in range(0, len(gs), size)):
                 this_loop = np.zeros(self.grids.size, "uint8")
