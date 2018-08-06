@@ -142,6 +142,7 @@ class Dataset(abc.ABC):
     # these are set in self._set_derived_attrs()
     domain_width = MutableAttribute(True)
     domain_center = MutableAttribute(True)
+    filename_template = None
 
     def __new__(cls, filename=None, *args, **kwargs):
         if not isinstance(filename, str):
@@ -1906,6 +1907,46 @@ class ParticleFile:
     def __hash__(self):
         return hash((self.filename, self.file_id, self.start, self.end))
 
+
+@functools.total_ordering
+class GridDataFile(object):
+    def __init__(self, ds, io, filename, file_id, grids = None, range = None):
+        self.ds = ds
+        self.io = weakref.proxy(io)
+        self.filename = filename
+        self.file_id = file_id
+        if range is None:
+            range = (None, None)
+        self.start, self.end = range
+        self.total_particles = self.io._count_particles(self)
+        # Now we adjust our start/end, in case there are fewer particles than
+        # we realized
+        if self.start is None:
+            self.start = 0
+        self.end = max(self.total_particles.values()) + self.start
+
+    def select(self, selector):
+        pass
+
+    def count(self, selector):
+        pass
+
+    def _calculate_offsets(self, fields, pcounts):
+        pass
+
+    def __lt__(self, other):
+        if self.filename != other.filename:
+            return self.filename < other.filename
+        return self.start < other.start
+
+    def __eq__(self, other):
+        if self.filename != other.filename:
+            return False
+        return self.start == other.start
+
+    def __hash__(self):
+        return hash((self.filename, self.file_id, self.start, self.end))
+        
 
 class ParticleDataset(Dataset):
     _unit_base = None

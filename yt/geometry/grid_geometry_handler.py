@@ -31,6 +31,9 @@ class GridIndex(Index, abc.ABC):
     )
 
     def _setup_geometry(self):
+        mylog.debug("Initializing grid files.")
+        self._setup_filenames()
+
         mylog.debug("Counting grids.")
         self._count_grids()
 
@@ -45,6 +48,9 @@ class GridIndex(Index, abc.ABC):
 
         mylog.debug("Re-examining index")
         self._initialize_level_stats()
+
+        # This is to check that at *some* point we create self.data_files
+        assert(getattr(self, 'data_files', None) is not None)
 
     @abc.abstractmethod
     def _count_grids(self):
@@ -69,6 +75,29 @@ class GridIndex(Index, abc.ABC):
     @property
     def parameters(self):
         return self.dataset.parameters
+
+    def _setup_filenames(self):
+        template = self.dataset.filename_template
+        if template is None:
+            # If the template is none, we will assume that data_files will be
+            # instantiated later.
+            return
+        nfiles = self.dataset.file_count
+        cls = self.dataset._file_class
+        self.data_files = []
+        # If _grid_chunk_size is not set, default to something enormous
+        GRID_CHUNKSIZE = self.dataset._grid_chunk_size or (2 << 32)
+        fi = 0
+        for i in range(int(nfiles)):
+            start = 0
+            end = start + GRID_CHUNKSIZE
+            df = cls(self.dataset, self.io, template % {'num': i}, fi, (start, end))
+            if df.total_grids == 0:
+                break
+            fi += 1
+            self.data_files.append(df)
+            start = end
+        self.total_grids = sum(df.total_grids for df in self.data_files)
 
     def _detect_output_fields_backup(self):
         # grab fields from backup file as well, if present
