@@ -97,6 +97,7 @@ yt/utilities/lib/partitioned_grid.cpp
 .*.swp
 *.so
 .idea/*
+.vscode/*
 tests/results/*
 doc/build/*
 doc/source/reference/api/generated/*
