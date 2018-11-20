@@ -21,6 +21,9 @@ class Index(ParallelAnalysisInterface, abc.ABC):
 
     _unsupported_objects = ()
     _index_properties = ()
+    directory = None
+    field_list = None
+    dataset_type = None
 
     def __init__(self, ds, dataset_type):
         ParallelAnalysisInterface.__init__(self)
@@ -43,7 +46,9 @@ class Index(ParallelAnalysisInterface, abc.ABC):
         mylog.debug("Detecting fields.")
         self._detect_output_fields()
 
-    @abc.abstractmethod
+    def _setup_geometry(self):
+        raise NotImplementedError
+    
     def _detect_output_fields(self):
         pass
 
@@ -247,6 +252,15 @@ class Index(ParallelAnalysisInterface, abc.ABC):
             return self._chunk_io(dobj, **kwargs)
         else:
             raise NotImplementedError
+
+    def _chunk_all(self, dobj, **kwargs):
+        raise NotImplementedError
+
+    def _chunk_spatial(self, dobj, ngz, **kwargs):
+        raise NotImplementedError
+
+    def _chunk_io(self, dobj, **kwargs):
+        raise NotImplementedError
 
 
 def cached_property(func):
