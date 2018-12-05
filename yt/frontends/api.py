@@ -48,6 +48,7 @@ _frontends = [
     'swift',
     'tipsy',
     'ytdata',
+    'ytree',
 ]
 
 class _frontend_container:
