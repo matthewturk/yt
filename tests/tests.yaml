@@ -102,7 +102,10 @@ answer_tests:
     - yt/frontends/ramses/tests/test_outputs.py
 
   local_ytdata_004:
-    - yt/frontends/ytdata
+    - yt/frontends/ytdata/tests/test_outputs.py
+
+  local_ytdata_001:
+    - yt/frontends/ytree/tests/test_outputs.py
 
   local_axialpix_005:
     - yt/geometry/coordinates/tests/test_axial_pixelization.py:test_axial_pixelization
