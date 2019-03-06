@@ -54,3 +54,26 @@ class ParticleFile(object):
 
     def __hash__(self):
         return hash((self.filename, self.file_id, self.start, self.end))
+
+class HaloCatalogFile(ParticleFile):
+    def __init__(self, ds, io, filename, file_id, range):
+        super(HaloCatalogFile, self).__init__(
+            ds, io, filename, file_id, range)
+
+    def _read_particle_positions(self, ptype, f=None):
+        raise NotImplementedError
+
+    def _get_particle_positions(self, ptype, f=None):
+        pcount = self.total_particles[ptype]
+        if pcount == 0:
+            return None
+
+        # Correct for periodicity.
+        dle = self.ds.domain_left_edge.to('code_length').v
+        dw = self.ds.domain_width.to('code_length').v
+        pos = self._read_particle_positions(ptype, f=f)
+        np.subtract(pos, dle, out=pos)
+        np.mod(pos, dw, out=pos)
+        np.add(pos, dle, out=pos)
+
+        return pos

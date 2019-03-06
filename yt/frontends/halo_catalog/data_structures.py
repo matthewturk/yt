@@ -30,6 +30,10 @@ from yt.geometry.particle_geometry_handler import \
 from yt.data_objects.static_output import \
     ParticleFile
 
+# Temporary import
+from yt.data_objects.particle_file import \
+    HaloCatalogFile
+
 class HaloCatalogParticleIndex(ParticleIndex):
     def _setup_filenames(self):
         template = self.dataset.filename_template
@@ -43,29 +47,6 @@ class HaloCatalogParticleIndex(ParticleIndex):
             self.data_files = \
               [cls(self.dataset, self.io,
                    self.dataset.parameter_filename, 0)]
-
-class HaloCatalogFile(ParticleFile):
-    def __init__(self, ds, io, filename, file_id, range):
-        super(HaloCatalogFile, self).__init__(
-            ds, io, filename, file_id, range)
-
-    def _read_particle_positions(self, ptype, f=None):
-        raise NotImplementedError
-
-    def _get_particle_positions(self, ptype, f=None):
-        pcount = self.total_particles[ptype]
-        if pcount == 0:
-            return None
-
-        # Correct for periodicity.
-        dle = self.ds.domain_left_edge.to('code_length').v
-        dw = self.ds.domain_width.to('code_length').v
-        pos = self._read_particle_positions(ptype, f=f)
-        np.subtract(pos, dle, out=pos)
-        np.mod(pos, dw, out=pos)
-        np.add(pos, dle, out=pos)
-
-        return pos
 
 class HaloCatalogHDF5File(HaloCatalogFile):
     def __init__(self, ds, io, filename, file_id, range):
