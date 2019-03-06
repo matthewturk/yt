@@ -84,6 +84,11 @@ from yt.geometry.coordinates.api import \
     SpectralCubeCoordinateHandler, \
     InternalGeographicCoordinateHandler
 
+# Temporary import to not break other imports
+# To remove later
+from yt.data_objects.particle_file import \
+    ParticleFile
+
 # We want to support the movie format in the future.
 # When such a thing comes to pass, I'll move all the stuff that is constant up
 # to here, and then have it instantiate EnzoDatasets as appropriate.
