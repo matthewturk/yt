@@ -15,6 +15,7 @@ Dataset and related data structures.
 #-----------------------------------------------------------------------------
 
 import functools
+import weakref
 
 @functools.total_ordering
 class ParticleFile(object):
