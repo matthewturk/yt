@@ -32,7 +32,7 @@ from yt.data_objects.static_output import \
 
 # Temporary import
 from yt.data_objects.particle_file import \
-    HaloCatalogFile
+    ParticleFile as HaloCatalogFile
 
 class HaloCatalogParticleIndex(ParticleIndex):
     def _setup_filenames(self):

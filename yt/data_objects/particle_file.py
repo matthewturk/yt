@@ -55,11 +55,6 @@ class ParticleFile(object):
     def __hash__(self):
         return hash((self.filename, self.file_id, self.start, self.end))
 
-class HaloCatalogFile(ParticleFile):
-    def __init__(self, ds, io, filename, file_id, range):
-        super(HaloCatalogFile, self).__init__(
-            ds, io, filename, file_id, range)
-
     def _read_particle_positions(self, ptype, f=None):
         raise NotImplementedError
 
