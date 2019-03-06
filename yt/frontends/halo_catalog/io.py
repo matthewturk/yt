@@ -56,13 +56,6 @@ class IOHandlerHaloCatalogHDF5(ParticleIOHandler):
                 pos[:,0], pos[:,1], pos[:,2], dle, dre)
         return morton
 
-    def _count_particles(self, data_file):
-        si, ei = data_file.start, data_file.end
-        nhalos = data_file.header['num_halos']
-        if None not in (si, ei):
-            nhalos = np.clip(nhalos - si, 0, ei - si)
-        return {'halos': nhalos}
-
     def _identify_fields(self, data_file):
         with h5py.File(data_file.filename, "r") as f:
             fields = [("halos", field) for field in f]

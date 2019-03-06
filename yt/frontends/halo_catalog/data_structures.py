@@ -87,6 +87,13 @@ class HaloCatalogHDF5File(HaloCatalogFile):
 
         f.close()
 
+    def _count_particles(self):
+        si, ei = self.start, self.end
+        nhalos = self.header['num_halos']
+        if None not in (si, ei):
+            nhalos = np.clip(nhalos - si, 0, ei - si)
+        return {'halos': nhalos}
+
 class HaloCatalogDataset(SavedDataset):
     _index_class = ParticleIndex
     _file_class = HaloCatalogHDF5File

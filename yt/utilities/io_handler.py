@@ -271,3 +271,6 @@ class ParticleIOHandler(BaseIOHandler):
         for data_file in self._yield_data_files(chunks):
             for fieldname, data in data_file._get_particle_fields(ptf, selector):
                 yield fieldname, data
+
+    def _count_particles(self, data_file):
+        return data_file._count_particles()
