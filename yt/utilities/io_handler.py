@@ -253,22 +253,21 @@ class ParticleIOHandler(BaseIOHandler):
                 continue
             yield ptype, data_file._get_particle_positions(ptype)
 
-    def _read_particle_coords(self, chunks, ptf):
+    def _yield_data_files(self, chunks):
         chunks = list(chunks)
         data_files = set([])
         for chunk in chunks:
             for obj in chunk.objs:
                 data_files.update(obj.data_files)
         for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+            yield data_file
+
+    def _read_particle_coords(self, chunks, ptf):
+        for data_file in self._yield_data_files(chunks):
             for ptype, pos in self._yield_coordinates(data_file):
                 yield ptype, tuple(pos[:, i] for i in range(pos.shape[1]))
 
     def _read_particle_fields(self, chunks, ptf, selector):
-        chunks = list(chunks)
-        data_files = set([])
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
-        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+        for data_file in self._yield_data_files(chunks):
             for fieldname, data in data_file._get_particle_fields(ptf, selector):
                 yield fieldname, data
