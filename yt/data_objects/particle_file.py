@@ -15,6 +15,7 @@ Dataset and related data structures.
 #-----------------------------------------------------------------------------
 
 import functools
+import numpy as np
 import weakref
 
 @functools.total_ordering
@@ -68,8 +69,32 @@ class ParticleFile(object):
         dle = self.ds.domain_left_edge.to('code_length').v
         dw = self.ds.domain_width.to('code_length').v
         pos = self._read_particle_positions(ptype, f=f)
+        pos.convert_to_units('code_length')
+        pos = pos.v[self.start:self.end]
         np.subtract(pos, dle, out=pos)
         np.mod(pos, dw, out=pos)
         np.add(pos, dle, out=pos)
 
         return pos
+
+    def _read_particle_fields(self, ptype, field_list):
+        raise NotImplementedError
+
+    def _get_particle_fields(self, ptf, selector):
+        for ptype, field_list in sorted(ptf.items()):
+            pcount = self.total_particles[ptype]
+            if pcount == 0:
+                continue
+
+            coords = self._get_particle_positions(ptype)
+            x = coords[:, 0]
+            y = coords[:, 1]
+            z = coords[:, 2]
+            mask = selector.select_points(x, y, z, 0.0)
+            del x, y, z
+            if mask is None:
+                continue
+
+            for field, data in self._read_particle_fields(ptype, field_list):
+                data = data[self.start:self.end][mask]
+                yield (ptype, field), data

@@ -240,3 +240,35 @@ class IOHandlerExtracted(BaseIOHandler):
         sl = [slice(None), slice(None), slice(None)]
         sl[axis] = slice(coord, coord + 1)
         return grid.base_grid[field][tuple(sl)] / grid.base_grid.convert(field)
+
+class ParticleIOHandler(BaseIOHandler):
+    def _read_fluid_selection(self, chunks, selector, fields, size):
+        raise NotImplementedError
+
+    def _yield_coordinates(self, data_file):
+        ptypes = self.ds.particle_types_raw
+        for ptype in sorted(ptypes):
+            pcount = data_file.total_particles[ptype]
+            if pcount == 0:
+                continue
+            yield ptype, data_file._get_particle_positions(ptype)
+
+    def _read_particle_coords(self, chunks, ptf):
+        chunks = list(chunks)
+        data_files = set([])
+        for chunk in chunks:
+            for obj in chunk.objs:
+                data_files.update(obj.data_files)
+        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+            for ptype, pos in self._yield_coordinates(data_file):
+                yield ptype, tuple(pos[:, i] for i in range(pos.shape[1]))
+
+    def _read_particle_fields(self, chunks, ptf, selector):
+        chunks = list(chunks)
+        data_files = set([])
+        for chunk in chunks:
+            for obj in chunk.objs:
+                data_files.update(obj.data_files)
+        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+            for fieldname, data in data_file._get_particle_fields(ptf, selector):
+                yield fieldname, data

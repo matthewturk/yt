@@ -67,15 +67,25 @@ class HaloCatalogHDF5File(HaloCatalogFile):
         else:
             close = False
 
+        units = parse_h5_attr(f['particle_position_x'], "units")
         pcount = self.header["num_halos"]
         pos = np.empty((pcount, 3), dtype="float64")
         for i, ax in enumerate('xyz'):
             pos[:, i] = f["particle_position_%s" % ax][()]
+        pos = self.ds.arr(pos, units)
 
         if close:
             f.close()
 
         return pos
+
+    def _read_particle_fields(self, ptype, field_list):
+        f = h5py.File(self.filename, 'r')
+
+        for field in field_list:
+            yield field, f[field][()]
+
+        f.close()
 
 class HaloCatalogDataset(SavedDataset):
     _index_class = ParticleIndex
