@@ -18,9 +18,6 @@ import functools
 import numpy as np
 import weakref
 
-from yt.utilities.lib.geometry_utils import \
-    compute_morton
-
 @functools.total_ordering
 class ParticleFile(object):
     def __init__(self, ds, io, filename, file_id, drange=None):
