@@ -16,15 +16,8 @@ HaloCatalog data-file handling function
 
 import numpy as np
 
-from yt.funcs import \
-    mylog, \
-    parse_h5_attr
-from yt.utilities.on_demand_imports import _h5py as h5py
-from yt.utilities.exceptions import YTDomainOverflow
 from yt.utilities.io_handler import \
     ParticleIOHandler
-from yt.utilities.lib.geometry_utils import compute_morton
-
 
 class IOHandlerHaloCatalogHDF5(ParticleIOHandler):
     _dataset_type = "halocatalog_hdf5"

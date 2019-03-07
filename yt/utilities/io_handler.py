@@ -277,6 +277,3 @@ class ParticleIOHandler(BaseIOHandler):
 
     def _identify_fields(self, data_file):
         return data_file._identify_fields()
-
-    def _initialize_index(self, data_file, regions):
-        return data_file._initialize_index(regions)

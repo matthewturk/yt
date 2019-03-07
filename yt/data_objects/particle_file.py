@@ -101,36 +101,3 @@ class ParticleFile(object):
             for field, data in self._read_particle_fields(ptype, field_list):
                 data = data[self.start:self.end][mask]
                 yield (ptype, field), data
-
-    def _initialize_index(self, regions):
-        if self.index_ptype == "all":
-            ptypes = self.ds.particle_types_raw
-            pcount = sum(self.total_particles.values())
-        else:
-            ptypes = [self.index_ptype]
-            pcount = self.total_particles[self.index_ptype]
-        morton = np.empty(pcount, dtype='uint64')
-        if pcount == 0: return morton
-        mylog.debug("Initializing index % 5i (% 7i particles)",
-                    self.file_id, pcount)
-        ind = 0
-        for ptype in ptypes:
-            if self.total_particles[ptype] == 0:
-                continue
-            pos = self._get_particle_positions(ptype)
-            # pos = self.ds.arr(pos, "code_length")
-
-            # this is likely not needed anymore because of _get_particle_positions
-            if np.any(pos.min(axis=0) < self.ds.domain_left_edge) or \
-               np.any(pos.max(axis=0) > self.ds.domain_right_edge):
-                raise YTDomainOverflow(pos.min(axis=0),
-                                       pos.max(axis=0),
-                                       self.ds.domain_left_edge,
-                                       self.ds.domain_right_edge)
-            regions.add_data_file(pos, self.file_id)
-            morton[ind:ind+pos.shape[0]] = compute_morton(
-                pos[:,0], pos[:,1], pos[:,2],
-                self.ds.domain_left_edge,
-                self.ds.domain_right_edge)
-            ind += pos.shape[0]
-        return morton
