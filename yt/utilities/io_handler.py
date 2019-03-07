@@ -274,3 +274,6 @@ class ParticleIOHandler(BaseIOHandler):
 
     def _count_particles(self, data_file):
         return data_file._count_particles()
+
+    def _identify_fields(self, data_file):
+        return data_file._identify_fields()

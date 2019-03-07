@@ -56,10 +56,3 @@ class IOHandlerHaloCatalogHDF5(ParticleIOHandler):
                 pos[:,0], pos[:,1], pos[:,2], dle, dre)
         return morton
 
-    def _identify_fields(self, data_file):
-        with h5py.File(data_file.filename, "r") as f:
-            fields = [("halos", field) for field in f]
-            units = dict([(("halos", field),
-                           parse_h5_attr(f[field], "units"))
-                          for field in f])
-        return fields, units
