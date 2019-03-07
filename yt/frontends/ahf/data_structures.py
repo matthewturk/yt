@@ -19,10 +19,10 @@ import stat
 
 import numpy as np
 
+from yt.data_objects.particle_store import \
+    ParticleFile
 from yt.data_objects.static_output import \
     Dataset
-from yt.frontends.halo_catalog.data_structures import \
-    HaloCatalogFile
 from yt.funcs import \
     setdefaultattr
 from yt.geometry.particle_geometry_handler import \
@@ -33,7 +33,7 @@ from yt.utilities.cosmology import \
 from .fields import AHFHalosFieldInfo
 
 
-class AHFHalosFile(HaloCatalogFile):
+class AHFHalosFile(ParticleFile):
     def __init__(self, ds, io, filename, file_id, range=None):
         root, _ = os.path.splitext(filename)
         candidates = glob.glob(root + '*.AHF_halos')

@@ -19,9 +19,10 @@ import json
 import numpy as np
 import time
 
-from yt.data_objects.static_output import \
-    ParticleDataset, \
+from yt.data_objects.particle_store import \
     ParticleFile
+from yt.data_objects.static_output import \
+    ParticleDataset
 from yt.frontends.sph.fields import \
     SPHFieldInfo
 from yt.funcs import \

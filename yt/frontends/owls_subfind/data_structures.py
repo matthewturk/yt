@@ -33,9 +33,10 @@ from yt.utilities.logger import ytLogger as \
     mylog
 from yt.geometry.particle_geometry_handler import \
     ParticleIndex
-from yt.data_objects.static_output import \
-    ParticleDataset, \
+from yt.data_objects.particle_store import \
     ParticleFile
+from yt.data_objects.static_output import \
+    ParticleDataset
 from yt.frontends.gadget.data_structures import \
     _fix_unit_ordering
 

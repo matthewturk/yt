@@ -1,5 +1,5 @@
 """
-Dataset and related data structures.
+ParticleStore and related classes.
 
 
 

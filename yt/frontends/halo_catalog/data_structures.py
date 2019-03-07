@@ -27,12 +27,8 @@ from yt.funcs import \
     parse_h5_attr
 from yt.geometry.particle_geometry_handler import \
     ParticleIndex
-from yt.data_objects.static_output import \
+from yt.data_objects.particle_store import \
     ParticleFile
-
-# Temporary import
-from yt.data_objects.particle_file import \
-    ParticleFile as HaloCatalogFile
 
 class HaloCatalogParticleIndex(ParticleIndex):
     def _setup_filenames(self):
@@ -48,7 +44,7 @@ class HaloCatalogParticleIndex(ParticleIndex):
               [cls(self.dataset, self.io,
                    self.dataset.parameter_filename, 0)]
 
-class HaloCatalogHDF5File(HaloCatalogFile):
+class HaloCatalogHDF5File(ParticleFile):
     def __init__(self, ds, io, filename, file_id, range):
         with h5py.File(filename, "r") as f:
             self.header = dict((field, parse_h5_attr(f, field)) \

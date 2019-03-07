@@ -21,7 +21,7 @@ import stat
 import struct
 import os
 
-from yt.data_objects.static_output import \
+from yt.data_objects.particle_store import \
     ParticleFile
 from yt.frontends.sph.data_structures import \
     SPHDataset, \

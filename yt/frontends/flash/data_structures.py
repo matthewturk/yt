@@ -20,9 +20,10 @@ import weakref
 
 from yt.data_objects.grid_patch import \
     AMRGridPatch
+from yt.data_objects.particle_store import \
+    ParticleFile
 from yt.data_objects.static_output import \
     Dataset, \
-    ParticleFile, \
     validate_index_order
 from yt.funcs import \
     mylog, \

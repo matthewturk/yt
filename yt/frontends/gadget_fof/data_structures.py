@@ -24,6 +24,8 @@ import weakref
 
 from yt.data_objects.data_containers import \
     YTSelectionContainer
+from yt.data_objects.particle_store import \
+    ParticleFile
 from yt.data_objects.static_output import \
     ParticleDataset
 from yt.frontends.gadget.data_structures import \
@@ -31,8 +33,6 @@ from yt.frontends.gadget.data_structures import \
 from yt.frontends.gadget_fof.fields import \
     GadgetFOFFieldInfo, \
     GadgetFOFHaloFieldInfo
-from yt.frontends.halo_catalog.data_structures import \
-    HaloCatalogFile
 from yt.funcs import \
     only_on_root, \
     setdefaultattr
@@ -116,7 +116,7 @@ class GadgetFOFParticleIndex(ParticleIndex):
         self._calculate_particle_index_starts()
         self._calculate_file_offset_map()
 
-class GadgetFOFHDF5File(HaloCatalogFile):
+class GadgetFOFHDF5File(ParticleFile):
     def __init__(self, ds, io, filename, file_id):
         with h5py.File(filename, "r") as f:
             self.header = \
