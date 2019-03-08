@@ -20,20 +20,23 @@ import weakref
 
 @functools.total_ordering
 class ParticleFile(object):
-    def __init__(self, ds, io, filename, file_id, drange=None):
+    _chunksize = 4
+
+    def __init__(self, ds, io, filename, file_id):
         self.ds = ds
         self.io = weakref.proxy(io)
         self.filename = filename
         self.file_id = file_id
-        if drange is None:
-            drange = (None, None)
-        self.start, self.end = drange
-        self.total_particles = self.io._count_particles(self)
-        # Now we adjust our start/end, in case there are fewer particles than
-        # we realized
-        if self.start is None:
-            self.start = 0
-        self.end = max(self.total_particles.values()) + self.start
+        self.total_particles = self._count_particles()
+        self._calculate_chunk_indices()
+
+    def _calculate_chunk_indices(self):
+        cinds = {}
+        for ptype, npart in self.total_particles.items():
+            start = np.arange(0, npart, self._chunksize)
+            end = np.clip(start + self._chunksize, 0, npart)
+            cinds[ptype] = [(si, ei) for si, ei in zip(start, end)]
+        self._chunk_indices = cinds
 
     def select(self, selector):
         pass
@@ -55,7 +58,7 @@ class ParticleFile(object):
         return self.start == other.start
 
     def __hash__(self):
-        return hash((self.filename, self.file_id, self.start, self.end))
+        return hash((self.filename, self.file_id))
 
     def _read_particle_positions(self, ptype, f=None):
         raise NotImplementedError
@@ -70,14 +73,15 @@ class ParticleFile(object):
         dw = self.ds.domain_width.to('code_length').v
         pos = self._read_particle_positions(ptype, f=f)
         pos.convert_to_units('code_length')
-        pos = pos.v[self.start:self.end]
+        pos = pos.v
         np.subtract(pos, dle, out=pos)
         np.mod(pos, dw, out=pos)
         np.add(pos, dle, out=pos)
 
-        return pos
+        for si, ei in self._chunk_indices[ptype]:
+            yield pos[si:ei]
 
-    def _read_particle_fields(self, ptype, field_list):
+    def _read_particle_fields(self, ptype, field_list, frange=None):
         raise NotImplementedError
 
     def _get_particle_fields(self, ptf, selector):
@@ -86,15 +90,17 @@ class ParticleFile(object):
             if pcount == 0:
                 continue
 
-            coords = self._get_particle_positions(ptype)
-            x = coords[:, 0]
-            y = coords[:, 1]
-            z = coords[:, 2]
-            mask = selector.select_points(x, y, z, 0.0)
-            del x, y, z
-            if mask is None:
-                continue
+            for frange, coords in zip(self._chunk_indices[ptype],
+                                      self._get_particle_positions(ptype)):
+                x = coords[:, 0]
+                y = coords[:, 1]
+                z = coords[:, 2]
+                mask = selector.select_points(x, y, z, 0.0)
+                del x, y, z
+                if mask is None:
+                    continue
 
-            for field, data in self._read_particle_fields(ptype, field_list):
-                data = data[self.start:self.end][mask]
-                yield (ptype, field), data
+                for field, data in \
+                  self._read_particle_fields(ptype, field_list, frange):
+                    data = data[mask]
+                    yield (ptype, field), data

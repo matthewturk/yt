@@ -30,27 +30,13 @@ from yt.geometry.particle_geometry_handler import \
 from yt.data_objects.particle_store import \
     ParticleFile
 
-class HaloCatalogParticleIndex(ParticleIndex):
-    def _setup_filenames(self):
-        template = self.dataset.filename_template
-        ndoms = self.dataset.file_count
-        cls = self.dataset._file_class
-        if ndoms > 1:
-            self.data_files = \
-              [cls(self.dataset, self.io, template % {'num':i}, i)
-               for i in range(ndoms)]
-        else:
-            self.data_files = \
-              [cls(self.dataset, self.io,
-                   self.dataset.parameter_filename, 0)]
-
 class HaloCatalogHDF5File(ParticleFile):
-    def __init__(self, ds, io, filename, file_id, range):
+    def __init__(self, ds, io, filename, file_id):
         with h5py.File(filename, "r") as f:
             self.header = dict((field, parse_h5_attr(f, field)) \
                                for field in f.attrs.keys())
         super(HaloCatalogHDF5File, self).__init__(
-            ds, io, filename, file_id, range)
+            ds, io, filename, file_id)
 
     def _read_particle_positions(self, ptype, f=None):
         """
@@ -75,20 +61,20 @@ class HaloCatalogHDF5File(ParticleFile):
 
         return pos
 
-    def _read_particle_fields(self, ptype, field_list):
+    def _read_particle_fields(self, ptype, field_list, frange=None):
+        if frange is None:
+            frange = (None, None)
+        si, ei = frange
+
         f = h5py.File(self.filename, 'r')
 
         for field in field_list:
-            yield field, f[field][()]
+            yield field, f[field][si:ei]
 
         f.close()
 
     def _count_particles(self):
-        si, ei = self.start, self.end
-        nhalos = self.header['num_halos']
-        if None not in (si, ei):
-            nhalos = np.clip(nhalos - si, 0, ei - si)
-        return {'halos': nhalos}
+        return {'halos': self.header['num_halos']}
 
     def _identify_fields(self):
         with h5py.File(self.filename, "r") as f:

@@ -251,7 +251,8 @@ class ParticleIOHandler(BaseIOHandler):
             pcount = data_file.total_particles[ptype]
             if pcount == 0:
                 continue
-            yield ptype, data_file._get_particle_positions(ptype)
+            for pos in data_file._get_particle_positions(ptype):
+                yield ptype, pos
 
     def _yield_data_files(self, chunks):
         chunks = list(chunks)
@@ -259,7 +260,7 @@ class ParticleIOHandler(BaseIOHandler):
         for chunk in chunks:
             for obj in chunk.objs:
                 data_files.update(obj.data_files)
-        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+        for data_file in sorted(data_files, key=lambda x: x.filename):
             yield data_file
 
     def _read_particle_coords(self, chunks, ptf):
