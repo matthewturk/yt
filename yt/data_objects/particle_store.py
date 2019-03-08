@@ -20,6 +20,8 @@ import weakref
 
 @functools.total_ordering
 class ParticleFile(object):
+    # Temporary small chunk size for testing!
+    # Change this to 64**3 or something.
     _chunksize = 4
 
     def __init__(self, ds, io, filename, file_id):
