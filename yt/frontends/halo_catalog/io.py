@@ -15,6 +15,7 @@ HaloCatalog data-file handling function
 #-----------------------------------------------------------------------------
 
 import numpy as np
+import contextlib
 
 from yt.utilities.on_demand_imports import _h5py as h5py
 from yt.utilities.io_handler import \
@@ -35,40 +36,46 @@ class HaloCatalogHDF5File(ParticleFile):
         super(HaloCatalogHDF5File, self).__init__(
             ds, io, filename, file_id)
 
-    def _read_particle_positions(self, ptype, f=None):
+    def _read_particle_positions(self, ptype, state=None):
         """
         Read all particle positions in this file.
         """
 
-        if f is None:
-            close = True
-            f = h5py.File(self.filename, "r")
+        if state is None:
+            f, (si, ei) = h5py.File(self.filename, "r"), (None, None)
         else:
-            close = False
+            f, (si, ei) = state
 
         units = parse_h5_attr(f['particle_position_x'], "units")
         pcount = self.header["num_halos"]
+        if None not in (ei, si):
+            pcount = min(pcount, ei-si)
         pos = np.empty((pcount, 3), dtype="float64")
         for i, ax in enumerate('xyz'):
-            pos[:, i] = f["particle_position_%s" % ax][()]
+            pos[:, i] = f["particle_position_%s" % ax][si:ei]
         pos = self.ds.arr(pos, units)
 
-        if close:
+        if state is None:
             f.close()
 
         return pos
 
-    def _read_particle_fields(self, ptype, field_list, frange=None):
-        if frange is None:
-            frange = (None, None)
-        si, ei = frange
-
-        f = h5py.File(self.filename, 'r')
+    def _read_particle_fields(self, ptype, field_list, state=None):
+        if state is None:
+            f, (si, ei) = h5py.File(self.filename, 'r'), (None, None)
+        else:
+            f, (si, ei) = state
 
         for field in field_list:
-            yield field, f[field][si:ei]
+            yield (ptype, field), f[field][si:ei]
 
-        f.close()
+        if state is None:
+            f.close()
+
+    @contextlib.contextmanager
+    def _open_file(self):
+        with h5py.File(self.filename, 'r') as f:
+            yield f
 
     def _count_particles(self):
         return {'halos': self.header['num_halos']}

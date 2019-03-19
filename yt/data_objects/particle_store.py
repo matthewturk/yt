@@ -49,6 +49,24 @@ class ParticleFile(object):
     def _calculate_offsets(self, fields, pcounts):
         pass
 
+    def iter_chunks(self, field_spec, return_positions = False):
+        # field_spec here is a list of (field_type, (field0, field1))
+        # tuples
+        with self._open_file() as f:
+            for ptype, fields in field_spec:
+                for si, ei in self._chunk_indices[ptype]:
+                    # Note: we aren't using "yield from" here, but instead
+                    # yielding a tuple of a set of positions and a
+                    # generator that will return all the fields.
+                    if return_positions:
+                        yield (self._read_particle_positions(ptype,
+                                                             (f, (si, ei))),
+                            self._read_particle_fields(ptype, fields,
+                                                       (f, (si, ei))))
+                    else:
+                        yield from self._read_particle_fields(ptype, fields,
+                                                              (f, (si, ei)))
+
     def __getitem__(self, key):
         # We assume here that "key" is one or multiple field-tuples.
         # Validating this is out of scope for the present time.
@@ -86,7 +104,7 @@ class ParticleFile(object):
         # Correct for periodicity.
         dle = self.ds.domain_left_edge.to('code_length').v
         dw = self.ds.domain_width.to('code_length').v
-        pos = self._read_particle_positions(ptype, f=f)
+        pos = self._read_particle_positions(ptype)
         pos.convert_to_units('code_length')
         pos = pos.v
         np.subtract(pos, dle, out=pos)
@@ -105,8 +123,8 @@ class ParticleFile(object):
             if pcount == 0:
                 continue
 
-            for frange, coords in zip(self._chunk_indices[ptype],
-                                      self._get_particle_positions(ptype)):
+            field_spec = [(ptype, field_list)]
+            for coords, read_iter in self.iter_chunks(field_spec, return_positions = True):
                 x = coords[:, 0]
                 y = coords[:, 1]
                 z = coords[:, 2]
@@ -115,7 +133,6 @@ class ParticleFile(object):
                 if mask is None:
                     continue
 
-                for field, data in \
-                  self._read_particle_fields(ptype, field_list, frange):
+                for (_, field), data in read_iter:
                     data = data[mask]
                     yield (ptype, field), data
