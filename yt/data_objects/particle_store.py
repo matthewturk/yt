@@ -49,6 +49,19 @@ class ParticleFile(object):
     def _calculate_offsets(self, fields, pcounts):
         pass
 
+    def __getitem__(self, key):
+        # We assume here that "key" is one or multiple field-tuples.
+        # Validating this is out of scope for the present time.
+        if not isinstance(key, tuple):
+            raise KeyError
+        if not len(key) == 2:
+            raise KeyError
+        if not all(isinstance(_, str) for _ in key):
+            raise KeyError
+        return np.concatenate([v for (_, v) in 
+                               self._read_particle_fields(key[0],
+                                                          [key[1]])])
+
     def __lt__(self, other):
         if self.filename != other.filename:
             return self.filename < other.filename
