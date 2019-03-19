@@ -14,58 +14,77 @@ ParticleStore and related classes.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
+import abc
 import functools
 import numpy as np
 import weakref
 
 @functools.total_ordering
-class ParticleFile(object):
+class ParticleFile(metaclass = abc.ABCMeta):
     # Temporary small chunk size for testing!
     # Change this to 64**3 or something.
-    _chunksize = 4
 
-    def __init__(self, ds, io, filename, file_id):
+    _fields_in_file = None
+    _num_chunks = None
+
+    def __init__(self, ds, io, filename, file_id, chunk_size = 4):
         self.ds = ds
         self.io = weakref.proxy(io)
         self.filename = filename
         self.file_id = file_id
         self.total_particles = self._count_particles()
+        self.chunk_size = chunk_size
         self._calculate_chunk_indices()
+
+    @abc.abstractmethod
+    def _identify_fields(self):
+        # Needs to return (fields, units) where (fields) is [(ptype,
+        # pfield), ...]
+        pass
+
+    def keys(self):
+        if self._fields_in_file is None:
+            _, self._fields_in_file = self._identify_fields()
+        yield from self._fields_in_file
+
 
     def _calculate_chunk_indices(self):
         cinds = {}
         for ptype, npart in self.total_particles.items():
-            start = np.arange(0, npart, self._chunksize)
-            end = np.clip(start + self._chunksize, 0, npart)
+            start = np.arange(0, npart, self.chunk_size)
+            end = np.clip(start + self.chunk_size, 0, npart)
             cinds[ptype] = [(si, ei) for si, ei in zip(start, end)]
         self._chunk_indices = cinds
-
-    def select(self, selector):
-        pass
-
-    def count(self, selector):
-        pass
+        self._num_chunks = len(cinds)
 
     def _calculate_offsets(self, fields, pcounts):
         pass
 
-    def iter_chunks(self, field_spec, return_positions = False):
+    def iter_chunks(self, field_spec, return_positions = False,
+                    chunk_slice = None):
         # field_spec here is a list of (field_type, (field0, field1))
         # tuples
+        if chunk_slice is None:
+            chunk_slice = slice(None)
+        elif not iterable(chunk_slice):
+            chunk_slice = slice(chunk_slice)
+        elif not isinstance(chunk_slice, slice):
+            chunk_slice = slice(*chunk_slice)
         with self._open_file() as f:
             for ptype, fields in field_spec:
-                for si, ei in self._chunk_indices[ptype]:
+                for ci, (si, ei) in enumerate(
+                        self._chunk_indices[ptype][chunk_slice]):
                     # Note: we aren't using "yield from" here, but instead
                     # yielding a tuple of a set of positions and a
                     # generator that will return all the fields.
                     if return_positions:
-                        yield (self._read_particle_positions(ptype,
+                        yield (ci, self._read_particle_positions(ptype,
                                                              (f, (si, ei))),
-                            self._read_particle_fields(ptype, fields,
-                                                       (f, (si, ei))))
+                            self._iter_fields(ptype, fields, (f, (si, ei))))
                     else:
-                        yield from self._read_particle_fields(ptype, fields,
-                                                              (f, (si, ei)))
+                        yield from (ci, _ for _ in
+                                    self._iter_fields(ptype, fields,
+                                                     (f, (si, ei))))
 
     def __getitem__(self, key):
         # We assume here that "key" is one or multiple field-tuples.
@@ -77,22 +96,18 @@ class ParticleFile(object):
         if not all(isinstance(_, str) for _ in key):
             raise KeyError
         return np.concatenate([v for (_, v) in 
-                               self._read_particle_fields(key[0],
-                                                          [key[1]])])
+                               self._iter_fields(key[0], [key[1]])])
 
     def __lt__(self, other):
-        if self.filename != other.filename:
-            return self.filename < other.filename
-        return self.start < other.start
+        return self.filename < other.filename
 
     def __eq__(self, other):
-        if self.filename != other.filename:
-            return False
-        return self.start == other.start
+        return self.filename == other.filename
 
     def __hash__(self):
         return hash((self.filename, self.file_id))
 
+    @abc.abstractmethod
     def _read_particle_positions(self, ptype, f=None):
         raise NotImplementedError
 
@@ -114,7 +129,7 @@ class ParticleFile(object):
         for si, ei in self._chunk_indices[ptype]:
             yield pos[si:ei]
 
-    def _read_particle_fields(self, ptype, field_list, frange=None):
+    def _iter_fields(self, ptype, field_list, state=None):
         raise NotImplementedError
 
     def _get_particle_fields(self, ptf, selector):
@@ -124,7 +139,8 @@ class ParticleFile(object):
                 continue
 
             field_spec = [(ptype, field_list)]
-            for coords, read_iter in self.iter_chunks(field_spec, return_positions = True):
+            for ci, (coords, read_iter) in self.iter_chunks(
+                    field_spec, return_positions = True):
                 x = coords[:, 0]
                 y = coords[:, 1]
                 z = coords[:, 2]

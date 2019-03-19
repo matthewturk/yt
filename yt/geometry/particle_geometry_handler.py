@@ -118,7 +118,8 @@ class ParticleIndex(Index):
             ds.domain_width = ds.domain_right_edge - ds.domain_left_edge
             
         # use a trivial morton index for datasets containing a single chunk
-        if len(self.data_files) == 1:
+        self._num_file_chunks = sum(_._num_chunks for _ in self.data_files)
+        if self._num_file_chunks == 1:
             order1 = 1
             order2 = 1
         else:
@@ -136,7 +137,7 @@ class ParticleIndex(Index):
         self.regions = ParticleBitmap(
             ds.domain_left_edge, ds.domain_right_edge,
             ds.periodicity, self.ds._file_hash,
-            len(self.data_files), 
+            self._num_file_chunks, 
             index_order1=order1,
             index_order2=order2)
 
@@ -168,10 +169,14 @@ class ParticleIndex(Index):
             rflag = self.regions.check_bitmasks()
             
     def _initialize_coarse_index(self):
-        pb = get_pbar("Initializing coarse index ", len(self.data_files))
+        pb = get_pbar("Initializing coarse index ", self._num_file_chunks)
+        chunk_map = {}
         for i, data_file in enumerate(self.data_files):
             pb.update(i)
-            for ptype, pos in self.io._yield_coordinates(data_file):
+            to_set = set([])
+            for ci, (ptype, pos) in self.io._yield_coordinates(data_file):
+                global_chunk_id = chunk_map.setdefault((data_file.file_id, ci), len(chunk_map))
+                to_set.add(global_chunk_id)
                 ds = self.ds
                 if hasattr(ds, '_sph_ptype') and ptype == ds._sph_ptype:
                     hsml = self.io._get_smoothing_length(
@@ -179,8 +184,12 @@ class ParticleIndex(Index):
                 else:
                     hsml = None
                 self.regions._coarse_index_data_file(
-                    pos, hsml, data_file.file_id)
-            self.regions._set_coarse_index_data_file(data_file.file_id)
+                    pos, hsml, global_chunk_id)
+                #self._chunk_map.append((data_file, ci))
+            for chunk_id in sort(to_set):
+                self.regions._set_coarse_index_data_file(chunk_id)
+        self._chunk_file_map = {v2:v1 for v1, v2 in chunk_map.items()}
+        self._chunk_map = chunk_map
         pb.finish()
         self.regions.find_collisions_coarse()
 
@@ -190,11 +199,11 @@ class ParticleIndex(Index):
                         for d in self.data_files) * 28
         sub_mi1 = np.zeros(max_npart, "uint64")
         sub_mi2 = np.zeros(max_npart, "uint64")
-        pb = get_pbar("Initializing refined index", len(self.data_files))
+        pb = get_pbar("Initializing refined index", self._num_file_chunks)
         for i, data_file in enumerate(self.data_files):
             pb.update(i)
             nsub_mi = 0
-            for ptype, pos in self.io._yield_coordinates(data_file):
+            for ci, (ptype, pos) in self.io._yield_coordinates(data_file):
                 if hasattr(self.ds, '_sph_ptype') and ptype == self.ds._sph_ptype:
                     hsml = self.io._get_smoothing_length(
                         data_file, pos.dtype, pos.shape)
@@ -202,10 +211,10 @@ class ParticleIndex(Index):
                     hsml = None
                 nsub_mi = self.regions._refined_index_data_file(
                     pos, hsml, mask, sub_mi1, sub_mi2,
-                    data_file.file_id, nsub_mi)
+                    self._chunk_map[data_file.file_id, ci], nsub_mi)
             self.regions._set_refined_index_data_file(
                 sub_mi1, sub_mi2,
-                data_file.file_id, nsub_mi)
+                self._chunk_map[data_file.file_id, ci], nsub_mi)
         pb.finish()
         self.regions.find_collisions_refined()
 

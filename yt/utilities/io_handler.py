@@ -251,8 +251,10 @@ class ParticleIOHandler(BaseIOHandler):
             pcount = data_file.total_particles[ptype]
             if pcount == 0:
                 continue
-            for pos in data_file._get_particle_positions(ptype):
-                yield ptype, pos
+            for ci, (pos, _) in data_file.iter_chunks(
+                    [(ptype, [])], return_positions = True):
+                yield ci, ptype, pos
+                _ = [__ for __ in _]
 
     def _yield_data_files(self, chunks):
         chunks = list(chunks)
@@ -265,7 +267,7 @@ class ParticleIOHandler(BaseIOHandler):
 
     def _read_particle_coords(self, chunks, ptf):
         for data_file in self._yield_data_files(chunks):
-            for ptype, pos in self._yield_coordinates(data_file):
+            for _, (ptype, pos) in self._yield_coordinates(data_file):
                 yield ptype, tuple(pos[:, i] for i in range(pos.shape[1]))
 
     def _read_particle_fields(self, chunks, ptf, selector):

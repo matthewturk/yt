@@ -60,7 +60,7 @@ class HaloCatalogHDF5File(ParticleFile):
 
         return pos
 
-    def _read_particle_fields(self, ptype, field_list, state=None):
+    def _iter_fields(self, ptype, field_list, state=None):
         if state is None:
             f, (si, ei) = h5py.File(self.filename, 'r'), (None, None)
         else:
