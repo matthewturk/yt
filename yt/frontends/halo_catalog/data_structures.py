@@ -20,6 +20,8 @@ import glob
 
 from .fields import \
     HaloCatalogFieldInfo
+from .io import \
+    HaloCatalogHDF5File
 
 from yt.frontends.ytdata.data_structures import \
     SavedDataset
@@ -27,63 +29,6 @@ from yt.funcs import \
     parse_h5_attr
 from yt.geometry.particle_geometry_handler import \
     ParticleIndex
-from yt.data_objects.particle_store import \
-    ParticleFile
-
-class HaloCatalogHDF5File(ParticleFile):
-    def __init__(self, ds, io, filename, file_id):
-        with h5py.File(filename, "r") as f:
-            self.header = dict((field, parse_h5_attr(f, field)) \
-                               for field in f.attrs.keys())
-        super(HaloCatalogHDF5File, self).__init__(
-            ds, io, filename, file_id)
-
-    def _read_particle_positions(self, ptype, f=None):
-        """
-        Read all particle positions in this file.
-        """
-
-        if f is None:
-            close = True
-            f = h5py.File(self.filename, "r")
-        else:
-            close = False
-
-        units = parse_h5_attr(f['particle_position_x'], "units")
-        pcount = self.header["num_halos"]
-        pos = np.empty((pcount, 3), dtype="float64")
-        for i, ax in enumerate('xyz'):
-            pos[:, i] = f["particle_position_%s" % ax][()]
-        pos = self.ds.arr(pos, units)
-
-        if close:
-            f.close()
-
-        return pos
-
-    def _read_particle_fields(self, ptype, field_list, frange=None):
-        if frange is None:
-            frange = (None, None)
-        si, ei = frange
-
-        f = h5py.File(self.filename, 'r')
-
-        for field in field_list:
-            yield field, f[field][si:ei]
-
-        f.close()
-
-    def _count_particles(self):
-        return {'halos': self.header['num_halos']}
-
-    def _identify_fields(self):
-        with h5py.File(self.filename, "r") as f:
-            fields = [("halos", field) for field in f]
-            units = dict([(("halos", field),
-                           parse_h5_attr(f[field], "units"))
-                          for field in f])
-        return fields, units
-
 
 class HaloCatalogDataset(SavedDataset):
     _index_class = ParticleIndex
