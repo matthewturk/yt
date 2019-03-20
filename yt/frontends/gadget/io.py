@@ -5,29 +5,107 @@ Gadget data-file handling functions
 
 
 """
-from __future__ import print_function
 
 #-----------------------------------------------------------------------------
-# Copyright (c) 2013, yt Development Team.
+# Copyright (c) yt Development Team. All rights reserved.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
+import contextlib
 import numpy as np
 import os
 
+from yt.data_objects.particle_store import \
+    ParticleFile
 from yt.extern.six import string_types
+from yt.frontends.gadget.definitions import \
+    gadget_hdf5_ptypes, \
+    SNAP_FORMAT_2_OFFSET
 from yt.frontends.sph.io import \
     IOHandlerSPH
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.on_demand_imports import _h5py as h5py
 
-from .definitions import \
-    gadget_hdf5_ptypes, \
-    SNAP_FORMAT_2_OFFSET
+class GadgetHDF5File(ParticleFile):
+    _known_ptypes = gadget_hdf5_ptypes
 
+    def _count_particles(self):
+        with self._open_file() as f:
+            pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int")
+        npart = dict(("PartType%s" % (i), v) for i, v in enumerate(pcount))
+        return npart
+
+    _var_mass = None
+    @property
+    def var_mass(self):
+        if self._var_mass is None:
+            ptypes = self._known_ptypes
+            masses = self.ds.parameters['Massarr']
+            self._var_mass = \
+              tuple(ptype for ptype, mass in zip(ptypes, masses)
+                    if mass == 0)
+        return self._var_mass
+
+    def _identify_fields(self):
+        f = h5py.File(self.filename, "r")
+        fields = []
+        cname = self.ds._particle_coordinates_name  # Coordinates
+        mname = self.ds._particle_mass_name  # Mass
+
+        # loop over all keys in OWLS hdf5 file
+        #--------------------------------------------------
+        for key in f.keys():
+
+            # only want particle data
+            #--------------------------------------
+            if not key.startswith("PartType"):
+                continue
+
+            # particle data group
+            #--------------------------------------
+            g = f[key]
+            if cname not in g:
+                continue
+
+            # note str => not unicode!
+            ptype = str(key)
+            if ptype not in self.var_mass:
+                fields.append((ptype, mname))
+
+            # loop over all keys in PartTypeX group
+            #----------------------------------------
+            for k in g.keys():
+
+                if k == 'ElementAbundance':
+                    gp = g[k]
+                    for j in gp.keys():
+                        kk = j
+                        fields.append((ptype, str(kk)))
+                elif k == 'Metallicity' and len(g[k].shape) > 1:
+                    # Vector of metallicity
+                    for i in range(g[k].shape[1]):
+                        fields.append((ptype, "Metallicity_%02i" % i))
+                elif k == "ChemistryAbundances" and len(g[k].shape) > 1:
+                    for i in range(g[k].shape[1]):
+                        fields.append((ptype, "Chemistry_%03i" % i))
+                else:
+                    kk = k
+                    if not hasattr(g[kk], "shape"):
+                        continue
+                    if len(g[kk].shape) > 1:
+                        self._vector_fields[kk] = g[kk].shape[1]
+                    fields.append((ptype, str(kk)))
+
+        f.close()
+        return fields, {}
+
+    @contextlib.contextmanager
+    def _open_file(self):
+        with h5py.File(self.filename, 'r') as f:
+            yield f
 
 class IOHandlerGadgetHDF5(IOHandlerSPH):
     _dataset_type = "gadget_hdf5"
@@ -36,19 +114,6 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
     _var_mass = None
     _element_names = ('Hydrogen', 'Helium', 'Carbon', 'Nitrogen', 'Oxygen',
                       'Neon', 'Magnesium', 'Silicon', 'Iron')
-
-    @property
-    def var_mass(self):
-        if self._var_mass is None:
-            vm = []
-            for i, v in enumerate(self.ds["Massarr"]):
-                if v == 0:
-                    vm.append(self._known_ptypes[i])
-            self._var_mass = tuple(vm)
-        return self._var_mass
-
-    def _read_fluid_selection(self, chunks, selector, fields, size):
-        raise NotImplementedError
 
     def _read_particle_coords(self, chunks, ptf):
         # This will read chunks and yield the results.
@@ -162,69 +227,6 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
 
                     yield (ptype, field), data
             f.close()
-
-    def _count_particles(self, data_file):
-        si, ei = data_file.start, data_file.end
-        f = h5py.File(data_file.filename, "r")
-        pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int")
-        f.close()
-        if None not in (si, ei):
-            np.clip(pcount - si, 0, ei - si, out=pcount)
-        npart = dict(("PartType%s" % (i), v) for i, v in enumerate(pcount))
-        return npart
-
-    def _identify_fields(self, data_file):
-        f = h5py.File(data_file.filename, "r")
-        fields = []
-        cname = self.ds._particle_coordinates_name  # Coordinates
-        mname = self.ds._particle_mass_name  # Mass
-
-        # loop over all keys in OWLS hdf5 file
-        #--------------------------------------------------
-        for key in f.keys():
-
-            # only want particle data
-            #--------------------------------------
-            if not key.startswith("PartType"):
-                continue
-
-            # particle data group
-            #--------------------------------------
-            g = f[key]
-            if cname not in g:
-                continue
-
-            # note str => not unicode!
-            ptype = str(key)
-            if ptype not in self.var_mass:
-                fields.append((ptype, mname))
-
-            # loop over all keys in PartTypeX group
-            #----------------------------------------
-            for k in g.keys():
-
-                if k == 'ElementAbundance':
-                    gp = g[k]
-                    for j in gp.keys():
-                        kk = j
-                        fields.append((ptype, str(kk)))
-                elif k == 'Metallicity' and len(g[k].shape) > 1:
-                    # Vector of metallicity
-                    for i in range(g[k].shape[1]):
-                        fields.append((ptype, "Metallicity_%02i" % i))
-                elif k == "ChemistryAbundances" and len(g[k].shape) > 1:
-                    for i in range(g[k].shape[1]):
-                        fields.append((ptype, "Chemistry_%03i" % i))
-                else:
-                    kk = k
-                    if not hasattr(g[kk], "shape"):
-                        continue
-                    if len(g[kk].shape) > 1:
-                        self._vector_fields[kk] = g[kk].shape[1]
-                    fields.append((ptype, str(kk)))
-
-        f.close()
-        return fields, {}
 
 
 ZeroMass = object()
