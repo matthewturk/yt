@@ -55,7 +55,7 @@ class ParticleFile(metaclass = abc.ABCMeta):
             end = np.clip(start + self.chunk_size, 0, npart)
             cinds[ptype] = [(si, ei) for si, ei in zip(start, end)]
         self._chunk_indices = cinds
-        self._num_chunks = len(cinds)
+        self._num_chunks = max(len(_) for _ in cinds.values())
 
     def _calculate_offsets(self, fields, pcounts):
         pass
@@ -78,9 +78,10 @@ class ParticleFile(metaclass = abc.ABCMeta):
                     # yielding a tuple of a set of positions and a
                     # generator that will return all the fields.
                     if return_positions:
-                        yield (ci, self._read_particle_positions(ptype,
-                                                             (f, (si, ei))),
-                            self._iter_fields(ptype, fields, (f, (si, ei))))
+                        yield (ci, (
+                            self._read_particle_positions(ptype,
+                                                         (f, (si, ei))),
+                            self._iter_fields(ptype, fields, (f, (si, ei)))))
                     else:
                         yield from ((ci, _) for _ in
                                     self._iter_fields(ptype, fields,

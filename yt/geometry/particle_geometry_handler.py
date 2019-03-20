@@ -137,7 +137,7 @@ class ParticleIndex(Index):
         self.regions = ParticleBitmap(
             ds.domain_left_edge, ds.domain_right_edge,
             ds.periodicity, self.ds._file_hash,
-            self._num_file_chunks, 
+            self._num_file_chunks,
             index_order1=order1,
             index_order2=order2)
 
@@ -186,7 +186,7 @@ class ParticleIndex(Index):
                 self.regions._coarse_index_data_file(
                     pos, hsml, global_chunk_id)
                 #self._chunk_map.append((data_file, ci))
-            for chunk_id in sort(to_set):
+            for chunk_id in sorted(to_set):
                 self.regions._set_coarse_index_data_file(chunk_id)
         self._chunk_file_map = {v2:v1 for v1, v2 in chunk_map.items()}
         self._chunk_map = chunk_map
@@ -248,12 +248,12 @@ class ParticleIndex(Index):
                 if getattr(dobj.selector, 'is_all_data', False):
                     dfi, file_masks, addfi = self.regions.identify_file_masks(
                         dobj.selector)
-                    nfiles = len(file_masks)
+                    nchunks = len(file_masks)
                 else:
-                    nfiles = self.regions.nfiles
-                    dfi = np.arange(nfiles)
-                dobj._chunk_info = [None for _ in range(nfiles)]
-                for i in range(nfiles):
+                    nchunks = self.regions.nchunks
+                    dfi = np.arange(nchunks)
+                dobj._chunk_info = [None for _ in range(nchunks)]
+                for i in range(nchunks):
                     domain_id = i+1
                     dobj._chunk_info[i] = ParticleContainer(
                         dobj, [self.data_files[dfi[i]]],

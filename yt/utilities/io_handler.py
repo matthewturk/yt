@@ -253,7 +253,7 @@ class ParticleIOHandler(BaseIOHandler):
                 continue
             for ci, (pos, _) in data_file.iter_chunks(
                     [(ptype, [])], return_positions = True):
-                yield ci, ptype, pos
+                yield ci, (ptype, pos)
                 _ = [__ for __ in _]
 
     def _yield_data_files(self, chunks):

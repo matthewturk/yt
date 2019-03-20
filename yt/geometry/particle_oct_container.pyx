@@ -413,7 +413,7 @@ cdef class ParticleBitmap:
     cdef np.float64_t idds[3]
     cdef np.int32_t dims[3]
     cdef np.int64_t file_hash
-    cdef public np.uint64_t nfiles
+    cdef public np.uint64_t nchunks
     cdef public np.int32_t index_order1
     cdef public np.int32_t index_order2
     cdef public object masks
@@ -432,7 +432,7 @@ cdef class ParticleBitmap:
     cdef FileBitmasks bitmasks
     cdef public BoolArrayCollection collisions
 
-    def __init__(self, left_edge, right_edge, periodicity, file_hash, nfiles, 
+    def __init__(self, left_edge, right_edge, periodicity, file_hash, nchunks, 
                  index_order1, index_order2):
         # TODO: Set limit on maximum orders?
         cdef int i
@@ -444,7 +444,7 @@ cdef class ParticleBitmap:
         self._prev_octree_subset = None
         self._prev_oct_handler = None
         self.file_hash = file_hash
-        self.nfiles = nfiles
+        self.nchunks = nchunks
         for i in range(3):
             self.left_edge[i] = left_edge[i]
             self.right_edge[i] = right_edge[i]
@@ -460,8 +460,8 @@ cdef class ParticleBitmap:
         # This will be an on/off flag for which morton index values are touched
         # by particles.
         # This is the simple way, for now.
-        self.masks = np.zeros((1 << (index_order1 * 3), nfiles), dtype="uint8")
-        self.bitmasks = FileBitmasks(self.nfiles)
+        self.masks = np.zeros((1 << (index_order1 * 3), nchunks), dtype="uint8")
+        self.bitmasks = FileBitmasks(self.nchunks)
         self.collisions = BoolArrayCollection()
 
     def _bitmask_logicaland(self, ifile, bcoll, out):
@@ -920,7 +920,7 @@ cdef class ParticleBitmap:
                           BoolArrayCollection mask2 = None):
         cdef np.ndarray[np.uint8_t, ndim=1] arr = np.zeros((1 << (self.index_order1 * 3)),'uint8')
         cdef np.uint8_t[:] arr_view = arr
-        cdef np.ndarray[np.uint8_t, ndim=1] sfiles = np.zeros(self.nfiles,'uint8')
+        cdef np.ndarray[np.uint8_t, ndim=1] sfiles = np.zeros(self.nchunks,'uint8')
         cdef np.uint8_t[:] sfiles_view = sfiles
         self.bitmasks._select_contaminated(ifile, mask, arr_view, sfiles_view, mask2)
         return arr, np.where(sfiles)[0].astype('uint32')
@@ -941,7 +941,7 @@ cdef class ParticleBitmap:
         cdef int out = 0
         out += struct.calcsize('Q')
         # Bitmaps for each file
-        for ifile in range(self.nfiles):
+        for ifile in range(self.nchunks):
             serial_BAC = self.bitmasks._dumps(ifile)
             out += struct.calcsize('Q')
             out += len(serial_BAC)
@@ -964,9 +964,9 @@ cdef class ParticleBitmap:
         # Header
         f.write(struct.pack('Q', _bitmask_version))
         f.write(struct.pack('q', self.file_hash))
-        f.write(struct.pack('Q', self.nfiles))
+        f.write(struct.pack('Q', self.nchunks))
         # Bitmap for each file
-        for ifile in range(self.nfiles):
+        for ifile in range(self.nchunks):
             serial_BAC = self.bitmasks._dumps(ifile)
             f.write(struct.pack('Q', len(serial_BAC)))
             f.write(serial_BAC)
@@ -986,7 +986,7 @@ cdef class ParticleBitmap:
         cdef bint read_flag = 1
         cdef bint irflag
         cdef np.uint64_t ver
-        cdef np.uint64_t nfiles = 0
+        cdef np.uint64_t nchunks = 0
         cdef np.int64_t file_hash
         cdef np.uint64_t size_serial
         cdef bint overwrite = 0
@@ -995,9 +995,9 @@ cdef class ParticleBitmap:
             raise OSError
         f = open(fname,'rb')
         ver, = struct.unpack('Q',f.read(struct.calcsize('Q')))
-        if ver == self.nfiles and ver != _bitmask_version:
+        if ver == self.nchunks and ver != _bitmask_version:
             overwrite = 1
-            nfiles = ver
+            nchunks = ver
             ver = 0 # Original bitmaps had number of files first
         if ver != _bitmask_version:
             raise OSError("The file format of the index has changed since "
@@ -1008,15 +1008,15 @@ cdef class ParticleBitmap:
         if file_hash != self.file_hash:
             raise OSError
         # Read number of bitmaps
-        if nfiles == 0:
-            nfiles, = struct.unpack('Q', f.read(struct.calcsize('Q')))
-            if nfiles != self.nfiles:
+        if nchunks == 0:
+            nchunks, = struct.unpack('Q', f.read(struct.calcsize('Q')))
+            if nchunks != self.nchunks:
                 raise OSError(
                     "Number of bitmasks ({}) conflicts with number of files "
-                    "({})".format(nfiles, self.nfiles))
+                    "({})".format(nchunks, self.nchunks))
         # Read bitmap for each file
-        pb = get_pbar("Loading particle index", nfiles)
-        for ifile in range(nfiles):
+        pb = get_pbar("Loading particle index", nchunks)
+        for ifile in range(nchunks):
             pb.update(ifile)
             size_serial, = struct.unpack('Q', f.read(struct.calcsize('Q')))
             irflag = self.bitmasks._loads(ifile, f.read(size_serial))
@@ -1034,7 +1034,7 @@ cdef class ParticleBitmap:
 
     def print_info(self):
         cdef int ifile
-        for ifile in range(self.nfiles):
+        for ifile in range(self.nchunks):
             self.bitmasks.print_info(ifile, "File: %03d" % ifile)
 
     def count_coarse(self, ifile):
@@ -1058,7 +1058,7 @@ cdef class ParticleBitmap:
         cdef int nm = 0, nc = 0
         cdef int ifile
         # Locate all indices with second level refinement
-        for ifile in range(self.nfiles):
+        for ifile in range(self.nchunks):
             arr = (<ewah_bool_array**> self.bitmasks.ewah_refn)[ifile][0]
             arr_totref.logicalor(arr,arr_totref)
         # Count collections & second level indices
@@ -1227,9 +1227,9 @@ cdef class ParticleBitmap:
         cdef FileBitmasks mm_d = self.bitmasks
         cdef np.int32_t ifile
         cdef np.ndarray[np.uint8_t, ndim=1] file_mask_p
-        file_mask_p = np.zeros(self.nfiles, dtype="uint8")
+        file_mask_p = np.zeros(self.nchunks, dtype="uint8")
         # Compare with mask of particles
-        for ifile in range(self.nfiles):
+        for ifile in range(self.nchunks):
             # Only continue if the file is not already selected
             if file_mask_p[ifile] == 0:
                 if mm_d._intersects(ifile, mm_s):
@@ -1243,10 +1243,10 @@ cdef class ParticleBitmap:
         cdef np.int32_t ifile
         cdef np.ndarray[np.uint8_t, ndim=1] file_mask_p
         cdef np.ndarray[np.uint8_t, ndim=1] file_mask_g
-        file_mask_p = np.zeros(self.nfiles, dtype="uint8")
-        file_mask_g = np.zeros(self.nfiles, dtype="uint8")
+        file_mask_p = np.zeros(self.nchunks, dtype="uint8")
+        file_mask_g = np.zeros(self.nchunks, dtype="uint8")
         # Compare with mask of particles
-        for ifile in range(self.nfiles):
+        for ifile in range(self.nchunks):
             # Only continue if the file is not already selected
             if file_mask_p[ifile] == 0:
                 if mm_d._intersects(ifile, mm_s):
@@ -1392,7 +1392,7 @@ cdef class ParticleBitmapSelector:
     cdef np.uint32_t[:,:] neighbors
     cdef np.uint64_t[:] neighbor_list1
     cdef np.uint64_t[:] neighbor_list2
-    cdef np.uint32_t nfiles
+    cdef np.uint32_t nchunks
     cdef np.uint8_t[:] file_mask_p
     cdef np.uint8_t[:] file_mask_g
     # Uncompressed boolean
@@ -1423,7 +1423,7 @@ cdef class ParticleBitmapSelector:
             self.periodicity[i] = periodicity[i]
         self.order1 = bitmap.index_order1
         self.order2 = bitmap.index_order2
-        self.nfiles = bitmap.nfiles
+        self.nchunks = bitmap.nchunks
         self.max_index1 = <np.uint64_t>(1 << self.order1)
         self.max_index2 = <np.uint64_t>(1 << self.order2)
         self.s1 = <np.uint64_t>(1 << (self.order1*3))
@@ -1434,8 +1434,8 @@ cdef class ParticleBitmapSelector:
         self.ind2_n = np.zeros((2*ngz+1, 3), dtype='uint64')
         self.neighbor_list1 = np.zeros((2*ngz+1)**3, dtype='uint64')
         self.neighbor_list2 = np.zeros((2*ngz+1)**3, dtype='uint64')
-        self.file_mask_p = np.zeros(bitmap.nfiles, dtype='uint8')
-        self.file_mask_g = np.zeros(bitmap.nfiles, dtype='uint8')
+        self.file_mask_p = np.zeros(bitmap.nchunks, dtype='uint8')
+        self.file_mask_g = np.zeros(bitmap.nchunks, dtype='uint8')
 
         self.refined_select_bool = np.zeros(self.s2, 'uint8')
         self.refined_ghosts_bool = np.zeros(self.s2, 'uint8')
@@ -1499,13 +1499,13 @@ cdef class ParticleBitmapSelector:
             pos[i] = self.DLE[i]
             dds[i] = self.DRE[i] - self.DLE[i]
         # Fill with input
-        for i in range(self.nfiles):
+        for i in range(self.nchunks):
             self.file_mask_p[i] = file_mask_p[i]
             self.file_mask_g[i] = file_mask_g[i]
         # Recurse
         self.recursive_morton_files(level, pos, dds, mi1)
         # Fill with results 
-        for i in range(self.nfiles):
+        for i in range(self.nchunks):
             file_mask_p[i] = self.file_mask_p[i]
             if file_mask_p[i]:
                 file_mask_g[i] = 0
@@ -1526,7 +1526,7 @@ cdef class ParticleBitmapSelector:
         cdef int i
         if self.bitmap.collisions._isref(mi1):
             # Don't refine if files all selected already
-            for i in range(self.nfiles):
+            for i in range(self.nchunks):
                 if self.file_mask_p[i] == 0:
                     if self.bitmap.bitmasks._isref(i, mi1) == 1:
                         return 1
@@ -1555,7 +1555,7 @@ cdef class ParticleBitmapSelector:
         cdef bint flag_ref = self.is_refined(mi1)
         # Flag files at coarse level
         if flag_ref == 0:
-            for i in range(self.nfiles):
+            for i in range(self.nchunks):
                 if self.file_mask_p[i] == 0:
                     if self.bitmap.bitmasks._get_coarse(i, mi1) == 1:
                         self.file_mask_p[i] = 1
@@ -1581,7 +1581,7 @@ cdef class ParticleBitmapSelector:
     cdef void set_files_refined(self, np.uint64_t mi1, np.uint64_t mi2):
         cdef int i
         # Flag files
-        for i in range(self.nfiles):
+        for i in range(self.nchunks):
             if self.file_mask_p[i] == 0:
                 if self.bitmap.bitmasks._get(i, mi1, mi2):
                     self.file_mask_p[i] = 1
@@ -1619,7 +1619,7 @@ cdef class ParticleBitmapSelector:
                                        self.ind1_n, self.neighbor_list1)
         for m in range(<np.int32_t>ntot):
             mi1_n = self.neighbor_list1[m]
-            for i in range(self.nfiles):
+            for i in range(self.nchunks):
                 if self.file_mask_g[i] == 0:
                     if self.bitmap.bitmasks._get_coarse(i, mi1_n):
                         self.file_mask_g[i] = 1
@@ -1669,12 +1669,12 @@ cdef class ParticleBitmapSelector:
             mi1_n = self.neighbor_list1[m]
             mi2_n = self.neighbor_list2[m]
             if self.is_refined(mi1_n) == 1:
-                for i in range(self.nfiles):
+                for i in range(self.nchunks):
                     if self.file_mask_g[i] == 0:
                         if self.bitmap.bitmasks._get(i, mi1_n, mi2_n) == 1:
                             self.file_mask_g[i] = 1
             else:
-                for i in range(self.nfiles):
+                for i in range(self.nchunks):
                     if self.file_mask_g[i] == 0:
                         if self.bitmap.bitmasks._get_coarse(i, mi1_n) == 1:
                             self.file_mask_g[i] = 1

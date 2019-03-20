@@ -45,6 +45,7 @@ class HaloCatalogDataset(SavedDataset):
         super(HaloCatalogDataset, self).__init__(filename, dataset_type,
                                                  units_override=units_override,
                                                  unit_system=unit_system)
+        self.index_order = (1, 1)
 
     def _parse_parameter_file(self):
         self.refine_by = 2
