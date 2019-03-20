@@ -47,7 +47,7 @@ class HaloCatalogHDF5File(ParticleFile):
             f, (si, ei) = state
 
         units = parse_h5_attr(f['particle_position_x'], "units")
-        pcount = self.header["num_halos"]
+        pcount = self.total_particles[ptype]
         if None not in (ei, si):
             pcount = min(pcount, ei-si)
         pos = np.empty((pcount, 3), dtype="float64")
