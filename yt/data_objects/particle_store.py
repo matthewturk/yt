@@ -82,7 +82,7 @@ class ParticleFile(metaclass = abc.ABCMeta):
                                                              (f, (si, ei))),
                             self._iter_fields(ptype, fields, (f, (si, ei))))
                     else:
-                        yield from (ci, _ for _ in
+                        yield from ((ci, _) for _ in
                                     self._iter_fields(ptype, fields,
                                                      (f, (si, ei))))
 
