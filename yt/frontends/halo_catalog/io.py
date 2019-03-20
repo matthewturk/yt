@@ -30,7 +30,7 @@ class IOHandlerHaloCatalogHDF5(ParticleIOHandler):
 
 class HaloCatalogHDF5File(ParticleFile):
     def __init__(self, ds, io, filename, file_id):
-        with h5py.File(filename, "r") as f:
+        with self._open_file() as f:
             self.header = dict((field, parse_h5_attr(f, field)) \
                                for field in f.attrs.keys())
         super(HaloCatalogHDF5File, self).__init__(
@@ -81,11 +81,9 @@ class HaloCatalogHDF5File(ParticleFile):
         return {'halos': self.header['num_halos']}
 
     def _identify_fields(self):
-        with h5py.File(self.filename, "r") as f:
+        with self._open_file() as f:
             fields = [("halos", field) for field in f]
             units = dict([(("halos", field),
                            parse_h5_attr(f[field], "units"))
                           for field in f])
         return fields, units
-
-
