@@ -278,3 +278,8 @@ class ParticleIOHandler(BaseIOHandler):
 
     def _identify_fields(self, data_file):
         return data_file._identify_fields()
+
+    def _get_smoothing_length(self, data_file, ptype,
+                              position_dtype, state=None):
+        return data_file._get_smoothing_length(
+            ptype, position_dtype, state=state)
