@@ -34,15 +34,17 @@ class ParticleContainer(YTSelectionContainer):
     _spatial = False
     _type_name = 'particle_container'
     _skip_add = True
-    _con_args = ('base_region', 'data_files', 'overlap_files')
+    _con_args = ('base_region', 'data_file', 'overlap_files')
 
-    def __init__(self, base_region, data_files, overlap_files = [], 
-                 domain_id = -1):
+    def __init__(self, base_region, data_file, chunk_list,
+                 overlap_files = None, domain_id = -1):
         self.field_data = YTFieldData()
         self.field_parameters = {}
-        self.data_files = ensure_list(data_files)
+        self.data_file = data_file
+        if overlap_files is None: overlap_files = []
         self.overlap_files = ensure_list(overlap_files)
-        self.ds = self.data_files[0].ds
+
+        self.ds = self.data_file.ds
         self._last_mask = None
         self._last_selector_id = None
         self._current_particle_type = 'all'
