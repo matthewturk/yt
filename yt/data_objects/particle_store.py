@@ -37,6 +37,11 @@ class ParticleFile(metaclass = abc.ABCMeta):
         self._calculate_chunk_indices()
 
     @abc.abstractmethod
+    def _count_particles(self):
+        # Return a dict of (ptype, nparticles)
+        pass
+
+    @abc.abstractmethod
     def _identify_fields(self):
         # Needs to return (fields, units) where (fields) is [(ptype,
         # pfield), ...]
