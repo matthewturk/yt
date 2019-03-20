@@ -1168,33 +1168,33 @@ cdef class ParticleBitmap:
     def mask2filemasks(self, BoolArrayCollection cmask, np.ndarray[np.uint32_t, ndim=1] file_idx):
         cdef BoolArrayCollection fmask
         cdef np.int32_t fid
-        cdef np.ndarray[object, ndim=1] file_masks
+        cdef np.ndarray[object, ndim=1] chunk_masks
         cdef int i
         # Get bitmasks for parts of files touching the selector
-        file_masks = np.array([BoolArrayCollection() for i in range(len(file_idx))],
+        chunk_masks = np.array([BoolArrayCollection() for i in range(len(file_idx))],
                               dtype="object")
-        for i, (fid, fmask) in enumerate(zip(file_idx,file_masks)):
+        for i, (fid, fmask) in enumerate(zip(file_idx,chunk_masks)):
             self.bitmasks._logicaland(<np.uint32_t> fid, cmask, fmask)
-        return file_masks
+        return chunk_masks
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def filemasks2addfiles(self, np.ndarray[object, ndim=1] file_masks):
+    def filemasks2addfiles(self, np.ndarray[object, ndim=1] chunk_masks):
         cdef list addfile_idx
-        addfile_idx = len(file_masks)*[None]
-        for i, fmask in enumerate(file_masks):
+        addfile_idx = len(chunk_masks)*[None]
+        for i, fmask in enumerate(chunk_masks):
             addfile_idx[i] = self.mask_to_files(fmask).astype('uint32')
         return addfile_idx
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def identify_file_masks(self, SelectorObject selector):
+    def identify_chunk_masks(self, SelectorObject selector):
         cdef BoolArrayCollection cmask = BoolArrayCollection()
         cdef BoolArrayCollection fmask
         cdef np.int32_t fid
-        cdef np.ndarray[object, ndim=1] file_masks
+        cdef np.ndarray[object, ndim=1] chunk_masks
         cdef np.ndarray[np.uint32_t, ndim=1] file_idx
         cdef list addfile_idx
         # Get bitmask for selector
@@ -1203,13 +1203,13 @@ cdef class ParticleBitmap:
         morton_selector.fill_masks(cmask)
         # Get bitmasks for parts of files touching the selector
         file_idx = self.mask_to_files(cmask)
-        file_masks = np.array([BoolArrayCollection() for i in range(len(file_idx))],
+        chunk_masks = np.array([BoolArrayCollection() for i in range(len(file_idx))],
                               dtype="object")
         addfile_idx = len(file_idx)*[None]
-        for i, (fid, fmask) in enumerate(zip(file_idx,file_masks)):
+        for i, (fid, fmask) in enumerate(zip(file_idx,chunk_masks)):
             self.bitmasks._logicaland(<np.uint32_t> fid, cmask, fmask)
             addfile_idx[i] = self.mask_to_files(fmask).astype('uint32')
-        return file_idx.astype('uint32'), file_masks, addfile_idx
+        return file_idx.astype('uint32'), chunk_masks, addfile_idx
 
     @cython.boundscheck(False)
     @cython.wraparound(False)

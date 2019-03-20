@@ -183,6 +183,8 @@ class ParticleIndex(Index):
                         data_file, pos.dtype, pos.shape)
                 else:
                     hsml = None
+                if hasattr(pos, 'in_units'):
+                    pos = pos.in_units("code_length")
                 self.regions._coarse_index_data_file(
                     pos, hsml, global_chunk_id)
                 #self._chunk_map.append((data_file, ci))
@@ -246,17 +248,33 @@ class ParticleIndex(Index):
             else:
                 # TODO: only return files
                 if getattr(dobj.selector, 'is_all_data', False):
-                    dfi, file_masks, addfi = self.regions.identify_file_masks(
+                    dfi, chunk_masks, addfi = self.regions.identify_chunk_masks(
                         dobj.selector)
-                    nchunks = len(file_masks)
+                    nchunks = len(chunk_masks)
                 else:
                     nchunks = self.regions.nchunks
                     dfi = np.arange(nchunks)
+                # At this point, dfi is the index into self._chunk_map.  So
+                # we can get the unique data files by looking at the
+                # numbers.  Our objects will now be the data file and the
+                # chunk IDs.
+                # Below, you shall find some code that could be done in a
+                # set of nested list comprehensions and iterators and
+                # whatnot, but in the interest of clarity, it is written
+                # out.
+                chunk_objs = {}
+                for d in dfi:
+                    data_file_id, chunk_id = self._chunk_file_map[d]
+                    chunk_objs.setdefault(self.data_files[data_file_id],
+                                          []).append(chunk_id)
+                # Sort our chunk indices...
+                [_.sort() for _ in chunk_objs.values()]
                 dobj._chunk_info = [None for _ in range(nchunks)]
-                for i in range(nchunks):
-                    domain_id = i+1
+                for i, (df, cl) in enumerate(sorted(chunk_objs.items())):
+                    # I don't think we need this domain_id any more.
+                    domain_id = df.file_id + 1
                     dobj._chunk_info[i] = ParticleContainer(
-                        dobj, [self.data_files[dfi[i]]],
+                        dobj, df, cl,
                         domain_id = domain_id)
                 # NOTE: One fun thing about the way IO works is that it
                 # consolidates things quite nicely.  So we should feel free to
