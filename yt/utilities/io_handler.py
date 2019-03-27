@@ -256,9 +256,6 @@ class ParticleIOHandler(BaseIOHandler):
         for chunk in chunks:
             for obj in chunk.objs:
                 data_files.setdefault(obj.data_file, []).append(obj.subchunk_id)
-        # TODO: MAKE THIS YIELD THE DATA FILES AND THE CHUNK LISTS FOR ALL THE
-        # DATA FILES.  WE CAN DO ITERATION OVER THE COORDINATES, ETC, BASED ON
-        # THE CHUNK LIST, SO THIS IS THE PLACE TO DO THAT.
         for data_file, chunk_slice in sorted(data_files.items()):#, key=lambda x: x.filename):
             yield data_file, chunk_slice
 

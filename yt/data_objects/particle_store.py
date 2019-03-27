@@ -28,7 +28,7 @@ class ParticleFile(metaclass = abc.ABCMeta):
     _fields_in_file = None
     _num_chunks = None
 
-    def __init__(self, ds, io, filename, file_id, chunk_size = 4):
+    def __init__(self, ds, io, filename, file_id, chunk_size = 32**3):
         self.ds = ds
         self.io = weakref.proxy(io)
         self.filename = filename
