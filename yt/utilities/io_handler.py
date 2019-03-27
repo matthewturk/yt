@@ -245,39 +245,33 @@ class ParticleIOHandler(BaseIOHandler):
     def _read_fluid_selection(self, chunks, selector, fields, size):
         raise NotImplementedError
 
-    def _yield_coordinates(self, data_file):
-        # TODO: This should probably take the chunk list
+    def _yield_coordinates(self, data_file, chunk_slice = None):
         ptypes = self.ds.particle_types_raw
-        for ptype in sorted(ptypes):
-            pcount = data_file.total_particles[ptype]
-            if pcount == 0:
-                continue
-            for ci, (pos, _) in data_file.iter_chunks(
-                    [(ptype, [])], return_positions = True):
-                yield ci, (ptype, pos)
-                _ = [__ for __ in _]
+        yield from data_file.iter_coordinates(ptypes = ptypes,
+                                         chunk_slice = chunk_slice)
 
     def _yield_data_files(self, chunks):
         chunks = list(chunks)
-        data_files = set([])
+        data_files = {}
         for chunk in chunks:
             for obj in chunk.objs:
-                data_files.update(obj.data_files)
+                data_files.setdefault(obj.data_file, []).append(obj.subchunk_id)
         # TODO: MAKE THIS YIELD THE DATA FILES AND THE CHUNK LISTS FOR ALL THE
         # DATA FILES.  WE CAN DO ITERATION OVER THE COORDINATES, ETC, BASED ON
         # THE CHUNK LIST, SO THIS IS THE PLACE TO DO THAT.
-        for data_file in sorted(data_files, key=lambda x: x.filename):
-            yield data_file
+        for data_file, chunk_slice in sorted(data_files.items()):#, key=lambda x: x.filename):
+            yield data_file, chunk_slice
 
     def _read_particle_coords(self, chunks, ptf):
-        for data_file in self._yield_data_files(chunks):
-            for _, (ptype, pos) in self._yield_coordinates(data_file):
+        for data_file, cs in self._yield_data_files(chunks):
+            for _, (ptype, pos) in self._yield_coordinates(data_file, chunk_slice = cs):
                 yield ptype, tuple(pos[:, i] for i in range(pos.shape[1]))
 
     def _read_particle_fields(self, chunks, ptf, selector):
-        for data_file in self._yield_data_files(chunks):
-            for fieldname, data in data_file._get_particle_fields(ptf, selector):
-                yield fieldname, data
+        for data_file, cs in self._yield_data_files(chunks):
+            for fname, data in data_file._get_particle_fields(ptf, selector,
+                                                              chunk_slice = cs):
+                yield fname, data
 
     def _count_particles(self, data_file):
         return data_file._count_particles()

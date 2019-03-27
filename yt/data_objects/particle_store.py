@@ -18,6 +18,7 @@ import abc
 import functools
 import numpy as np
 import weakref
+from yt.funcs import iterable
 
 @functools.total_ordering
 class ParticleFile(metaclass = abc.ABCMeta):
@@ -58,12 +59,22 @@ class ParticleFile(metaclass = abc.ABCMeta):
         for ptype, npart in self.total_particles.items():
             start = np.arange(0, npart, self.chunk_size)
             end = np.clip(start + self.chunk_size, 0, npart)
-            cinds[ptype] = [(si, ei) for si, ei in zip(start, end)]
+            cinds[ptype] = np.array([(si, ei) for si, ei in zip(start, end)])
         self._chunk_indices = cinds
         self._num_chunks = max(len(_) for _ in cinds.values())
 
     def _calculate_offsets(self, fields, pcounts):
         pass
+
+    def iter_coordinates(self, ptypes, chunk_slice = None):
+        for ptype in ptypes:
+            field_spec = [(ptype, [])]
+            for ci, (pos, _) in self.iter_chunks(
+                    field_spec, return_positions = True,
+                    chunk_slice = chunk_slice):
+                yield ci, (ptype, pos)
+                _ = [__ for __ in _] # exhaust our iterator
+
 
     def iter_chunks(self, field_spec, return_positions = False,
                     chunk_slice = None):
@@ -71,10 +82,10 @@ class ParticleFile(metaclass = abc.ABCMeta):
         # tuples
         if chunk_slice is None:
             chunk_slice = slice(None)
-        elif not iterable(chunk_slice):
-            chunk_slice = slice(chunk_slice)
-        elif not isinstance(chunk_slice, slice):
-            chunk_slice = slice(*chunk_slice)
+        elif not iterable(chunk_slice): # single number
+            pass
+        elif isinstance(chunk_slice, slice): # already a slice
+            pass
         with self._open_file() as f:
             for ptype, fields in field_spec:
                 for ci, (si, ei) in enumerate(
@@ -138,7 +149,7 @@ class ParticleFile(metaclass = abc.ABCMeta):
     def _iter_fields(self, ptype, field_list, state=None):
         raise NotImplementedError
 
-    def _get_particle_fields(self, ptf, selector):
+    def _get_particle_fields(self, ptf, selector, chunk_slice = None):
         for ptype, field_list in sorted(ptf.items()):
             pcount = self.total_particles[ptype]
             if pcount == 0:
@@ -146,7 +157,8 @@ class ParticleFile(metaclass = abc.ABCMeta):
 
             field_spec = [(ptype, field_list)]
             for ci, (coords, read_iter) in self.iter_chunks(
-                    field_spec, return_positions = True):
+                    field_spec, return_positions = True,
+                    chunk_slice = chunk_slice):
                 x = coords[:, 0]
                 y = coords[:, 1]
                 z = coords[:, 2]

@@ -167,7 +167,7 @@ class ParticleIndex(Index):
                 except OSError:
                     pass
             rflag = self.regions.check_bitmasks()
-            
+
     def _initialize_coarse_index(self):
         pb = get_pbar("Initializing coarse index ", self._num_file_chunks)
         chunk_map = {}
@@ -265,6 +265,7 @@ class ParticleIndex(Index):
                 dobj._chunk_info = [None for _ in range(nchunks)]
                 for i, d in enumerate(dfi):
                     data_file_id, chunk_id = self._chunk_file_map[d]
+                    df = self.data_files[data_file_id]
                     domain_id = i + 1
                     dobj._chunk_info[i] = ParticleContainer(
                         dobj, df, chunk_id, domain_id = domain_id)
