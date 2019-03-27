@@ -262,20 +262,12 @@ class ParticleIndex(Index):
                 # set of nested list comprehensions and iterators and
                 # whatnot, but in the interest of clarity, it is written
                 # out.
-                chunk_objs = {}
-                for d in dfi:
-                    data_file_id, chunk_id = self._chunk_file_map[d]
-                    chunk_objs.setdefault(self.data_files[data_file_id],
-                                          []).append(chunk_id)
-                # Sort our chunk indices...
-                [_.sort() for _ in chunk_objs.values()]
                 dobj._chunk_info = [None for _ in range(nchunks)]
-                for i, (df, cl) in enumerate(sorted(chunk_objs.items())):
-                    # I don't think we need this domain_id any more.
-                    domain_id = df.file_id + 1
+                for i, d in enumerate(dfi):
+                    data_file_id, chunk_id = self._chunk_file_map[d]
+                    domain_id = i + 1
                     dobj._chunk_info[i] = ParticleContainer(
-                        dobj, df, cl,
-                        domain_id = domain_id)
+                        dobj, df, chunk_id, domain_id = domain_id)
                 # NOTE: One fun thing about the way IO works is that it
                 # consolidates things quite nicely.  So we should feel free to
                 # create as many objects as part of the chunk as we want, since

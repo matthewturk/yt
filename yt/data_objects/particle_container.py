@@ -36,11 +36,12 @@ class ParticleContainer(YTSelectionContainer):
     _skip_add = True
     _con_args = ('base_region', 'data_file', 'overlap_files')
 
-    def __init__(self, base_region, data_file, chunk_list,
+    def __init__(self, base_region, data_file, subchunk_id,
                  overlap_files = None, domain_id = -1):
         self.field_data = YTFieldData()
         self.field_parameters = {}
         self.data_file = data_file
+        self.subchunk_id = subchunk_id
         if overlap_files is None: overlap_files = []
         self.overlap_files = ensure_list(overlap_files)
 

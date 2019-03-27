@@ -246,6 +246,7 @@ class ParticleIOHandler(BaseIOHandler):
         raise NotImplementedError
 
     def _yield_coordinates(self, data_file):
+        # TODO: This should probably take the chunk list
         ptypes = self.ds.particle_types_raw
         for ptype in sorted(ptypes):
             pcount = data_file.total_particles[ptype]
@@ -262,6 +263,9 @@ class ParticleIOHandler(BaseIOHandler):
         for chunk in chunks:
             for obj in chunk.objs:
                 data_files.update(obj.data_files)
+        # TODO: MAKE THIS YIELD THE DATA FILES AND THE CHUNK LISTS FOR ALL THE
+        # DATA FILES.  WE CAN DO ITERATION OVER THE COORDINATES, ETC, BASED ON
+        # THE CHUNK LIST, SO THIS IS THE PLACE TO DO THAT.
         for data_file in sorted(data_files, key=lambda x: x.filename):
             yield data_file
 
