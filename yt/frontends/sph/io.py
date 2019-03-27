@@ -6,9 +6,9 @@ Generic file-handing functions for SPH data
 
 """
 from yt.utilities.io_handler import \
-    BaseIOHandler
+    ParticleIOHandler
 
-class IOHandlerSPH(BaseIOHandler):
+class IOHandlerSPH(ParticleIOHandler):
     """IOHandler implementation specifically for SPH data
 
     This exists to handle particles with smoothing lengths, which require us

@@ -23,6 +23,8 @@ import os
 
 from yt.data_objects.particle_store import \
     ParticleFile
+from yt.frontends.gadget.io import \
+    GadgetHDF5File
 from yt.frontends.sph.data_structures import \
     SPHDataset, \
     SPHParticleIndex
@@ -531,7 +533,7 @@ class GadgetDataset(SPHDataset):
 
 
 class GadgetHDF5Dataset(GadgetDataset):
-    _file_class = ParticleFile
+    _file_class = GadgetHDF5File
     _index_class = SPHParticleIndex
     _field_info_class = GadgetFieldInfo
     _particle_mass_name = "Masses"
