@@ -175,7 +175,8 @@ class ParticleIndex(Index):
             pb.update(i)
             to_set = set([])
             for ci, (ptype, pos) in self.io._yield_coordinates(data_file):
-                global_chunk_id = chunk_map.setdefault((data_file.file_id, ci), len(chunk_map))
+                global_chunk_id = chunk_map.setdefault((data_file.file_id, ci, ptype),
+                                                       len(chunk_map))
                 to_set.add(global_chunk_id)
                 ds = self.ds
                 if hasattr(ds, '_sph_ptype') and ptype == ds._sph_ptype:
@@ -213,10 +214,10 @@ class ParticleIndex(Index):
                     hsml = None
                 nsub_mi = self.regions._refined_index_data_file(
                     pos, hsml, mask, sub_mi1, sub_mi2,
-                    self._chunk_map[data_file.file_id, ci], nsub_mi)
+                    self._chunk_map[data_file.file_id, ci, ptype], nsub_mi)
             self.regions._set_refined_index_data_file(
                 sub_mi1, sub_mi2,
-                self._chunk_map[data_file.file_id, ci], nsub_mi)
+                self._chunk_map[data_file.file_id, ci, ptype], nsub_mi)
         pb.finish()
         self.regions.find_collisions_refined()
 
@@ -264,11 +265,11 @@ class ParticleIndex(Index):
                 # out.
                 dobj._chunk_info = [None for _ in range(nchunks)]
                 for i, d in enumerate(dfi):
-                    data_file_id, chunk_id = self._chunk_file_map[d]
+                    data_file_id, chunk_id, ptype = self._chunk_file_map[d]
                     df = self.data_files[data_file_id]
                     domain_id = i + 1
                     dobj._chunk_info[i] = ParticleContainer(
-                        dobj, df, chunk_id, domain_id = domain_id)
+                        dobj, df, chunk_id, ptype, domain_id = domain_id)
                 # NOTE: One fun thing about the way IO works is that it
                 # consolidates things quite nicely.  So we should feel free to
                 # create as many objects as part of the chunk as we want, since

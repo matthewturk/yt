@@ -37,8 +37,9 @@ class ParticleContainer(YTSelectionContainer):
     _con_args = ('base_region', 'data_file', 'overlap_files')
 
     def __init__(self, base_region, data_file, subchunk_id,
-                 overlap_files = None, domain_id = -1):
+                 particle_type, overlap_files = None, domain_id = -1):
         self.field_data = YTFieldData()
+        self.particle_type = particle_type
         self.field_parameters = {}
         self.data_file = data_file
         self.subchunk_id = subchunk_id

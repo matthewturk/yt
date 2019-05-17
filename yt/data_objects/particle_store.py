@@ -61,7 +61,8 @@ class ParticleFile(metaclass = abc.ABCMeta):
             end = np.clip(start + self.chunk_size, 0, npart)
             cinds[ptype] = np.array([(si, ei) for si, ei in zip(start, end)])
         self._chunk_indices = cinds
-        self._num_chunks = max(len(_) for _ in cinds.values())
+        # We have chunks for each
+        self._num_chunks = sum(len(_) for _ in cinds.values())
 
     def _calculate_offsets(self, fields, pcounts):
         pass
