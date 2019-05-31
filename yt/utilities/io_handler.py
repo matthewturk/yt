@@ -255,7 +255,7 @@ class ParticleIOHandler(BaseIOHandler):
         data_files = {}
         for chunk in chunks:
             for obj in chunk.objs:
-                data_files.setdefault(obj.data_file, []).append(obj.subchunk_id)
+                data_files.setdefault(obj.data_file, {}).setdefault(obj.particle_type, []).append(obj.subchunk_id)
         for data_file, chunk_slice in sorted(data_files.items()):#, key=lambda x: x.filename):
             yield data_file, chunk_slice
 

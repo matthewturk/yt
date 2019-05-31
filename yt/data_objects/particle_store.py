@@ -19,6 +19,7 @@ import functools
 import numpy as np
 import weakref
 from yt.funcs import iterable
+from collections import defaultdict
 
 @functools.total_ordering
 class ParticleFile(metaclass = abc.ABCMeta):
@@ -68,11 +69,13 @@ class ParticleFile(metaclass = abc.ABCMeta):
         pass
 
     def iter_coordinates(self, ptypes, chunk_slice = None):
+        if chunk_slice is None:
+            chunk_slice = defaultdict(lambda: None)
         for ptype in ptypes:
             field_spec = [(ptype, [])]
             for ci, (pos, _) in self.iter_chunks(
                     field_spec, return_positions = True,
-                    chunk_slice = chunk_slice):
+                    chunk_slice = chunk_slice[ptype]):
                 yield ci, (ptype, pos)
                 _ = [__ for __ in _] # exhaust our iterator
 
@@ -82,15 +85,19 @@ class ParticleFile(metaclass = abc.ABCMeta):
         # field_spec here is a list of (field_type, (field0, field1))
         # tuples
         if chunk_slice is None:
-            chunk_slice = slice(None)
+            chunk_slice = defaultdict(lambda: slice(None))
         elif not iterable(chunk_slice): # single number
             pass
         elif isinstance(chunk_slice, slice): # already a slice
             pass
         with self._open_file() as f:
             for ptype, fields in field_spec:
+                if isinstance(chunk_slice, dict):
+                    sl = chunk_slice[ptype]
+                else:
+                    sl = chunk_slice
                 for ci, (si, ei) in enumerate(
-                        self._chunk_indices[ptype][chunk_slice]):
+                        self._chunk_indices[ptype][sl]):
                     # Note: we aren't using "yield from" here, but instead
                     # yielding a tuple of a set of positions and a
                     # generator that will return all the fields.
