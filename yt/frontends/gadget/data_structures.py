@@ -21,7 +21,7 @@ import stat
 import struct
 import os
 
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.frontends.gadget.io import \
     GadgetHDF5File

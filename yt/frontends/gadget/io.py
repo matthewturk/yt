@@ -18,7 +18,7 @@ import contextlib
 import numpy as np
 import os
 
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.extern.six import string_types
 from yt.frontends.gadget.definitions import \

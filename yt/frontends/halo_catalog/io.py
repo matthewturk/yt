@@ -20,7 +20,7 @@ import contextlib
 from yt.utilities.on_demand_imports import _h5py as h5py
 from yt.io.io_handler import \
     ParticleIOHandler
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.funcs import \
     parse_h5_attr

@@ -24,7 +24,7 @@ import weakref
 
 from yt.data_objects.data_containers import \
     YTSelectionContainer
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.data_objects.static_output import \
     ParticleDataset

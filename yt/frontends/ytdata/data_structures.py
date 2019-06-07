@@ -35,7 +35,7 @@ from yt.data_objects.profiles import \
     Profile1DFromDataset, \
     Profile2DFromDataset, \
     Profile3DFromDataset
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.data_objects.static_output import \
     Dataset, \

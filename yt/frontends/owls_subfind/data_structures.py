@@ -33,7 +33,7 @@ from yt.utilities.logger import ytLogger as \
     mylog
 from yt.geometry.particle_geometry_handler import \
     ParticleIndex
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.data_objects.static_output import \
     ParticleDataset

@@ -19,7 +19,7 @@ import stat
 import glob
 import os
 
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.data_objects.static_output import \
     ParticleDataset

@@ -25,7 +25,7 @@ from yt.frontends.sph.data_structures import \
     SPHDataset, \
     SPHParticleIndex
 from yt.funcs import deprecate
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.utilities.cosmology import \
     Cosmology

@@ -21,7 +21,7 @@ from yt.frontends.sph.data_structures import \
     SPHDataset, \
     SPHParticleIndex
 from yt.frontends.sph.fields import SPHFieldInfo
-from yt.data_objects.particle_store import \
+from yt.io.particle_store import \
     ParticleFile
 from yt.funcs import only_on_root
 
