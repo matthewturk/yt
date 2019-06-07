@@ -14,7 +14,7 @@ ExodusII-specific IO functions
 #-----------------------------------------------------------------------------
 
 import numpy as np
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.utilities.file_handler import \
     NetCDF4FileHandler

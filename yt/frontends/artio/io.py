@@ -15,7 +15,7 @@ ARTIO-specific IO
 #-----------------------------------------------------------------------------
 import numpy as np
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 
 

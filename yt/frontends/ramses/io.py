@@ -16,7 +16,7 @@ RAMSES-specific IO
 from collections import defaultdict
 import numpy as np
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.physical_ratios import cm_per_km, cm_per_mpc

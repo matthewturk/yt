@@ -15,7 +15,7 @@ Enzo-P-specific IO functions
 
 from yt.utilities.exceptions import \
     YTException
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.extern.six import b, iteritems
 from yt.utilities.on_demand_imports import _h5py as h5py

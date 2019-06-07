@@ -29,7 +29,7 @@ from yt.frontends.art.definitions import \
     particle_fields, \
     star_struct, \
     hydro_struct
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.lib.geometry_utils import compute_morton

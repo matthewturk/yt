@@ -26,7 +26,7 @@ from yt.frontends.gadget.definitions import \
     SNAP_FORMAT_2_OFFSET
 from yt.frontends.sph.io import \
     IOHandlerSPH
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     ParticleIOHandler
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.on_demand_imports import _h5py as h5py

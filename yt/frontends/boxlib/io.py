@@ -17,7 +17,7 @@ import os
 import numpy as np
 from collections import defaultdict
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.funcs import mylog
 from yt.frontends.chombo.io import parse_orion_sinks

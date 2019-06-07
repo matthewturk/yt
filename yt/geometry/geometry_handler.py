@@ -24,7 +24,7 @@ from yt.config import ytcfg
 from yt.funcs import iterable
 from yt.units.yt_array import \
     YTArray, uconcatenate
-from yt.utilities.io_handler import io_registry
+from yt.io.io_handler import io_registry
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.parallel_tools.parallel_analysis_interface import \
     ParallelAnalysisInterface, parallel_root_only

@@ -35,7 +35,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import \
     parallel_root_only
 from yt.utilities.lib.misc_utilities import \
     get_box_grids_level
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     io_registry
 
 from .fields import \

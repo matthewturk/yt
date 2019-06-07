@@ -16,7 +16,7 @@ Athena++-specific IO functions
 import numpy as np
 from itertools import groupby
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.utilities.logger import ytLogger as mylog
 

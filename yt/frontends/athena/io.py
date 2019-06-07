@@ -13,7 +13,7 @@ The data-file handling functions
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 import numpy as np
 from yt.funcs import mylog

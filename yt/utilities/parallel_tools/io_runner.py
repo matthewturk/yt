@@ -17,7 +17,7 @@ import numpy as np
 from yt.utilities.logger import ytLogger as mylog
 from .parallel_analysis_interface import \
     ProcessorPool, parallel_objects
-from yt.utilities.io_handler import BaseIOHandler
+from yt.io.io_handler import BaseIOHandler
 from contextlib import contextmanager
 import time
 

@@ -13,7 +13,7 @@
 
 import numpy as np
 from yt.funcs import mylog
-from yt.utilities.io_handler import BaseIOHandler
+from yt.io.io_handler import BaseIOHandler
 
 
 def field_dname(field_name):

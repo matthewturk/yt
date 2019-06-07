@@ -22,7 +22,7 @@ from yt.funcs import mylog
 from yt.utilities.exceptions import \
     YTDomainOverflow
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 
 from .definitions import halo_dts

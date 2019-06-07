@@ -13,7 +13,7 @@ Enzo-specific IO functions
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 from yt.utilities.logger import ytLogger as mylog
 from yt.extern.six import b, iteritems

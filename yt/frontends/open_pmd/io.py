@@ -23,7 +23,7 @@ from yt.frontends.open_pmd.misc import \
     is_const_component, \
     get_component
 from yt.geometry.selection_routines import GridSelector
-from yt.utilities.io_handler import BaseIOHandler
+from yt.io.io_handler import BaseIOHandler
 
 
 class IOHandlerOpenPMDHDF5(BaseIOHandler):

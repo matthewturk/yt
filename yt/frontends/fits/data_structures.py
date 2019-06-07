@@ -37,7 +37,7 @@ from yt.data_objects.static_output import \
     Dataset
 from yt.utilities.file_handler import \
     FITSFileHandler
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     io_registry
 from .fields import FITSFieldInfo, \
     WCSFITSFieldInfo

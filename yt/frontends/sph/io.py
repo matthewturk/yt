@@ -5,7 +5,7 @@ Generic file-handing functions for SPH data
 
 
 """
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     ParticleIOHandler
 
 class IOHandlerSPH(ParticleIOHandler):

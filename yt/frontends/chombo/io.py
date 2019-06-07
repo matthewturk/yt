@@ -19,7 +19,7 @@ from yt.geometry.selection_routines import \
     GridSelector
 from yt.utilities.logger import \
     ytLogger as mylog
-from yt.utilities.io_handler import \
+from yt.io.io_handler import \
     BaseIOHandler
 
 

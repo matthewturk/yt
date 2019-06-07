@@ -30,7 +30,7 @@ from yt.funcs import \
     iterable, \
     ensure_list, \
     issue_deprecation_warning
-from yt.utilities.io_handler import io_registry
+from yt.io.io_handler import io_registry
 from yt.data_objects.field_data import \
     YTFieldData
 from yt.data_objects.particle_unions import \
