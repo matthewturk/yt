@@ -28,7 +28,7 @@ from yt.geometry.geometry_handler import \
     Index, \
     YTDataChunk
 from yt.geometry.particle_oct_container import ParticleBitmap
-from yt.data_objects.particle_container import ParticleContainer
+from yt.data_objects.particle_container import ParticleBlock
 from yt.utilities.lib.fnv_hash import fnv_hash
 
 CHUNKSIZE = 64**3
@@ -244,7 +244,7 @@ class ParticleIndex(Index):
     def _identify_base_chunk(self, dobj):
         # Must check that chunk_info contains the right number of ghost zones
         if getattr(dobj, "_chunk_info", None) is None:
-            if isinstance(dobj, ParticleContainer):
+            if isinstance(dobj, ParticleBlock):
                 dobj._chunk_info = [dobj]
             else:
                 # TODO: only return files
@@ -268,7 +268,7 @@ class ParticleIndex(Index):
                     data_file_id, chunk_id, ptype = self._chunk_file_map[d]
                     df = self.data_files[data_file_id]
                     domain_id = i + 1
-                    dobj._chunk_info[i] = ParticleContainer(
+                    dobj._chunk_info[i] = ParticleFile(
                         dobj, df, chunk_id, ptype, domain_id = domain_id)
                 # NOTE: One fun thing about the way IO works is that it
                 # consolidates things quite nicely.  So we should feel free to

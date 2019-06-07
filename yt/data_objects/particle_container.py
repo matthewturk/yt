@@ -30,7 +30,7 @@ def _non_indexed(name):
         raise YTNonIndexedDataContainer(self)
     return _func_non_indexed
 
-class ParticleContainer(YTSelectionContainer):
+class ParticleBlock(YTSelectionContainer):
     _spatial = False
     _type_name = 'particle_container'
     _skip_add = True
@@ -59,7 +59,7 @@ class ParticleContainer(YTSelectionContainer):
             self.base_selector = base_region.selector
         self._octree = None
         self._temp_spatial = False
-        if isinstance(base_region, ParticleContainer):
+        if isinstance(base_region, ParticleBlock):
             self._temp_spatial = base_region._temp_spatial
             self._octree = base_region._octree
         # To ensure there are not domains if global octree not used
@@ -86,10 +86,10 @@ class ParticleContainer(YTSelectionContainer):
 
     def retrieve_ghost_zones(self, ngz, coarse_ghosts = False):
         gz_oct = self.octree.retrieve_ghost_zones(ngz, coarse_ghosts = coarse_ghosts)
-        gz = ParticleContainer(gz_oct.base_region, gz_oct.data_files,
-                               overlap_files = gz_oct.overlap_files,
-                               selector_mask = gz_oct.selector_mask,
-                               domain_id = gz_oct.domain_id)
+        gz = ParticleBlock(gz_oct.base_region, gz_oct.data_files,
+                           overlap_files = gz_oct.overlap_files,
+                           selector_mask = gz_oct.selector_mask,
+                           domain_id = gz_oct.domain_id)
         gz._octree = gz_oct
         return gz
 
