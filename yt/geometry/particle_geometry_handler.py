@@ -28,7 +28,7 @@ from yt.geometry.geometry_handler import \
     Index, \
     YTDataChunk
 from yt.geometry.particle_oct_container import ParticleBitmap
-from yt.data_objects.particle_container import ParticleBlock
+from yt.io.particle_block import ParticleBlock
 from yt.utilities.lib.fnv_hash import fnv_hash
 
 CHUNKSIZE = 64**3
