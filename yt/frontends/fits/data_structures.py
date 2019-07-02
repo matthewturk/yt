@@ -31,8 +31,7 @@ from yt.data_objects.grid_patch import \
     AMRGridPatch
 from yt.geometry.grid_geometry_handler import \
     GridIndex
-from yt.geometry.geometry_handler import \
-    YTDataChunk
+from yt.io.data_chunk import YTDataChunk
 from yt.data_objects.static_output import \
     Dataset
 from yt.utilities.file_handler import \

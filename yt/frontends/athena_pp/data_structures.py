@@ -26,8 +26,7 @@ from yt.geometry.grid_geometry_handler import \
     GridIndex
 from yt.data_objects.static_output import \
     Dataset
-from yt.geometry.geometry_handler import \
-    YTDataChunk
+from yt.io.data_chunk import YTDataChunk
 from yt.utilities.file_handler import \
     HDF5FileHandler
 from yt.geometry.unstructured_mesh_handler import \

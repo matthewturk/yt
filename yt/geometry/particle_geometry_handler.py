@@ -25,8 +25,8 @@ from yt.funcs import \
     only_on_root
 from yt.utilities.logger import ytLogger as mylog
 from yt.geometry.geometry_handler import \
-    Index, \
-    YTDataChunk
+    Index
+from yt.io.data_chunk import YTDataChunk
 from yt.geometry.particle_oct_container import ParticleBitmap
 from yt.io.particle_block import ParticleBlock
 from yt.utilities.lib.fnv_hash import fnv_hash
@@ -57,9 +57,6 @@ class ParticleIndex(Index):
             for k in df.total_particles.keys():
                 result[k] += df.total_particles[k]
         return dict(result)
-
-    def convert(self, unit):
-        return self.dataset.conversion_factors[unit]
 
     _data_files = None
     @property
