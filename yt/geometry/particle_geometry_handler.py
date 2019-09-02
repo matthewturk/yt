@@ -266,7 +266,7 @@ class ParticleIndex(Index):
                     df = self.data_files[data_file_id]
                     domain_id = i + 1
                     dobj._chunk_info[i] = ParticleBlock(
-                        dobj, df, chunk_id, ptype, domain_id = domain_id)
+                        None, df, chunk_id, ptype, domain_id = domain_id)
                 # NOTE: One fun thing about the way IO works is that it
                 # consolidates things quite nicely.  So we should feel free to
                 # create as many objects as part of the chunk as we want, since

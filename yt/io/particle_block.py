@@ -51,12 +51,12 @@ class ParticleBlock(YTSelectionContainer):
         self._last_selector_id = None
         self._current_particle_type = 'all'
         # self._current_fluid_type = self.ds.default_fluid_type
-        if hasattr(base_region, "base_selector"):
-            self.base_selector = base_region.base_selector
-            self.base_region = base_region.base_region
-        else:
-            self.base_region = base_region
-            self.base_selector = base_region.selector
+        # if hasattr(base_region, "base_selector"):
+        #     self.base_selector = base_region.base_selector
+        #     self.base_region = base_region.base_region
+        # else:
+        #     self.base_region = base_region
+        #     self.base_selector = base_region.selector
         self._octree = None
         self._temp_spatial = False
         if isinstance(base_region, ParticleBlock):
