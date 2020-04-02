@@ -5,10 +5,6 @@ from yt.utilities.physical_constants import \
     me, \
     mp
 
-b_units = "code_magnetic"
-e_units = "code_magnetic/c"
-ra_units = "code_length / code_time**2"
-rho_units = "code_mass / code_length**3"
 vel_units = "code_velocity"
 
 known_species_names = {
@@ -49,47 +45,6 @@ NODAL_FLAGS = {
 }
 
 class EnzoFieldInfo(FieldInfoContainer):
-    known_other_fields = (
-        ("Cooling_Time", ("s", ["cooling_time"], None)),
-        ("Dengo_Cooling_Rate", ("erg/g/s", [], None)),
-        ("Grackle_Cooling_Rate", ("erg/s/cm**3", [], None)),
-        ("HI_kph", ("1/code_time", [], None)),
-        ("HeI_kph", ("1/code_time", [], None)),
-        ("HeII_kph", ("1/code_time", [], None)),
-        ("H2I_kdiss", ("1/code_time", [], None)),
-        ("HM_kph", ("1/code_time", [], None)),
-        ("H2II_kdiss", ("1/code_time", [], None)),
-        ("Bx", (b_units, [], None)),
-        ("By", (b_units, [], None)),
-        ("Bz", (b_units, [], None)),
-        ("BxF", (b_units, [], None)),
-        ("ByF", (b_units, [], None)),
-        ("BzF", (b_units, [], None)),
-        ("Ex", (e_units, [], None)),
-        ("Ey", (e_units, [], None)),
-        ("Ez", (e_units, [], None)),
-        ("AvgElec0", (e_units, [], None)),
-        ("AvgElec1", (e_units, [], None)),
-        ("AvgElec2", (e_units, [], None)),
-        ("RadAccel1", (ra_units, ["radiation_acceleration_x"], None)),
-        ("RadAccel2", (ra_units, ["radiation_acceleration_y"], None)),
-        ("RadAccel3", (ra_units, ["radiation_acceleration_z"], None)),
-        ("Dark_Matter_Density", (rho_units, ["dark_matter_density"], None)),
-        ("Temperature", ("K", ["temperature"], None)),
-        ("Dust_Temperature", ("K", ["dust_temperature"], None)),
-        ("x-velocity", (vel_units, ["velocity_x"], None)),
-        ("y-velocity", (vel_units, ["velocity_y"], None)),
-        ("z-velocity", (vel_units, ["velocity_z"], None)),
-        ("RaySegments", ("", ["ray_segments"], None)),
-        ("PhotoGamma", ("eV/code_time", ["photo_gamma"], None)),
-        ("PotentialField", ("code_velocity**2", ["gravitational_potential"], None)),
-        ("Density", (rho_units, ["density"], None)),
-        ("Metal_Density", (rho_units, ["metal_density"], None)),
-        ("SN_Colour", (rho_units, [], None)),
-        # Note: we do not alias Electron_Density to anything
-        ("Electron_Density", (rho_units, [], None)),
-    )
-
     known_particle_fields = (
         ("particle_position_x", ("code_length", [], None)),
         ("particle_position_y", ("code_length", [], None)),

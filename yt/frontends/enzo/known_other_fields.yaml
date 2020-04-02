@@ -1,0 +1,221 @@
+Cooling_Time:
+    aliases:
+        - cooling_time
+    units : s
+    display_name : None
+
+Dengo_Cooling_Rate:
+    aliases :
+        - None
+    units : erg/g/s
+    display_name : None
+
+Grackle_Cooling_Rate:
+    aliases:
+        - None
+    units : erg/s/cm**3
+    display_name : None
+
+HI_kph:
+    aliases:
+        - None
+    units : 1/code_time
+    display_name : None
+
+HeI_kph:
+    aliases:
+        - None
+    units : 1/code_time
+    display_name : None
+
+HeII_kph:
+    aliases:
+        - None
+    units : 1/code_time
+    display_name : None
+
+H2I_kdiss:
+    aliases:
+        - None
+    units : 1/code_time
+    display_name : None
+
+HM_kph:
+    aliases:
+        - None
+    units : 1/code_time
+    display_name : None
+
+H2II_kdiss:
+    aliases:
+        - None
+    units : 1/code_time
+    display_name : None
+
+Bx:
+    aliases:
+        - None
+    units : code_magnetic
+    display_name : None
+
+By:
+    aliases:
+        - None
+    units : code_magnetic
+    display_name : None
+
+Bz:
+    aliases:
+        - None
+    units : code_magnetic
+    display_name : None
+
+BxF:
+    aliases:
+        - None
+    units : code_magnetic
+    display_name : None
+
+ByF:
+    aliases:
+        - None
+    units : code_magnetic
+    display_name : None
+
+BzF:
+    aliases:
+        - None
+    units : code_magnetic
+    display_name : None
+
+Ex:
+    aliases:
+        - None
+    units : code_magnetic/c
+    display_name : None
+
+Ey:
+    aliases:
+        - None
+    units : code_magnetic/c
+    display_name : None
+
+Ez:
+    aliases:
+        - None
+    units : code_magnetic/c
+    display_name : None
+
+AvgElec0:
+    aliases:
+        - None
+    units : code_magnetic/c
+    display_name : None
+
+AvgElec1:
+    aliases:
+        - None
+    units : code_magnetic/c
+    display_name : None
+
+AvgElec2:
+    aliases:
+        - None
+    units : code_magnetic/c
+    display_name : None
+
+RadAccel1:
+    aliases:
+        - radiation_acceleration_x
+    units : code_length / code_time**2
+    display_name : None
+
+RadAccel2:
+    aliases:
+        - radiation_acceleration_y
+    units : code_length / code_time**2
+    display_name : None
+
+RadAccel3:
+    aliases:
+        - radiation_acceleration_z
+    units : code_length / code_time**2
+    display_name : None
+
+Dark_Matter_Density:
+    aliases:
+        - dark_matter_density
+    units : code_mass / code_length**3
+    display_name : None
+
+Temperature:
+    aliases:
+        - temperature
+    units : K
+    display_name : None
+
+Dust_Temperature:
+    aliases:
+        - dust_temperature
+    units : K
+    display_name : None
+
+x-velocity:
+    aliases:
+        - velocity_x
+    units : code_velocity
+    display_name : None
+
+y-velocity:
+    aliases:
+        - velocity_y
+    units : code_velocity
+    display_name : None
+
+z-velocity:
+    aliases:
+        - velocity_z
+    units : code_velocity
+    display_name : None
+
+RaySegments:
+    aliases:
+        - ray_segments
+    units : None
+    display_name : None
+
+PhotoGamma:
+    aliases:
+        - photo_gamma
+    units : eV/code_time
+    display_name : None
+
+PotentialField:
+    aliases:
+        - gravitational_potential
+    units : code_velocity**2
+    display_name : None
+
+Density:
+    aliases:
+        - density
+    units : code_mass / code_length**3
+    display_name : None
+
+Metal_Density:
+    aliases:
+        - metal_density
+    units : code_mass / code_length**3
+    display_name : None
+
+SN_Colour:
+    aliases:
+        - None
+    units : code_mass / code_length**3
+    display_name : None
+
+Electron_Density:
+    aliases:
+        - None
+    units : code_mass / code_length**3
+    display_name : None
