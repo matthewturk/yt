@@ -1,7 +1,10 @@
 import contextlib
 import inspect
 import re
+from typing import List
 import warnings
+
+import pydantic
 
 from yt.funcs import \
     ensure_list, \
@@ -20,6 +23,22 @@ from yt.units.unit_object import \
 import yt.units.dimensions as ytdims
 from yt.utilities.exceptions import \
     YTFieldNotFound
+
+
+class OtherFieldInfo(pydantic.BaseModel):
+    """
+    Currently, every known other field has four pieces of information
+    specified: the name of the field within the frontend simulation code,
+    any aliases applicable to the field, the units, and the name of the
+    field used for display purposes in plots and the like. With this
+    set up, the aliases and display name attributes do not need to be
+    specified in the known_other_fields.yaml file if they aren't needed
+    or wanted.
+    """
+    code_name : str
+    aliases : List[str] 
+    units : str
+    display_name : str
 
 
 def TranslationFunc(field_name):
