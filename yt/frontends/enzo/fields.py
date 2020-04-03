@@ -1,4 +1,7 @@
 import numpy as np
+import pydantic
+import yaml
+
 from yt.fields.field_info_container import \
     FieldInfoContainer
 from yt.utilities.physical_constants import \
@@ -44,6 +47,22 @@ NODAL_FLAGS = {
     'AvgElec2': [1, 1, 0],
 }
 
+
+class OtherFieldInfo(pydantic.BaseModel):
+    """
+    Currently, every known other field has four pieces of information
+    specified: the name of the field within the frontend simulation code,
+    any aliases applicable to the field, the units, and the name of the
+    field used for display purposes in plots and the like. With this
+    set up, the aliases and display name attributes do not need to be
+    specified in the known_other_fields.yaml file if they aren't needed
+    or wanted.
+    """
+    code_name : str
+    aliases = ['',]
+    units : str
+    display_name = ''
+
 class EnzoFieldInfo(FieldInfoContainer):
     known_particle_fields = (
         ("particle_position_x", ("code_length", [], None)),
@@ -65,6 +84,12 @@ class EnzoFieldInfo(FieldInfoContainer):
     )
 
     def __init__(self, ds, field_list):
+        # Data stored as a list of dictionaries
+        with open('known_other_fields.yaml', 'r') as f:
+            known_field_data = yaml.safe_load(f)
+        self.known_other_fields = []
+        for field in known_field_data:
+            self.known_other_fields.append(OtherFieldInfo(**field))
         hydro_method = ds.parameters.get("HydroMethod", None)
         if hydro_method is None:
             hydro_method = ds.parameters["Physics"]["Hydro"]["HydroMethod"]

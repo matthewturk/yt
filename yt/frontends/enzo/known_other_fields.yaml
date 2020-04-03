@@ -1,221 +1,140 @@
-Cooling_Time:
-    aliases:
-        - cooling_time
-    units : s
-    display_name : None
+- code_name : Cooling_Time
+  aliases:
+    - cooling_time
+  units : s
 
-Dengo_Cooling_Rate:
-    aliases :
-        - None
-    units : erg/g/s
-    display_name : None
+- code_name : Dengo_Cooling_Rate
+  units : erg/g/s
 
-Grackle_Cooling_Rate:
-    aliases:
-        - None
-    units : erg/s/cm**3
-    display_name : None
+- code_name : Grackle_Cooling_Rate
+  units : erg/s/cm**3
 
-HI_kph:
-    aliases:
-        - None
-    units : 1/code_time
-    display_name : None
+- code_name : HI_kph
+  units : 1/code_time
 
-HeI_kph:
-    aliases:
-        - None
-    units : 1/code_time
-    display_name : None
+- code_name : HeI_kph
+  units : 1/code_time
 
-HeII_kph:
-    aliases:
-        - None
-    units : 1/code_time
-    display_name : None
+- code_name : HeII_kph
+  units : 1/code_time
 
-H2I_kdiss:
-    aliases:
-        - None
-    units : 1/code_time
-    display_name : None
+- code_name : H2I_kdiss
+  units : 1/code_time
 
-HM_kph:
-    aliases:
-        - None
-    units : 1/code_time
-    display_name : None
+- code_name : HM_kph
+  units : 1/code_time
 
-H2II_kdiss:
-    aliases:
-        - None
-    units : 1/code_time
-    display_name : None
+- code_name : H2II_kdiss
+  units : 1/code_time
 
-Bx:
-    aliases:
-        - None
-    units : code_magnetic
-    display_name : None
+- code_name : Bx
+  units : code_magnetic
 
-By:
-    aliases:
-        - None
-    units : code_magnetic
-    display_name : None
+- code_name : By
+  units : code_magnetic
 
-Bz:
-    aliases:
-        - None
-    units : code_magnetic
-    display_name : None
+- code_name : Bz
+  units : code_magnetic
 
-BxF:
-    aliases:
-        - None
-    units : code_magnetic
-    display_name : None
+- code_name : BxF
+  units : code_magnetic
 
-ByF:
-    aliases:
-        - None
-    units : code_magnetic
-    display_name : None
+- code_name : ByF
+  units : code_magnetic
 
-BzF:
-    aliases:
-        - None
-    units : code_magnetic
-    display_name : None
+- code_name : BzF
+  units : code_magnetic
 
-Ex:
-    aliases:
-        - None
-    units : code_magnetic/c
-    display_name : None
+- code_name : Ex
+  units : code_magnetic/c
 
-Ey:
-    aliases:
-        - None
-    units : code_magnetic/c
-    display_name : None
+- code_name : Ey
+  units : code_magnetic/c
 
-Ez:
-    aliases:
-        - None
-    units : code_magnetic/c
-    display_name : None
+- code_name : Ez
+  units : code_magnetic/c
 
-AvgElec0:
-    aliases:
-        - None
-    units : code_magnetic/c
-    display_name : None
+- code_name : AvgElec0
+  units : code_magnetic/c
 
-AvgElec1:
-    aliases:
-        - None
-    units : code_magnetic/c
-    display_name : None
+- code_name : AvgElec1
+  units : code_magnetic/c
 
-AvgElec2:
-    aliases:
-        - None
-    units : code_magnetic/c
-    display_name : None
+- code_name : AvgElec2
+  units : code_magnetic/c
 
-RadAccel1:
-    aliases:
-        - radiation_acceleration_x
-    units : code_length / code_time**2
-    display_name : None
+- code_name : RadAccel1
+  aliases:
+    - radiation_acceleration_x
+  units : code_length / code_time**2
 
-RadAccel2:
-    aliases:
-        - radiation_acceleration_y
-    units : code_length / code_time**2
-    display_name : None
+- code_name : RadAccel2
+  aliases:
+    - radiation_acceleration_y
+  units : code_length / code_time**2
 
-RadAccel3:
-    aliases:
-        - radiation_acceleration_z
-    units : code_length / code_time**2
-    display_name : None
+- code_name : RadAccel3
+  aliases:
+    - radiation_acceleration_z
+  units : code_length / code_time**2
 
-Dark_Matter_Density:
-    aliases:
-        - dark_matter_density
-    units : code_mass / code_length**3
-    display_name : None
+- code_name : Dark_Matter_Density
+  aliases:
+    - dark_matter_density
+  units : code_mass / code_length**3
 
-Temperature:
-    aliases:
-        - temperature
-    units : K
-    display_name : None
+- code_name : Temperature
+  aliases:
+    - temperature
+  units : K
 
-Dust_Temperature:
-    aliases:
-        - dust_temperature
-    units : K
-    display_name : None
+- code_name : Dust_Temperature
+  aliases:
+    - dust_temperature
+  units : K
 
-x-velocity:
-    aliases:
-        - velocity_x
-    units : code_velocity
-    display_name : None
+- code_name : x-velocity
+  aliases:
+    - velocity_x
+  units : code_velocity
 
-y-velocity:
-    aliases:
-        - velocity_y
-    units : code_velocity
-    display_name : None
+- code_name : y-velocity
+  aliases:
+    - velocity_y
+  units : code_velocity
 
-z-velocity:
-    aliases:
-        - velocity_z
-    units : code_velocity
-    display_name : None
+- code_name : z-velocity
+  aliases:
+    - velocity_z
+  units : code_velocity
 
-RaySegments:
-    aliases:
-        - ray_segments
-    units : None
-    display_name : None
+- code_name : RaySegments
+  aliases:
+    - ray_segments
+  units : dimensionless
 
-PhotoGamma:
-    aliases:
-        - photo_gamma
-    units : eV/code_time
-    display_name : None
+- code_name : PhotoGamma
+  aliases:
+    - photo_gamma
+  units : eV/code_time
 
-PotentialField:
-    aliases:
-        - gravitational_potential
-    units : code_velocity**2
-    display_name : None
+- code_name : PotentialField
+  aliases:
+    - gravitational_potential
+  units : code_velocity**2
 
-Density:
-    aliases:
-        - density
-    units : code_mass / code_length**3
-    display_name : None
+- code_name : Density
+  aliases:
+    - density
+  units : code_mass / code_length**3
 
-Metal_Density:
-    aliases:
-        - metal_density
-    units : code_mass / code_length**3
-    display_name : None
+- code_name : Metal_Density
+  aliases:
+    - metal_density
+  units : code_mass / code_length**3
 
-SN_Colour:
-    aliases:
-        - None
-    units : code_mass / code_length**3
-    display_name : None
+- code_name : SN_Colour
+  units : code_mass / code_length**3
 
-Electron_Density:
-    aliases:
-        - None
-    units : code_mass / code_length**3
-    display_name : None
+- code_name : Electron_Density
+  units : code_mass / code_length**3
