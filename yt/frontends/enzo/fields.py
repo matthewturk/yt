@@ -1,3 +1,5 @@
+import pkg_resources
+
 import numpy as np
 import yaml
 
@@ -70,8 +72,11 @@ class EnzoFieldInfo(FieldInfoContainer):
 
     def __init__(self, ds, field_list):
         # Data stored as a list of dictionaries
-        with open('known_other_fields.yaml', 'r') as f:
-            known_field_data = yaml.safe_load(f)
+        known_field_data = yaml.safe_load(
+            pkg_resources.resource_stream(
+                "yt", "pkg_data/enzo_known_other_fields.yaml"
+            )
+        )
         self.known_other_fields = []
         for field in known_field_data:
             self.known_other_fields.append(OtherFieldInfo(**field))
