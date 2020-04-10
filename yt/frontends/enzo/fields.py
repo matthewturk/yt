@@ -6,6 +6,7 @@ import yaml
 from yt.fields.derived_field import OtherFieldInfo
 from yt.fields.field_info_container import \
     FieldInfoContainer
+from yt.funcs import mylog
 from yt.utilities.physical_constants import \
     me, \
     mp
@@ -74,12 +75,13 @@ class EnzoFieldInfo(FieldInfoContainer):
         # Data stored as a list of dictionaries
         known_field_data = yaml.safe_load(
             pkg_resources.resource_stream(
-                "yt", "pkg_data/enzo_known_other_fields.yaml"
+                "yt", "frontends/enzo/enzo_known_other_fields.yaml"
             )
         )
-        self.known_other_fields = []
+        self.known_other_fields = {} 
         for field in known_field_data:
-            self.known_other_fields.append(OtherFieldInfo(**field))
+            other_field = OtherFieldInfo(**field)
+            self.known_other_fields[other_field.code_name] = other_field
         hydro_method = ds.parameters.get("HydroMethod", None)
         if hydro_method is None:
             hydro_method = ds.parameters["Physics"]["Hydro"]["HydroMethod"]
@@ -92,13 +94,54 @@ class EnzoFieldInfo(FieldInfoContainer):
             sl_right = slice(2,None,None)
             div_fac = 2.0
         slice_info = (sl_left, sl_right, div_fac)
-        super(EnzoFieldInfo, self).__init__(ds, field_list, slice_info)
+        # Here we do the work done in FieldInfoContainer.__init__ until
+        # all of the frontends have been ported over and the changes
+        # can be put back into that method. This is to isolate EnzoFieldInfo
+        # from the rest of the frontend FieldInfo classes and not break
+        # anything
+        self._show_field_errors = []
+        self.ds = ds
+        # Now we start setting things up.
+        self.field_list = field_list
+        self.slice_info = slice_info
+        self.field_aliases = {}
+        self.species_names = []
+        self.setup_fluid_aliases()
+        # super(EnzoFieldInfo, self).__init__(ds, field_list, slice_info)
 
         # setup nodal flag information
         for field in NODAL_FLAGS:
             if ('enzo', field) in self:
                 finfo = self['enzo', field]
                 finfo.nodal_flag = np.array(NODAL_FLAGS[field])
+
+    def setup_fluid_aliases(self, ftype='gas'):
+        for field in sorted(self.field_list):
+            if not isinstance(field, tuple):
+                raise RuntimeError
+            if field[0] in self.ds.particle_types:
+                continue
+            u = self.known_other_fields[field[1]].units 
+            units = self.known_other_fields[field[1]].units
+            aliases = self.known_other_fields[field[1]].aliases
+            display_name = self.known_other_fields[field[1]].display_name
+            # We allow field_units to override this.  First we check if the
+            # field *name* is in there, then the field *tuple*.
+            units = self.ds.field_units.get(field[1], units)
+            units = self.ds.field_units.get(field, units)
+            if not isinstance(units, str) and u != "":
+                units = "((%s)*%s)" % (u, units)
+            if isinstance(units, (numeric_type, np.number, np.ndarray)) and \
+                u == "" and units != 1.0:
+                mylog.warning("Cannot interpret units: %s * %s, " +
+                              "setting to dimensionless.", units, u)
+                units = ""
+            elif units == 1.0:
+                units = ""
+            self.add_output_field(field, sampling_type="cell",units = units,
+                                  display_name = display_name)
+            for alias in aliases:
+                self.alias((ftype, alias), field)
 
     def add_species_field(self, species):
         # This is currently specific to Enzo.  Hopefully in the future we will
