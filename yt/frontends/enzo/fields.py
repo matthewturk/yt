@@ -1,5 +1,6 @@
 import pkg_resources
 
+from numbers import Number as numeric_type
 import numpy as np
 import yaml
 
@@ -121,20 +122,28 @@ class EnzoFieldInfo(FieldInfoContainer):
                 raise RuntimeError
             if field[0] in self.ds.particle_types:
                 continue
-            u = self.known_other_fields[field[1]].units 
-            units = self.known_other_fields[field[1]].units
-            aliases = self.known_other_fields[field[1]].aliases
-            display_name = self.known_other_fields[field[1]].display_name
+            # See if field is in known_other_fields. If not, use a
+            # default empty attribute tuple
+            args = self.known_other_fields.get(field[1], ("", [], None))
+            if isinstance(args, tuple):
+                units, aliases, display_name = args
+            # If the field is in known_other_fields, the value returned
+            # by get() is an OtherFieldInfo instance, so we unpack it
+            elif isinstance(args, OtherFieldInfo):
+                units = args.units
+                aliases = args.aliases
+                display_name = args.display_name
+                args = [args.units]
             # We allow field_units to override this.  First we check if the
             # field *name* is in there, then the field *tuple*.
             units = self.ds.field_units.get(field[1], units)
             units = self.ds.field_units.get(field, units)
-            if not isinstance(units, str) and u != "":
-                units = "((%s)*%s)" % (u, units)
+            if not isinstance(units, str) and args[0] != "":
+                units = "((%s)*%s)" % (args[0], units)
             if isinstance(units, (numeric_type, np.number, np.ndarray)) and \
-                u == "" and units != 1.0:
+                args[0] == "" and units != 1.0:
                 mylog.warning("Cannot interpret units: %s * %s, " +
-                              "setting to dimensionless.", units, u)
+                              "setting to dimensionless.", units, args[0])
                 units = ""
             elif units == 1.0:
                 units = ""
