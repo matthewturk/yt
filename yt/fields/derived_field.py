@@ -36,9 +36,9 @@ class OtherFieldInfo(pydantic.BaseModel):
     or wanted.
     """
     code_name : str
-    aliases : List[str] 
-    units : str
-    display_name : str
+    aliases : List[str] = []
+    units : str = ""
+    display_name : str = ""
 
 
 def TranslationFunc(field_name):
