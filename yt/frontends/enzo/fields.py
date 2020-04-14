@@ -1,14 +1,25 @@
+import os
+import pkg_resources
+from numbers import Number as numeric_type
+
 import numpy as np
+import yaml
+
+from yt.fields.derived_field import NullFunc, OtherFieldInfo
 from yt.fields.field_info_container import \
     FieldInfoContainer
+from yt.fields.particle_fields import \
+    particle_deposition_functions, \
+    particle_vector_functions, \
+    particle_scalar_functions, \
+    standard_particle_fields
+from yt.funcs import mylog
+from yt.units.dimensions import dimensionless
+from yt.units.unit_object import Unit
 from yt.utilities.physical_constants import \
     me, \
     mp
 
-b_units = "code_magnetic"
-e_units = "code_magnetic/c"
-ra_units = "code_length / code_time**2"
-rho_units = "code_mass / code_length**3"
 vel_units = "code_velocity"
 
 known_species_names = {
@@ -48,68 +59,35 @@ NODAL_FLAGS = {
     'AvgElec2': [1, 1, 0],
 }
 
+
+def _load_other_fields(frontend):
+    """
+    Data stored as a dictionary. The keys are "known_other_fields"
+    and "known_particle_fields". The value for each key is a list
+    of dictionaries. Each of these inner dictionaries contains the
+    field attributes.
+    """
+    file_name = frontend + "_known_other_fields.yaml"
+    file_name = os.path.join("frontends", frontend, file_name)
+    file_object = pkg_resources.resource_stream("yt", file_name)
+    known_field_data = yaml.safe_load(file_object)
+    known_other_fields = {} 
+    known_particle_fields = {}
+    for field_type, field_list in known_field_data.items():
+        for field in field_list:
+            other_field = OtherFieldInfo(**field)
+            if field_type == "known_other_fields":
+                known_other_fields[other_field.code_name] = other_field
+            elif field_type == "known_particle_fields":
+                known_particle_fields[other_field.code_name] = other_field
+            else:
+                raise KeyError
+    return known_other_fields, known_particle_fields
+
+
 class EnzoFieldInfo(FieldInfoContainer):
-    known_other_fields = (
-        ("Cooling_Time", ("s", ["cooling_time"], None)),
-        ("Dengo_Cooling_Rate", ("erg/g/s", [], None)),
-        ("Grackle_Cooling_Rate", ("erg/s/cm**3", [], None)),
-        ("HI_kph", ("1/code_time", [], None)),
-        ("HeI_kph", ("1/code_time", [], None)),
-        ("HeII_kph", ("1/code_time", [], None)),
-        ("H2I_kdiss", ("1/code_time", [], None)),
-        ("HM_kph", ("1/code_time", [], None)),
-        ("H2II_kdiss", ("1/code_time", [], None)),
-        ("Bx", (b_units, [], None)),
-        ("By", (b_units, [], None)),
-        ("Bz", (b_units, [], None)),
-        ("BxF", (b_units, [], None)),
-        ("ByF", (b_units, [], None)),
-        ("BzF", (b_units, [], None)),
-        ("Ex", (e_units, [], None)),
-        ("Ey", (e_units, [], None)),
-        ("Ez", (e_units, [], None)),
-        ("AvgElec0", (e_units, [], None)),
-        ("AvgElec1", (e_units, [], None)),
-        ("AvgElec2", (e_units, [], None)),
-        ("RadAccel1", (ra_units, ["radiation_acceleration_x"], None)),
-        ("RadAccel2", (ra_units, ["radiation_acceleration_y"], None)),
-        ("RadAccel3", (ra_units, ["radiation_acceleration_z"], None)),
-        ("Dark_Matter_Density", (rho_units, ["dark_matter_density"], None)),
-        ("Temperature", ("K", ["temperature"], None)),
-        ("Dust_Temperature", ("K", ["dust_temperature"], None)),
-        ("x-velocity", (vel_units, ["velocity_x"], None)),
-        ("y-velocity", (vel_units, ["velocity_y"], None)),
-        ("z-velocity", (vel_units, ["velocity_z"], None)),
-        ("RaySegments", ("", ["ray_segments"], None)),
-        ("PhotoGamma", ("eV/code_time", ["photo_gamma"], None)),
-        ("PotentialField", ("code_velocity**2", ["gravitational_potential"], None)),
-        ("Density", (rho_units, ["density"], None)),
-        ("Metal_Density", (rho_units, ["metal_density"], None)),
-        ("SN_Colour", (rho_units, [], None)),
-        # Note: we do not alias Electron_Density to anything
-        ("Electron_Density", (rho_units, [], None)),
-    )
-
-    known_particle_fields = (
-        ("particle_position_x", ("code_length", [], None)),
-        ("particle_position_y", ("code_length", [], None)),
-        ("particle_position_z", ("code_length", [], None)),
-        ("particle_velocity_x", (vel_units, [], None)),
-        ("particle_velocity_y", (vel_units, [], None)),
-        ("particle_velocity_z", (vel_units, [], None)),
-        ("creation_time", ("code_time", [], None)),
-        ("dynamical_time", ("code_time", [], None)),
-        ("metallicity_fraction", ("code_metallicity", [], None)),
-        ("metallicity", ("", [], None)),
-        ("particle_type", ("", [], None)),
-        ("particle_index", ("", [], None)),
-        ("particle_mass", ("code_mass", [], None)),
-        ("GridID", ("", [], None)),
-        ("identifier", ("", ["particle_index"], None)),
-        ("level", ("", [], None)),
-    )
-
     def __init__(self, ds, field_list):
+        self.known_other_fields, self.known_particle_fields = _load_other_fields("enzo")
         hydro_method = ds.parameters.get("HydroMethod", None)
         if hydro_method is None:
             hydro_method = ds.parameters["Physics"]["Hydro"]["HydroMethod"]
@@ -122,13 +100,67 @@ class EnzoFieldInfo(FieldInfoContainer):
             sl_right = slice(2,None,None)
             div_fac = 2.0
         slice_info = (sl_left, sl_right, div_fac)
-        super(EnzoFieldInfo, self).__init__(ds, field_list, slice_info)
-
+        # Here we do the work done in FieldInfoContainer.__init__ until
+        # all of the frontends have been ported over and the changes
+        # can be put back into that method. This is to isolate EnzoFieldInfo
+        # from the rest of the frontend FieldInfo classes and not break
+        # anything
+        self._show_field_errors = []
+        self.ds = ds
+        # Now we start setting things up.
+        self.field_list = field_list
+        self.slice_info = slice_info
+        self.field_aliases = {}
+        self.species_names = []
+        self.setup_fluid_aliases()
+        # super(EnzoFieldInfo, self).__init__(ds, field_list, slice_info)
         # setup nodal flag information
         for field in NODAL_FLAGS:
             if ('enzo', field) in self:
                 finfo = self['enzo', field]
                 finfo.nodal_flag = np.array(NODAL_FLAGS[field])
+
+    def setup_fluid_aliases(self, ftype='gas'):
+        """
+        Overloaded from FieldInfoContainer's version until all frontends
+        have been ported over to using pydantic.
+        """
+        for field in sorted(self.field_list):
+            if not isinstance(field, tuple):
+                raise RuntimeError
+            if field[0] in self.ds.particle_types:
+                continue
+            # See if field is in known_other_fields. If not, use a
+            # default empty attribute tuple
+            args = self.known_other_fields.get(field[1], ("", [], None))
+            if isinstance(args, tuple):
+                units, aliases, display_name = args
+            # If the field is in known_other_fields, the value returned
+            # by get() is an OtherFieldInfo instance, so we unpack it
+            elif isinstance(args, OtherFieldInfo):
+                units = args.units
+                aliases = args.aliases
+                display_name = args.display_name
+                args = [args.units]
+            else:
+                raise ValueError
+            # We allow field_units to override this.  First we check if the
+            # field *name* is in there, then the field *tuple*.
+            units = self.ds.field_units.get(field[1], units)
+            units = self.ds.field_units.get(field, units)
+            if not isinstance(units, str) and args[0] != "":
+                units = "((%s)*%s)" % (args[0], units)
+            if isinstance(units, (numeric_type, np.number, np.ndarray)) and \
+                args[0] == "" and units != 1.0:
+                mylog.warning("Cannot interpret units: %s * %s, " +
+                              "setting to dimensionless.", units, args[0])
+                units = ""
+            elif units == 1.0:
+                units = ""
+            self.add_output_field(field, sampling_type="cell",units = units,
+                                  display_name = display_name)
+            for alias in aliases:
+                self.alias((ftype, alias), field)
 
     def add_species_field(self, species):
         # This is currently specific to Enzo.  Hopefully in the future we will
@@ -295,12 +327,72 @@ class EnzoFieldInfo(FieldInfoContainer):
                 units=unit_system["number_density"])
 
     def setup_particle_fields(self, ptype):
-
         def _age(field, data):
             return data.ds.current_time - data["creation_time"]
         self.add_field((ptype, "age"),
                        sampling_type="particle",
                        function=_age,
                        units = "yr")
+        #super(EnzoFieldInfo, self).setup_particle_fields(ptype)
+        self._overload_setup_particle_fields(ptype)
 
-        super(EnzoFieldInfo, self).setup_particle_fields(ptype)
+    def _overload_setup_particle_fields(self, ptype, ftype='gas', num_neighbors=64):
+        """
+        Overloaded from FieldInfoContainer's version until all frontends
+        have been ported over to using pydantic.
+        """
+        skip_output_units = ("code_length",)
+        for f in sorted(self.known_particle_fields):
+            units = self.known_particle_fields[f].units
+            aliases = self.known_particle_fields[f].aliases
+            dn = self.known_particle_fields[f].display_name
+            units = self.ds.field_units.get((ptype, f), units)
+            output_units = units
+            if (f in aliases or ptype not in self.ds.particle_types_raw) and \
+                units not in skip_output_units:
+                u = Unit(units, registry = self.ds.unit_registry)
+                if u.dimensions is not dimensionless:
+                    output_units = str(self.ds.unit_system[u.dimensions])
+            if (ptype, f) not in self.field_list:
+                continue
+            self.add_output_field((ptype, f), sampling_type="particle",
+                units = units, display_name = dn, 
+                output_units = output_units)
+            for alias in aliases:
+                self.alias((ptype, alias), (ptype, f), units = output_units)
+        # We'll either have particle_position or particle_position_[xyz]
+        if (ptype, "particle_position") in self.field_list or \
+           (ptype, "particle_position") in self.field_aliases:
+            particle_scalar_functions(ptype,
+                   "particle_position", "particle_velocity",
+                   self)
+        else:
+            # We need to check to make sure that there's a "known field" that
+            # overlaps with one of the vector fields.  For instance, if we are
+            # in the Stream frontend, and we have a set of scalar position
+            # fields, they will overlap with -- and be overridden by -- the
+            # "known" vector field that the frontend creates.  So the easiest
+            # thing to do is to simply remove the on-disk field (which doesn't
+            # exist) and replace it with a derived field.
+            if (ptype, "particle_position") in self and \
+                 self[ptype, "particle_position"]._function == NullFunc:
+                self.pop((ptype, "particle_position"))
+            particle_vector_functions(ptype,
+                    ["particle_position_%s" % ax for ax in 'xyz'],
+                    ["particle_velocity_%s" % ax for ax in 'xyz'],
+                    self)
+        particle_deposition_functions(ptype, "particle_position",
+            "particle_mass", self)
+        standard_particle_fields(self, ptype)
+        # Now we check for any leftover particle fields
+        for field in sorted(self.field_list):
+            if field in self: continue
+            if not isinstance(field, tuple):
+                raise RuntimeError
+            if field[0] not in self.ds.particle_types:
+                continue
+            self.add_output_field(field, sampling_type="particle",
+                                  units = self.ds.field_units.get(field, ""))
+        self.setup_smoothed_fields(ptype, 
+                                   num_neighbors=num_neighbors,
+                                   ftype=ftype)
