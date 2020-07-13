@@ -171,8 +171,8 @@ def NGPDeposit_2(np.float64_t[:] posx,
             if (ypos >= y_bin_edges[j]) and (ypos < y_bin_edges[j+1]):
                 j1 = j
                 break
-        assert i1 > 0
-        assert j1 > 0
+        assert i1 >= 0
+        assert j1 >= 0
         # Deposit onto field
         field[i1,j1] += mass[n]
 
