@@ -44,18 +44,11 @@ def parentage_relationships(ds):
 
 
 def grid_values(ds, field):
-    # The hashing is done here so that there is only one entry for
-    # the test that contains info about all of the grids as opposed
-    # to having a separate 'grid_id : grid_hash' pair for each grid
-    # since that makes the answer file much larger
-    result = None
+    result = {}
     for g in ds.index.grids:
-        if result is None:
-            result = hashlib.md5(bytes(g.id) + g[field].tobytes())
-        else:
-            result.update(bytes(g.id) + g[field].tobytes())
+        result[str(g.id)] = g[field]
         g.clear_data()
-    return result.hexdigest()
+    return result
 
 
 def projection_values(ds, axis, field, weight_field, dobj_type):
@@ -87,10 +80,13 @@ def field_values(ds, field, obj_type=None, particle_type=False):
     # If needed build an instance of the dataset type
     obj = create_obj(ds, obj_type)
     determined_field = obj._determine_fields(field)[0]
+    fd = ds.field_info[field]
     # Get the proper weight field depending on if we're looking at
     # particles or not
     if particle_type:
         weight_field = (determined_field[0], "particle_ones")
+    elif fd.is_sph_field:
+        weight_field = (determined_field[0], "ones")
     else:
         weight_field = ("index", "ones")
     # Get the average, min, and max
@@ -194,7 +190,7 @@ def sph_answer(ds, ds_str_repr, ds_nparticles, field, weight, ds_obj, axis):
         particle_type = True
     else:
         particle_type = False
-    if not particle_type:
+    if particle_type is False:
         ppv_hd = pixelized_projection_values(ds, axis, field, weight, ds_obj)
         hex_digests["pixelized_projection_values"] = ppv_hd
     fv_hd = field_values(ds, field, ds_obj, particle_type=particle_type)
@@ -289,6 +285,25 @@ def axial_pixelization(ds):
     return pix_x, pix_y
 
 
+def light_cone_projection(parameter_file, simulation_type):
+    lc = LightCone(
+        parameter_file, simulation_type, 0., 0.1,
+        observer_redshift=0.0, time_data=False)
+    lc.calculate_light_cone_solution(
+        seed=123456789, filename="LC/solution.txt")
+    lc.project_light_cone(
+        (600.0, "arcmin"), (60.0, "arcsec"), "density",
+        weight_field=None, save_stack=True)
+    fh = h5py.File("LC/LightCone.h5")
+    data = fh["density_None"].value
+    units = fh["density_None"].attrs["units"]
+    assert units == "g/cm**2"
+    fh.close()
+    mean = data.mean()
+    mi = data[data.nonzero()].min()
+    ma = data.max()
+    return np.array([mean, mi, ma])
+
 def extract_connected_sets(ds_fn, data_source, field, num_levels, min_val, max_val):
     n, all_sets = data_source.extract_connected_sets(
         field, num_levels, min_val, max_val
@@ -313,3 +328,13 @@ def VR_image_comparison(scene):
     image = mpimg.imread(tmpname)
     os.remove(tmpname)
     return image
+
+
+def yt_data_field(ds, field, geometric):
+    if geometric:
+        obj = ds.all_data()
+    else:
+        obj = ds.data
+    num_e = obj[field].size
+    avg = obj[field].mean()
+    return np.array([num_e, avg])
