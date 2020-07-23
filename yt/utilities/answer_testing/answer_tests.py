@@ -126,6 +126,25 @@ def pixelized_projection_values(ds, axis, field, weight_field=None, dobj_type=No
     return result.hexdigest()
 
 
+def pixelized_particle_projection_values(ds, axis, field, weight_field=None,
+    dobj_type=None):
+    if dobj_type is not None:
+        obj = utils.create_obj(ds, dobj_type)
+    else:
+        obj = None
+    proj_plot = particle_plots.ParticleProjectionPlot(ds, axis, [field],
+                  weight_field = weight_field)
+    proj = proj_plot.data_source
+    frb = proj_plot.frb
+    frb[field]
+    if weight_field is not None:
+        frb[weight_field]
+    d = frb.data
+    for f in proj.field_data:
+        # Sometimes f will be a tuple.
+        d["%s_sum" % (f,)] = proj.field_data[f].sum(dtype="float64")
+    return d
+
 def small_patch_amr(ds, field, weight, axis, ds_obj):
     hex_digests = {}
     # Grid hierarchy test
@@ -160,16 +179,11 @@ def big_patch_amr(ds, field, weight, axis, ds_obj):
     return hex_digests
 
 
-def generic_array(func, args=None, kwargs=None):
-    if args is None:
-        args = []
-    if kwargs is None:
-        kwargs = {}
+def generic_array(func, args=[], kwargs={}):
     return func(*args, **kwargs)
 
 
 def sph_answer(ds, ds_str_repr, ds_nparticles, field, weight, ds_obj, axis):
-    # Make sure we're dealing with the right dataset
     assert str(ds) == ds_str_repr
     # Set up keys of test names
     hex_digests = {}
@@ -268,6 +282,7 @@ def axial_pixelization(ds):
     Feed it a dataset, and it checks that the results of basic pixelization
     don't change.
     """
+    rv = {}
     for i, axis in enumerate(ds.coordinates.axis_order):
         (bounds, center, display_center) = pw.get_window_parameters(
             axis, ds.domain_center, None, ds
@@ -329,7 +344,6 @@ def VR_image_comparison(scene):
     os.remove(tmpname)
     return image
 
-
 def yt_data_field(ds, field, geometric):
     if geometric:
         obj = ds.all_data()
@@ -338,3 +352,7 @@ def yt_data_field(ds, field, geometric):
     num_e = obj[field].size
     avg = obj[field].mean()
     return np.array([num_e, avg])
+
+def verify_simulation_same(sim_obj):
+    result = [ds.current_time for ds in sim_obj]
+    return np.array(result)
