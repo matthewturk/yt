@@ -98,6 +98,7 @@ def field_values(ds, field, obj_type=None, particle_type=False):
     return np.array([avg, minimum, maximum])
 
 
+
 def pixelized_projection_values(ds, axis, field, weight_field=None, dobj_type=None):
     if dobj_type is not None:
         obj = create_obj(ds, dobj_type)
@@ -126,14 +127,13 @@ def pixelized_projection_values(ds, axis, field, weight_field=None, dobj_type=No
     return result.hexdigest()
 
 
-def pixelized_particle_projection_values(ds, axis, field, weight_field=None,
-    dobj_type=None):
-    if dobj_type is not None:
-        obj = utils.create_obj(ds, dobj_type)
-    else:
-        obj = None
-    proj_plot = particle_plots.ParticleProjectionPlot(ds, axis, [field],
-                  weight_field = weight_field)
+
+def pixelized_particle_projection_values(
+    ds, axis, field, weight_field=None, dobj_type=None
+):
+    proj_plot = particle_plots.ParticleProjectionPlot(
+        ds, axis, [field], weight_field=weight_field
+    )
     proj = proj_plot.data_source
     frb = proj_plot.frb
     frb[field]
@@ -144,6 +144,7 @@ def pixelized_particle_projection_values(ds, axis, field, weight_field=None,
         # Sometimes f will be a tuple.
         d["%s_sum" % (f,)] = proj.field_data[f].sum(dtype="float64")
     return d
+
 
 def small_patch_amr(ds, field, weight, axis, ds_obj):
     hex_digests = {}
@@ -177,6 +178,7 @@ def big_patch_amr(ds, field, weight, axis, ds_obj):
     ppv_hd = pixelized_projection_values(ds, axis, field, weight, ds_obj)
     hex_digests["pixelized_projection_values"] = ppv_hd
     return hex_digests
+
 
 
 def generic_array(func, args=[], kwargs={}):
@@ -302,13 +304,21 @@ def axial_pixelization(ds):
 
 def light_cone_projection(parameter_file, simulation_type):
     lc = LightCone(
-        parameter_file, simulation_type, 0., 0.1,
-        observer_redshift=0.0, time_data=False)
-    lc.calculate_light_cone_solution(
-        seed=123456789, filename="LC/solution.txt")
+        parameter_file,
+        simulation_type,
+        0.0,
+        0.1,
+        observer_redshift=0.0,
+        time_data=False,
+    )
+    lc.calculate_light_cone_solution(seed=123456789, filename="LC/solution.txt")
     lc.project_light_cone(
-        (600.0, "arcmin"), (60.0, "arcsec"), "density",
-        weight_field=None, save_stack=True)
+        (600.0, "arcmin"),
+        (60.0, "arcsec"),
+        "density",
+        weight_field=None,
+        save_stack=True,
+    )
     fh = h5py.File("LC/LightCone.h5")
     data = fh["density_None"].value
     units = fh["density_None"].attrs["units"]
@@ -318,6 +328,7 @@ def light_cone_projection(parameter_file, simulation_type):
     mi = data[data.nonzero()].min()
     ma = data.max()
     return np.array([mean, mi, ma])
+
 
 def extract_connected_sets(ds_fn, data_source, field, num_levels, min_val, max_val):
     n, all_sets = data_source.extract_connected_sets(
@@ -344,6 +355,7 @@ def VR_image_comparison(scene):
     os.remove(tmpname)
     return image
 
+
 def yt_data_field(ds, field, geometric):
     if geometric:
         obj = ds.all_data()
@@ -352,6 +364,7 @@ def yt_data_field(ds, field, geometric):
     num_e = obj[field].size
     avg = obj[field].mean()
     return np.array([num_e, avg])
+
 
 def verify_simulation_same(sim_obj):
     result = [ds.current_time for ds in sim_obj]

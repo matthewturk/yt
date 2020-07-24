@@ -12,9 +12,6 @@ import pytest
 import yaml
 from matplotlib.testing.compare import compare_images
 
-import yt.visualization.particle_plots as particle_plots
-import yt.visualization.plot_window as pw
-import yt.visualization.profile_plotter as profile_plotter
 from yt.config import ytcfg
 from yt.data_objects.selection_objects.region import YTRegion
 from yt.data_objects.static_output import Dataset
