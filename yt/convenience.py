@@ -20,7 +20,9 @@ def _sanitize_load_args(*args):
     except AttributeError:
         path_types = (str,)
 
-    return [ os.path.expanduser(arg) if isinstance(arg, path_types) else arg for arg in args ]
+    return [
+        os.path.expanduser(arg) if isinstance(arg, path_types) else arg for arg in args
+    ]
 
 
 def load(*args, **kwargs):
