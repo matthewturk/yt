@@ -186,7 +186,12 @@ def generic_array(func, args=[], kwargs={}):
     return func(*args, **kwargs)
 
 
-def sph_answer(ds, ds_str_repr, ds_nparticles, field, weight, ds_obj, axis):
+# Just until all frontends are ported over
+def sph_answer():
+    pass
+
+
+def sph_validation(ds, ds_str_repr, ds_nparticles):
     assert str(ds) == ds_str_repr
     # Set up keys of test names
     hex_digests = {}
