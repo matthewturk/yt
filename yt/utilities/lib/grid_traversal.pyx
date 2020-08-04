@@ -1,6 +1,7 @@
-# distutils: include_dirs = LIB_DIR
+# distutils: language = c++
+# distutils: include_dirs = LIB_DIR_SPHERICAL_VR
 # distutils: libraries = STD_LIBS
-# distutils: sources = FIXED_INTERP
+# distutils: sources = SPHERICAL_VR_SOURCE
 """
 Simple integrators for the radiative transfer equation
 
@@ -40,6 +41,8 @@ from libc.stdlib cimport abs, calloc, free, malloc
 from yt.utilities.lib.fp_utils cimport fclip, fmax, fmin, i64clip, iclip, imax, imin
 
 DEF Nch = 4
+
+from .spherical_walk cimport walk_volume_spherical
 
 
 
@@ -377,6 +380,8 @@ cdef volume_walker get_volume_walker(str geometry) nogil:
     with gil:
         if geometry == "cartesian":
             return walk_volume_cartesian
+        elif geometry == "spherical":
+            return walk_volume_spherical
         else:
             raise NotImplementedError
 
