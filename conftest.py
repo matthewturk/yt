@@ -22,28 +22,23 @@ def pytest_addoption(parser):
     Lets options be passed to test functions.
     """
     parser.addoption(
-        "--with-answer-testing",
-        action="store_true",
+        "--with-answer-testing", action="store_true",
     )
     parser.addoption(
-        "--answer-store",
-        action="store_true",
+        "--answer-store", action="store_true",
     )
     parser.addoption(
         "--answer-raw-arrays",
         action="store_true",
     )
     parser.addoption(
-        "--raw-answer-store",
-        action="store_true",
+        "--raw-answer-store", action="store_true",
     )
     parser.addoption(
-        "--force-overwrite",
-        action="store_true",
+        "--force-overwrite", action="store_true",
     )
     parser.addoption(
-        "--no-hash",
-        action="store_true",
+        "--no-hash", action="store_true",
     )
     parser.addoption("--local-dir", default=None, help="Where answers are saved.")
     # Tell pytest about the local-dir option in the ini files. This
