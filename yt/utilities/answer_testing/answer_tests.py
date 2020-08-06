@@ -182,7 +182,11 @@ def big_patch_amr(ds, field, weight, axis, ds_obj):
 
 
 
-def generic_array(func, args=[], kwargs={}):
+def generic_array(func, args=None, kwargs=None):
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
     return func(*args, **kwargs)
 
 
