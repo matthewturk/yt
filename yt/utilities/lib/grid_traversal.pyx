@@ -21,7 +21,6 @@ from field_interpolation_tables cimport (
     FIT_eval_transfer_with_light,
     FIT_initialize_table,
 )
-from fixed_interpolator cimport *
 from libc.math cimport (
     M_PI,
     acos,
