@@ -119,6 +119,8 @@ cdef class ImageSampler:
                 self.extent_function = lenses.calculate_extent_null
             self.\
                 vector_function = lenses.generate_vector_info_null
+        if geometry != "cartesian":
+            self.extent_function = lenses.calculate_extent_null
 
         # These assignments are so we can track the objects and prevent their
         # de-allocation from reference counts.  Note that we do this to the
