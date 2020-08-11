@@ -1,4 +1,5 @@
 # distutils: language = c++
+# distutils: extra_compile_args=["-std=c++11"]
 # distutils: include_dirs = LIB_DIR_SPHERICAL_VR
 # distutils: libraries = STD_LIBS
 # distutils: sources = SPHERICAL_VR_SOURCE

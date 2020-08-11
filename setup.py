@@ -60,10 +60,10 @@ cythonize_aliases = {
     ],
     "STD_LIBS": std_libs,
     "OMP_ARGS": omp_args,
-    "FIXED_INTERP": "yt/utilities/lib/fixed_interpolator.c",
     "ARTIO_SOURCE": glob.glob("yt/frontends/artio/artio_headers/*.c"),
-    "SPHERICAL_VR_SOURCE": ["yt/utilities/lib/fixed_interpolator.c"]
-    + glob.glob("yt/utilities/lib/spherical_volume_rendering/*.cpp"),
+    "SPHERICAL_VR_SOURCE": glob.glob(
+        "yt/utilities/lib/spherical_volume_rendering/*.cpp"
+    ),
 }
 
 lib_exts = [
