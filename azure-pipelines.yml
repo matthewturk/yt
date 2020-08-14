@@ -1,0 +1,25 @@
+jobs:
+- job:
+  displayName: vs2017-win2016
+  pool:
+    vmImage: 'vs2017-win2016'
+  strategy:
+    matrix:
+      Python36:
+        python.version: '3.6'
+      Python38:
+        python.version: '3.8'
+
+  steps:
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Add conda to PATH
+
+  - script: conda create --quiet --file environment.yml python=%PYTHON_VERSION% 
+    displayName: Create Anaconda environment
+
+  - script: |
+      call activate yt-env
+      pip install pytest pytest-azurepipelines
+      pip install -e .
+      pytest
+    displayName: Install and test
