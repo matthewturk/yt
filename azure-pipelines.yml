@@ -14,11 +14,11 @@ jobs:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH
 
-  - script: conda env create --yes --name yt-py%PYTHON_VERSION% --file environment.yml python=%PYTHON_VERSION% 
+  - script: conda env create --file environment.yml python=%PYTHON_VERSION% 
     displayName: Create Anaconda environment
 
   - script: |
-      call activate yt-py%PYTHON_VERSION%
+      call activate yt-env
       pip install pytest pytest-azurepipelines
       pip install -e .
       pytest
