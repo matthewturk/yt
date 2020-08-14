@@ -30,6 +30,10 @@ jobs:
       - name: Conda list
         shell: pwsh
         run: conda list
+      - name: Build yt
+        shell: pwsh
+        run: |
+          pip install -e .
       - name: Test with pytest
         shell: pwsh
         run: |
