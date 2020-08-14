@@ -21,8 +21,8 @@ jobs:
         python | "$(Agent.OS)"
         python
       path: $(CONDA_PKG_DIRS)
+      cacheHitVar: CONDA_CACHE_RESTORED
     displayName: Cache conda packages
-    cacheHitVar: CONDA_CACHE_RESTORED
   - checkout: self
     fetchDepth: 10
     clean: true
