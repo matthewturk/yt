@@ -11,17 +11,28 @@ jobs:
         python.version: '3.8'
 
   steps:
-  - checkout: self
-    fetchDepth: 10
-    clean: true
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH
 
+  - task: Cache@2
+    inputs:
+      key: 'python | "$(Agent.OS)" | environment.yml'
+      restoreKeys: |
+        python | "$(Agent.OS)"
+        python
+      path: $(CONDA_PKG_DIRS)
+    displayName: Cache conda packages
+    cacheHitVar: CONDA_CACHE_RESTORED
+  - checkout: self
+    fetchDepth: 10
+    clean: true
   - script: conda env create --file environment.yml python=%PYTHON_VERSION% 
     displayName: Create Anaconda environment
+    condition: eq(variables.CONDA_CACHE_RESTORED, 'false')
 
   - script: |
       call activate yt-env
+      conda update --all --yes --quiet
       pip install pytest pytest-azurepipelines
       pip install -e .
       pytest
