@@ -15,8 +15,7 @@ jobs:
     displayName: Add conda to PATH
 
   - checkout: self
-    fetchDepth: 10
-    clean: true
+    fetchDepth: 1
   - task: Cache@2
     inputs:
       key: 'python | "$(Agent.OS)" | environment.yml'
@@ -26,13 +25,13 @@ jobs:
       path: $(CONDA_PKG_DIRS)
       cacheHitVar: CONDA_CACHE_RESTORED
     displayName: Cache conda packages
-  - script: conda env create --file environment.yml python=%PYTHON_VERSION% 
+  - script: conda env create --quiet --file environment.yml python=%PYTHON_VERSION% 
     displayName: Create Anaconda environment
     condition: eq(variables.CONDA_CACHE_RESTORED, 'false')
 
   - script: |
       call activate yt-env
-      conda update --all --yes --quiet
+      conda update --all --yes --quiet -c conda-forge
       pip install pytest pytest-azurepipelines
       pip install -e .
       pytest
