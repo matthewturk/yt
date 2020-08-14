@@ -1,0 +1,36 @@
+# Based on Marc Wouts' conda CI pipeline for jupytext
+name: CI (conda)
+on: [push]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        python-version: [3.6, 3.8]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Cache conda
+        uses: actions/cache@v1
+        with:
+          path: ~/conda_pkgs_dir
+          key: conda-${{ matrix.os }}-python-${{ matrix.python-version }}-${{ hashFiles('environment.yml') }}
+      - name: Setup Miniconda
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          activate-environment: yt-env
+          python-version: ${{ matrix.python-version }}
+          channels: defaults,conda-forge
+          environment-file: environment.yml
+          use-only-tar-bz2: true
+      - name: Conda list
+        shell: pwsh
+        run: conda list
+      - name: Test with pytest
+        shell: pwsh
+        run: |
+          pytest
