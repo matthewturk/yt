@@ -14,6 +14,9 @@ jobs:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH
 
+  - checkout: self
+    fetchDepth: 10
+    clean: true
   - task: Cache@2
     inputs:
       key: 'python | "$(Agent.OS)" | environment.yml'
@@ -23,9 +26,6 @@ jobs:
       path: $(CONDA_PKG_DIRS)
       cacheHitVar: CONDA_CACHE_RESTORED
     displayName: Cache conda packages
-  - checkout: self
-    fetchDepth: 10
-    clean: true
   - script: conda env create --file environment.yml python=%PYTHON_VERSION% 
     displayName: Create Anaconda environment
     condition: eq(variables.CONDA_CACHE_RESTORED, 'false')
