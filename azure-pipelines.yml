@@ -11,6 +11,9 @@ jobs:
         python.version: '3.8'
 
   steps:
+  - checkout: self
+    fetchDepth: 10
+    clean: true
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH
 
