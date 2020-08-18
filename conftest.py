@@ -322,3 +322,15 @@ def Npart(request):
     Needed because indirect=True is used for loading the datasets.
     """
     return request.param
+
+@pytest.fixture(scope="class")
+def big_data(request):
+    """
+    There isn't a way to access command-line options given to pytest from
+    an actual test, so we need a fixture that retrieves and returns its
+    value. In this case, the --answer-big-data option.
+    """
+    if request.config.getoption("--answer-big-data"):
+        return True
+    else:
+        return False
