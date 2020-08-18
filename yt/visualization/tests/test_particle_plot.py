@@ -1,10 +1,25 @@
+"""
+Test suite for Particle Plots
+
+
+
+"""
+
+#-----------------------------------------------------------------------------
+# Copyright (c) 2013, yt Development Team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+#-----------------------------------------------------------------------------
 import os
-import shutil
 import tempfile
+import shutil
 import unittest
 from unittest import mock
 
 import numpy as np
+import pytest
 
 from yt.data_objects.particle_filters import add_particle_filter
 from yt.data_objects.profiles import create_profile
@@ -66,7 +81,7 @@ CENTER_SPECS = (
     "Center",
     [0.5, 0.5, 0.5],
     [[0.2, 0.3, 0.4], "cm"],
-    YTArray([0.3, 0.4, 0.7], "cm"),
+    YTArray([0.3, 0.4, 0.7], "cm")
 )
 
 WEIGHT_FIELDS = (None, ("all", "particle_ones"), ("all", "particle_mass"))
@@ -89,6 +104,10 @@ PHASE_FIELDS = [
     ),
 ]
 
+PHASE_FIELDS = [('particle_velocity_x', 'particle_position_z', 'particle_mass'),
+                ('particle_position_x', 'particle_position_y', 'particle_ones'),
+                ('particle_velocity_x', 'particle_velocity_y',
+                 ['particle_mass', 'particle_ones'])]
 
 g30 = "IsolatedGalaxy/galaxy0030/galaxy0030"
 
@@ -192,6 +211,7 @@ def test_particle_phase_answers():
 
 
 class TestParticlePhasePlotSave(unittest.TestCase):
+
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.curdir = os.getcwd()
@@ -203,10 +223,8 @@ class TestParticlePhasePlotSave(unittest.TestCase):
 
     def test_particle_phase_plot(self):
         test_ds = fake_particle_ds()
-        data_sources = [
-            test_ds.region([0.5] * 3, [0.4] * 3, [0.6] * 3),
-            test_ds.all_data(),
-        ]
+        data_sources = [test_ds.region([0.5] * 3, [0.4] * 3, [0.6] * 3),
+                        test_ds.all_data()]
         particle_phases = []
 
         for source in data_sources:
@@ -244,33 +262,23 @@ class TestParticlePhasePlotSave(unittest.TestCase):
 
                 particle_phases.append(ParticlePhasePlot.from_profile(pp))
         particle_phases[0]._repr_html_()
+        for p in particle_phases:
+            for fname in TEST_FLNMS:
+                assert_fname(p.save(fname)[0])
 
-        with mock.patch(
-            "yt.visualization._mpl_imports.FigureCanvasAgg.print_figure"
-        ), mock.patch(
-            "yt.visualization._mpl_imports.FigureCanvasPdf.print_figure"
-        ), mock.patch(
-            "yt.visualization._mpl_imports.FigureCanvasPS.print_figure"
-        ):
-            for p in particle_phases:
-                for fname in TEST_FLNMS:
-                    p.save(fname)
-
-
-tgal = "TipsyGalaxy/galaxy.00300"
-
-
+tgal = 'TipsyGalaxy/galaxy.00300'
 @requires_file(tgal)
 def test_particle_phase_plot_semantics():
     ds = load(tgal)
     ad = ds.all_data()
-    dens_ex = ad.quantities.extrema(("Gas", "density"))
-    temp_ex = ad.quantities.extrema(("Gas", "temperature"))
-    plot = ParticlePlot(
-        ds, ("Gas", "density"), ("Gas", "temperature"), ("Gas", "particle_mass")
-    )
-    plot.set_log(("Gas", "density"), True)
-    plot.set_log(("Gas", "temperature"), True)
+    dens_ex = ad.quantities.extrema(('Gas', 'density'))
+    temp_ex = ad.quantities.extrema(('Gas', 'temperature'))
+    plot = ParticlePlot(ds,
+                        ('Gas', 'density'),
+                        ('Gas', 'temperature'),
+                        ('Gas', 'particle_mass'))
+    plot.set_log(('Gas', 'density'), True)
+    plot.set_log(('Gas', 'temperature'), True)
     p = plot.profile
 
     # bin extrema are field extrema
@@ -288,8 +296,8 @@ def test_particle_phase_plot_semantics():
     dylogybins = logybins[1:] - logybins[:-1]
     assert_allclose(dylogybins, dylogybins[0])
 
-    plot.set_log(("Gas", "density"), False)
-    plot.set_log(("Gas", "temperature"), False)
+    plot.set_log(('Gas', 'density'), False)
+    plot.set_log(('Gas', 'temperature'), False)
     p = plot.profile
 
     # bin extrema are field extrema
@@ -305,17 +313,13 @@ def test_particle_phase_plot_semantics():
     dybins = p.y_bins[1:] - p.y_bins[:-1]
     assert_allclose(dybins, dybins[0])
 
-
 @requires_file(tgal)
 def test_set_units():
     ds = load(tgal)
     sp = ds.sphere("max", (1.0, "Mpc"))
-    pp = ParticlePhasePlot(
-        sp, ("Gas", "density"), ("Gas", "temperature"), ("Gas", "particle_mass")
-    )
+    pp = ParticlePhasePlot(sp, ("Gas", "density"), ("Gas", "temperature"), ("Gas", "particle_mass"))
     # make sure we can set the units using the tuple without erroring out
     pp.set_unit(("Gas", "particle_mass"), "Msun")
-
 
 @requires_file(tgal)
 def test_switch_ds():
@@ -337,8 +341,8 @@ def test_switch_ds():
 
     return
 
-
 class TestParticleProjectionPlotSave(unittest.TestCase):
+
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.curdir = os.getcwd()
@@ -424,7 +428,6 @@ class TestParticleProjectionPlotSave(unittest.TestCase):
             [assert_array_almost_equal(py, y, 14) for py, y in zip(plot.ylim, ylim)]
             [assert_array_almost_equal(pw, w, 14) for pw, w in zip(plot.width, pwidth)]
 
-
 def test_particle_plot_instance():
     """
     Tests the type of plot instance returned by ParticlePlot.
@@ -435,9 +438,9 @@ def test_particle_plot_instance():
 
     """
     ds = fake_particle_ds()
-    x_field = ("all", "particle_position_x")
-    y_field = ("all", "particle_position_y")
-    z_field = ("all", "particle_velocity_x")
+    x_field = ('all', 'particle_position_x')
+    y_field = ('all', 'particle_position_y')
+    z_field = ('all', 'particle_velocity_x')
 
     plot = ParticlePlot(ds, x_field, y_field)
     assert isinstance(plot, ParticleProjectionPlot)
