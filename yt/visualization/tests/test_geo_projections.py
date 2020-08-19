@@ -3,25 +3,23 @@ Tests for making unstructured mesh slices
 
 """
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Copyright (c) 2013, yt Development Team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 import os
 import tempfile
+import unittest
 
     ytcfg["yt", "internals", "within_testing"] = True
 
 import yt
-import unittest
-from yt.testing import \
-    fake_amr_ds, \
-    requires_module
+from yt.testing import fake_amr_ds, requires_module
 from yt.utilities.answer_testing.answer_tests import generic_image_test
-from yt.visualization.geo_plot_utils import transform_list, get_mpl_transform
+from yt.visualization.geo_plot_utils import get_mpl_transform, transform_list
 
 
     slice_image.__name__ = f"slice_{test_prefix}"
@@ -55,7 +53,6 @@ def test_geo_slices_amr():
 
 
 class TestGeoProjections(unittest.TestCase):
-
     def setUp(self):
         self.ds = fake_amr_ds(geometry="geographic")
 
@@ -66,6 +63,7 @@ class TestGeoProjections(unittest.TestCase):
     def test_geo_projection_setup(self):
 
         from yt.utilities.on_demand_imports import _cartopy as cartopy
+
         axis = "altitude"
         self.slc = yt.SlicePlot(self.ds, axis, ("stream", "Density"), origin="native")
 
@@ -86,10 +84,10 @@ class TestGeoProjections(unittest.TestCase):
         )
 
         for transform in transform_list:
-            if transform == 'UTM':
+            if transform == "UTM":
                 # this requires special arguments so let's skip it
                 continue
-            if transform == 'OSNI':
+            if transform == "OSNI":
                 # avoid crashes, see https://github.com/SciTools/cartopy/issues/1177
                 continue
             self.slc.set_mpl_projection(transform)
@@ -103,7 +101,8 @@ class TestGeoProjections(unittest.TestCase):
 
     def test_projection_object(self):
         from yt.utilities.on_demand_imports import _cartopy as cartopy
-        shortlist = ['Orthographic', 'PlateCarree', 'Mollweide']
+
+        shortlist = ["Orthographic", "PlateCarree", "Mollweide"]
 
         for transform in shortlist:
             projection = get_mpl_transform(transform)
@@ -121,11 +120,12 @@ class TestGeoProjections(unittest.TestCase):
 
     def test_nondefault_transform(self):
         from yt.utilities.on_demand_imports import _cartopy as cartopy
+
         axis = "altitude"
         self.ds.coordinates.data_transform[axis] = "Miller"
         self.slc = yt.SlicePlot(self.ds, axis, ("stream", "Density"), origin="native")
 
-        shortlist = ['Orthographic', 'PlateCarree', 'Mollweide']
+        shortlist = ["Orthographic", "PlateCarree", "Mollweide"]
 
         for transform in shortlist:
 
@@ -141,8 +141,8 @@ class TestGeoProjections(unittest.TestCase):
             )
 
 
-class TestNonGeoProjections(unittest.TestCase):
 
+class TestNonGeoProjections(unittest.TestCase):
     def setUp(self):
         self.ds = fake_amr_ds()
 
@@ -158,4 +158,3 @@ class TestNonGeoProjections(unittest.TestCase):
         assert self.ds.coordinates.data_transform[axis] is None
         assert self.slc._projection is None
         assert self.slc._transform is None
-

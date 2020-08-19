@@ -3,13 +3,13 @@ Tests for making slices through raw fields
 
     ytcfg["yt", "internals", "within_testing"] = True
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Copyright (c) 2017, yt Development Team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 import pytest
 
 def compare(ds, field, test_prefix, decimals=12):
@@ -23,7 +23,6 @@ def compare(ds, field, test_prefix, decimals=12):
     test = GenericImageTest(ds, slice_image, decimals)
     test.prefix = test_prefix
     return test
-
 
 raw_fields = "Laser/plt00015"
 

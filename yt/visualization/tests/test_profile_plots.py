@@ -13,8 +13,8 @@ Testsuite for ProfilePlot and PhasePlot
 # The full license is in the file COPYING.txt, distributed with this software.
 # -----------------------------------------------------------------------------
 import os
-import tempfile
 import shutil
+import tempfile
 import unittest
 
 import pytest
@@ -205,8 +205,11 @@ def test_profile_plot_multiple_field_multiple_plot():
 
 
 def test_set_units():
-    fields = ('density', 'temperature')
-    units = ('g/cm**3', 'K',)
+    fields = ("density", "temperature")
+    units = (
+        "g/cm**3",
+        "K",
+    )
     ds = fake_random_ds(16, fields=fields, units=units)
     sp = ds.sphere("max", (1.0, "Mpc"))
     p1 = yt.ProfilePlot(sp, ("index", "radius"), ("gas", "density"))
@@ -248,7 +251,8 @@ def test_create_from_dataset():
         plot1.profiles[0][("gas", "density")], plot2.profiles[0][("gas", "density")]
     )
     assert_allclose_units(
-        plot1.profiles[0]['velocity_x'], plot2.profiles[0]['velocity_x'])
+        plot1.profiles[0]["velocity_x"], plot2.profiles[0]["velocity_x"]
+    )
 
     plot1 = yt.PhasePlot(ds, ("gas", "density"), ("gas", "velocity_x"), ("gas", "mass"))
     plot2 = yt.PhasePlot(
@@ -258,7 +262,6 @@ def test_create_from_dataset():
 
 
 class TestAnnotations(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.tmpdir = tempfile.mkdtemp()
@@ -295,6 +298,7 @@ class TestAnnotations(unittest.TestCase):
 
     def test_annotations_wrong_fields(self):
         from yt.utilities.exceptions import YTFieldNotFound
+
         with self.assertRaises(YTFieldNotFound):
             self.plot.annotate_title("velocity_x plot", "wrong_field_name")
 
@@ -303,8 +307,11 @@ class TestAnnotations(unittest.TestCase):
 
 
 def test_phaseplot_set_log():
-    fields = ('density', 'temperature')
-    units = ('g/cm**3', 'K',)
+    fields = ("density", "temperature")
+    units = (
+        "g/cm**3",
+        "K",
+    )
     ds = fake_random_ds(16, fields=fields, units=units)
     sp = ds.sphere("max", (1.0, "Mpc"))
     p1 = yt.ProfilePlot(sp, ("index", "radius"), ("gas", "density"))
@@ -328,30 +335,32 @@ def test_phaseplot_set_log():
     assert p2.y_log is False
 
 
-
 def test_phaseplot_showhide_colorbar_axes():
-    fields = ('density', 'temperature')
-    units = ('g/cm**3', 'K',)
+    fields = ("density", "temperature")
+    units = (
+        "g/cm**3",
+        "K",
+    )
     ds = fake_random_ds(16, fields=fields, units=units)
     ad = ds.all_data()
     plot = yt.PhasePlot(ad, ("gas", "density"), ("gas", "temperature"), ("gas", "mass"))
 
     # make sure we can hide colorbar
     plot.hide_colorbar()
-    with tempfile.NamedTemporaryFile(suffix='png') as f1:
+    with tempfile.NamedTemporaryFile(suffix="png") as f1:
         plot.save(f1.name)
 
     # make sure we can show colorbar
     plot.show_colorbar()
-    with tempfile.NamedTemporaryFile(suffix='png') as f2:
+    with tempfile.NamedTemporaryFile(suffix="png") as f2:
         plot.save(f2.name)
 
     # make sure we can hide axes
     plot.hide_axes()
-    with tempfile.NamedTemporaryFile(suffix='png') as f3:
+    with tempfile.NamedTemporaryFile(suffix="png") as f3:
         plot.save(f3.name)
 
     # make sure we can show axes
     plot.show_axes()
-    with tempfile.NamedTemporaryFile(suffix='png') as f4:
+    with tempfile.NamedTemporaryFile(suffix="png") as f4:
         plot.save(f4.name)

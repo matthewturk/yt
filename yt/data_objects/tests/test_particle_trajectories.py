@@ -1,14 +1,13 @@
 import numpy as np
-from numpy.testing import \
-    assert_raises
 import pytest
+from numpy.testing import assert_raises
 
 from yt.config import ytcfg
 from yt.data_objects.particle_filters import particle_filter
 from yt.data_objects.time_series import DatasetSeries
 from yt.testing import fake_particle_ds
-from yt.utilities.answer_testing.answer_tests import generic_array
 from yt.utilities.answer_testing import utils
+from yt.utilities.answer_testing.answer_tests import generic_array
 from yt.utilities.exceptions import YTIllDefinedParticleData
 
 
@@ -32,14 +31,16 @@ vfields = [
 
 @pytest.mark.answer_test
 class TestParticleTrajectories:
-    @pytest.mark.usefixtures('hashing')
+    @pytest.mark.usefixtures("hashing")
     @utils.requires_ds("Orbit/orbit_hdf5_chk_0000")
     def test_orbit_traj(self, field, orbit_traj):
         ds, traj = orbit_traj
+
         def field_func(name):
             return traj[field]
+
         ga = generic_array(field_func, args=[field])
-        self.hashes.update({'generic_array' : ga})
+        self.hashes.update({"generic_array": ga})
 
         yield GenericArrayTest(ds, field_func, args=[field])
 

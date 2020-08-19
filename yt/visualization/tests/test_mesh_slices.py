@@ -3,13 +3,13 @@ Tests for making unstructured mesh slices
 
 """
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Copyright (c) 2013, yt Development Team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file COPYING.txt, distributed with this software.
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 import os
 import tempfile
 
@@ -18,6 +18,7 @@ import pytest
 
 import yt
 from yt.testing import small_fake_hexahedral_ds
+from yt.utilities.answer_testing.answer_tests import generic_image_test
 from yt.utilities.lib.geometry_utils import triangle_plane_intersect
 from yt.utilities.lib.mesh_triangulation import triangulate_indices
 
@@ -99,6 +100,7 @@ def test_mesh_slices_hexahedral():
             sl_obj = ds.slice(idir, ds.domain_center[idir])
             assert sl_obj[field].shape[0] == mesh.count(sl_obj.selector)
             assert sl_obj[field].shape[0] < ad[field].shape[0]
+
 
 
 def test_perfect_element_intersection():

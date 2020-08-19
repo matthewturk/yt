@@ -30,7 +30,7 @@ def surface_mesh_render():
     images = []
     ds = fake_tetrahedral_ds()
     for field in ds.field_list:
-        if field[0] == 'all':
+        if field[0] == "all":
             continue
         sc = Scene()
         sc.add_source(MeshSource(ds, field))
@@ -39,7 +39,7 @@ def surface_mesh_render():
         images.append(im)
     ds = fake_hexahedral_ds()
     for field in ds.field_list:
-        if field[0] == 'all':
+        if field[0] == "all":
             continue
         sc = Scene()
         sc.add_source(MeshSource(ds, field))
@@ -79,7 +79,7 @@ hex8_fields = [("connect1", "diffused"), ("connect2", "convected")]
 
 def hex8_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(hex8, kwargs={'step':-1})
+    ds = utils.data_dir_load(hex8, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_hex8_{field[0]}_{field[1]}")
@@ -104,7 +104,7 @@ tet4_fields = [("connect1", "u")]
 
 def tet4_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(tet4, kwargs={'step':-1})
+    ds = utils.data_dir_load(tet4, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_tet4_{field[0]}_{field[1]}")
@@ -129,7 +129,7 @@ hex20_fields = [("connect2", "temp")]
 
 def hex20_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(hex20, kwargs={'step':-1})
+    ds = utils.data_dir_load(hex20, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_hex20_{field[0]}_{field[1]}")
@@ -154,7 +154,7 @@ wedge6_fields = [("connect1", "diffused")]
 
 def wedge6_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(wedge6, kwargs={'step':-1})
+    ds = utils.data_dir_load(wedge6, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_wedge6_{field[0]}_{field[1]}")
@@ -179,10 +179,10 @@ tet10_fields = [("connect1", "uz")]
 
 def tet10_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(tet10, kwargs={'step':-1})
+    ds = utils.data_dir_load(tet10, kwargs={"step": -1})
     sc = create_scene(ds, field)
     ms = sc.get_source(0)
-    ms.color_bounds = (-.01, .2)
+    ms.color_bounds = (-0.01, 0.2)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_tet10_{field[0]}_{field[1]}")
 
@@ -204,10 +204,10 @@ def perspective_mesh_render(engine):
     ytcfg["yt", "ray_tracing_engine"] = engine
     ds = utils.data_dir_load(hex8)
     sc = create_scene(ds, ("connect2", "diffused"))
-    cam = sc.add_camera(ds, lens_type='perspective')
-    cam.focus = ds.arr([0.0, 0.0, 0.0], 'code_length')
-    cam_pos = ds.arr([-4.5, 4.5, -4.5], 'code_length')
-    north_vector = ds.arr([0.0, -1.0, -1.0], 'dimensionless')
+    cam = sc.add_camera(ds, lens_type="perspective")
+    cam.focus = ds.arr([0.0, 0.0, 0.0], "code_length")
+    cam_pos = ds.arr([-4.5, 4.5, -4.5], "code_length")
+    north_vector = ds.arr([0.0, -1.0, -1.0], "dimensionless")
     cam.set_position(cam_pos, north_vector)
     cam.resolution = (800, 800)
     im = sc.render()
@@ -230,13 +230,15 @@ def composite_mesh_render(engine):
     ds = utils.data_dir_load(hex8)
     sc = Scene()
     cam = sc.add_camera(ds)
-    cam.focus = ds.arr([0.0, 0.0, 0.0], 'code_length')
-    cam.set_position(ds.arr([-3.0, 3.0, -3.0], 'code_length'),
-                     ds.arr([0.0, -1.0, 0.0], 'dimensionless'))
-    cam.set_width = ds.arr([8.0, 8.0, 8.0], 'code_length')
+    cam.focus = ds.arr([0.0, 0.0, 0.0], "code_length")
+    cam.set_position(
+        ds.arr([-3.0, 3.0, -3.0], "code_length"),
+        ds.arr([0.0, -1.0, 0.0], "dimensionless"),
+    )
+    cam.set_width = ds.arr([8.0, 8.0, 8.0], "code_length")
     cam.resolution = (800, 800)
-    ms1 = MeshSource(ds, ('connect1', 'diffused'))
-    ms2 = MeshSource(ds, ('connect2', 'diffused'))
+    ms1 = MeshSource(ds, ("connect1", "diffused"))
+    ms2 = MeshSource(ds, ("connect2", "diffused"))
     sc.add_source(ms1)
     sc.add_source(ms2)
     im = sc.render()

@@ -44,21 +44,22 @@ def test_orientation():
         frame = 0
 
 @pytest.mark.answer_test
-@pytest.mark.usefixtures('hashing')
+@pytest.mark.usefixtures("hashing")
 class TestVROrientation:
     def test_vr_images(self, ds_vr, sc, lens_type):
         n_frames = 1
         theta = np.pi / n_frames
         cam = sc.add_camera(ds_vr, lens_type=lens_type)
         cam.resolution = (1000, 1000)
-        cam.position = ds_vr.arr(np.array([-4., 0., 0.]), 'code_length')
-        cam.switch_orientation(normal_vector=[1., 0., 0.],
-                               north_vector=[0., 0., 1.])
-        cam.set_width(ds_vr.domain_width*2.)
+        cam.position = ds_vr.arr(np.array([-4.0, 0.0, 0.0]), "code_length")
+        cam.switch_orientation(
+            normal_vector=[1.0, 0.0, 0.0], north_vector=[0.0, 0.0, 1.0]
+        )
+        cam.set_width(ds_vr.domain_width * 2.0)
         test1 = VR_image_comparison_test(sc)
-        self.hashes.update({'test1' : test1})
+        self.hashes.update({"test1": test1})
         for i in range(n_frames):
-            center = ds_vr.arr([0, 0, 0], 'code_length')
+            center = ds_vr.arr([0, 0, 0], "code_length")
             cam.yaw(theta, rot_center=center)
             test2 = VR_image_comparison_test(sc)
             # Updating nested dictionaries doesn't add the new key, it
@@ -67,22 +68,22 @@ class TestVROrientation:
             # d.update({'key1' : {'subkey2' : 2}}), d = {'key1' : 'subkey2':2}},
             # so to add subkey2 to key1's subdictionary, you need to do
             # d['key1'].update({'subkey2' : 2}))
-            if 'test2' not in self.hashes:
-                self.hashes.update({'test2' : {str(i) : test2}})
+            if "test2" not in self.hashes:
+                self.hashes.update({"test2": {str(i): test2}})
             else:
-                self.hashes['test2'].update({str(i) : test2})
+                self.hashes["test2"].update({str(i): test2})
         for i in range(n_frames):
             theta = np.pi / n_frames
-            center = ds_vr.arr([0, 0, 0], 'code_length')
+            center = ds_vr.arr([0, 0, 0], "code_length")
             cam.pitch(theta, rot_center=center)
             test3 = VR_image_comparison_test(sc)
-            if 'test3' not in self.hashes:
-                self.hashes.update({'test3' : {str(i) : test3}})
+            if "test3" not in self.hashes:
+                self.hashes.update({"test3": {str(i): test3}})
             else:
-                self.hashes['test3'].update({str(i) : test3})
+                self.hashes["test3"].update({str(i): test3})
         for i in range(n_frames):
             theta = np.pi / n_frames
-            center = ds_vr.arr([0, 0, 0], 'code_length')
+            center = ds_vr.arr([0, 0, 0], "code_length")
             cam.roll(theta, rot_center=center)
             desc = "roll_%s_%04d" % (lens_type, frame)
             test4 = VRImageComparisonTest(sc, ds, desc, decimals)
