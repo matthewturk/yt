@@ -18,7 +18,7 @@ import pytest
 
 import yt
 from yt.testing import small_fake_hexahedral_ds
-from yt.utilities.answer_testing.answer_tests import generic_image_test
+from yt.utilities.answer_testing.answer_tests import generic_image
 from yt.utilities.lib.geometry_utils import triangle_plane_intersect
 from yt.utilities.lib.mesh_triangulation import triangulate_indices
 

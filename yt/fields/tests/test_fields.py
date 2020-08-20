@@ -93,24 +93,6 @@ class TestFieldAccess:
                     res = field._function(field, dd2)
                     res = dd2.apply_units(res, field.units)
                 assert_array_almost_equal_nulp(v1, res, 4)
-            if not skip_grids:
-                for g in ds.index.grids:
-                    g.field_parameters.update(sp)
-                    v1 = g[self.field_name]
-                    g.clear_data()
-                    g.field_parameters.update(sp)
-                    r1 = field._function(field, g)
-                    if field.sampling_type == "particle":
-                        assert_equal(v1.shape[0], g.NumberOfParticles)
-                    else:
-                        assert_array_equal(r1.shape, v1.shape)
-                        for ax in "xyz":
-                            assert_array_equal(g["index", ax].shape, v1.shape)
-                    with field.unit_registry(g):
-                        res = field._function(field, g)
-                        assert_array_equal(v1.shape, res.shape)
-                        res = g.apply_units(res, field.units)
-                    assert_array_almost_equal_nulp(v1, res, 4)
 
 
 def get_base_ds(nprocs):
