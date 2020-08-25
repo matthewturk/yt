@@ -32,6 +32,7 @@ vfields = [
 @pytest.mark.answer_test
 class TestParticleTrajectories:
     answer_file = None
+    saved_hashes = None
 
     @pytest.mark.usefixtures("hashing")
     @utils.requires_ds("Orbit/orbit_hdf5_chk_0000")

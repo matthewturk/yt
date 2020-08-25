@@ -47,6 +47,7 @@ def test_orientation():
 @pytest.mark.usefixtures("hashing")
 class TestVROrientation:
     answer_file = None
+    saved_hashes = None
 
     def test_vr_images(self, ds_vr, sc, lens_type):
         n_frames = 1

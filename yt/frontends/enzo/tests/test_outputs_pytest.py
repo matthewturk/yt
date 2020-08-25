@@ -124,6 +124,7 @@ def color_conservation_test(ds):
 @pytest.mark.answer_test
 class TestEnzo:
     answer_file = None
+    saved_hashes = None
 
     @pytest.mark.usefixtures("hashing")
     @pytest.mark.parametrize("ds", ds_list, indirect=True)

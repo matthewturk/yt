@@ -43,6 +43,7 @@ def image_from_plot(plot):
 @pytest.mark.usefixtures("temp_dir", "hashing")
 class TestLinePlots:
     answer_file = None
+    saved_hashes = None
 
     def test_line_plot(self):
         ds = fake_random_ds(4)
