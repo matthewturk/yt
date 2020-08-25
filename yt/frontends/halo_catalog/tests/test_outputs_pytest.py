@@ -27,8 +27,8 @@ class TestHaloCatalog:
         rs = np.random.RandomState(3670474)
         n_halos = 100
         fields = [
-            "particle_%s" % name
-            for name in ["mass"] + ["position_%s" % ax for ax in "xyz"]
+            f"particle_{name}"
+            for name in ["mass"] + [f"position_{ax}" for ax in "xyz"]
         ]
         units = ["g"] + ["cm"] * 3
         data = dict(
@@ -50,8 +50,8 @@ class TestHaloCatalog:
         rs = np.random.RandomState(3670474)
         n_halos = 100
         fields = [
-            "particle_%s" % name
-            for name in ["mass"] + ["position_%s" % ax for ax in "xyz"]
+            f"particle_{name}"
+            for name in ["mass"] + [f"position_{ax}" for ax in "xyz"]
         ]
         units = ["g"] + ["cm"] * 3
         data = dict(

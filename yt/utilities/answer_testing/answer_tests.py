@@ -143,7 +143,7 @@ def pixelized_particle_projection_values(
     d = frb.data
     for f in proj.field_data:
         # Sometimes f will be a tuple.
-        d["%s_sum" % (f,)] = proj.field_data[f].sum(dtype="float64")
+        d[f"{f}_sum"] = proj.field_data[f].sum(dtype="float64")
     return d
 
 
