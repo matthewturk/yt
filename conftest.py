@@ -323,6 +323,7 @@ def Npart(request):
     """
     return request.param
 
+
 @pytest.fixture(scope="class")
 def big_data(request):
     """
