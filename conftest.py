@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+import yt
 from yt.config import ytcfg
 from yt.utilities.answer_testing.testing_utilities import (
     _compare_raw_arrays,
