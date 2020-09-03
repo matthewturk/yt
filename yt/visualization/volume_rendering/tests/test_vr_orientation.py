@@ -49,44 +49,63 @@ class TestVROrientation:
     answer_file = None
     saved_hashes = None
 
-    def test_vr_images(self, ds_vr, sc, lens_type):
-        n_frames = 1
-        theta = np.pi / n_frames
-        cam = sc.add_camera(ds_vr, lens_type=lens_type)
+    sc = Scene()
+
+    vol = VolumeSource(ds, field=("gas", "density"))
+    sc.add_source(vol)
+
+    tf = vol.transfer_function
+    tf = ColorTransferFunction((0.1, 1.0))
+    tf.sample_colormap(1.0, 0.01, colormap="coolwarm")
+    tf.sample_colormap(0.8, 0.01, colormap="coolwarm")
+    tf.sample_colormap(0.6, 0.01, colormap="coolwarm")
+    tf.sample_colormap(0.3, 0.01, colormap="coolwarm")
+
+    n_frames = 1
+    orientations = [[-0.3, -0.1, 0.8]]
+
+    theta = np.pi / n_frames
+    decimals = 12
+    test_name = "vr_orientation"
+
+    for lens_type in ["plane-parallel", "perspective"]:
+        frame = 0
+
+        cam = sc.add_camera(ds, lens_type=lens_type)
         cam.resolution = (1000, 1000)
-        cam.position = ds_vr.arr(np.array([-4.0, 0.0, 0.0]), "code_length")
+        cam.position = ds.arr(np.array([-4.0, 0.0, 0.0]), "code_length")
         cam.switch_orientation(
             normal_vector=[1.0, 0.0, 0.0], north_vector=[0.0, 0.0, 1.0]
         )
-        cam.set_width(ds_vr.domain_width * 2.0)
-        test1 = VR_image_comparison(sc)
-        self.hashes.update({"test1": test1})
-        for i in range(n_frames):
-            center = ds_vr.arr([0, 0, 0], "code_length")
+        cam.set_width(ds.domain_width * 2.0)
+        desc = "%s_%04d" % (lens_type, frame)
+        test1 = VRImageComparisonTest(sc, ds, desc, decimals)
+        test1.answer_name = test_name
+        yield test1
+
+        for _ in range(n_frames):
+            frame += 1
+            center = ds.arr([0, 0, 0], "code_length")
             cam.yaw(theta, rot_center=center)
-            test2 = VR_image_comparison(sc)
-            # Updating nested dictionaries doesn't add the new key, it
-            # overwrites the old one (so d.update({'key1' : {'subkey1' : 1}})
-            # is d = {'key1' : {'subkey1' : 1}}. Then if you do
-            # d.update({'key1' : {'subkey2' : 2}}), d = {'key1' : 'subkey2':2}},
-            # so to add subkey2 to key1's subdictionary, you need to do
-            # d['key1'].update({'subkey2' : 2}))
-            if "test2" not in self.hashes:
-                self.hashes.update({"test2": {str(i): test2}})
-            else:
-                self.hashes["test2"].update({str(i): test2})
-        for i in range(n_frames):
+            desc = "yaw_%s_%04d" % (lens_type, frame)
+            test2 = VRImageComparisonTest(sc, ds, desc, decimals)
+            test2.answer_name = test_name
+            yield test2
+
+        for _ in range(n_frames):
+            frame += 1
             theta = np.pi / n_frames
-            center = ds_vr.arr([0, 0, 0], "code_length")
+            center = ds.arr([0, 0, 0], "code_length")
             cam.pitch(theta, rot_center=center)
-            test3 = VR_image_comparison(sc)
-            if "test3" not in self.hashes:
-                self.hashes.update({"test3": {str(i): test3}})
-            else:
-                self.hashes["test3"].update({str(i): test3})
-        for i in range(n_frames):
+            desc = "pitch_%s_%04d" % (lens_type, frame)
+            test3 = VRImageComparisonTest(sc, ds, desc, decimals)
+            test3.answer_name = test_name
+            yield test3
+
+        for _ in range(n_frames):
+            frame += 1
             theta = np.pi / n_frames
-            center = ds_vr.arr([0, 0, 0], "code_length")
+            center = ds.arr([0, 0, 0], "code_length")
             cam.roll(theta, rot_center=center)
             desc = "roll_%s_%04d" % (lens_type, frame)
             test4 = VRImageComparisonTest(sc, ds, desc, decimals)

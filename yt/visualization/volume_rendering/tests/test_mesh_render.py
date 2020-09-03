@@ -28,6 +28,7 @@ def compare(ds, im, test_prefix, test_name=None, decimals=12):
 
 def surface_mesh_render():
     images = []
+
     ds = fake_tetrahedral_ds()
     for field in ds.field_list:
         if field[0] == "all":
@@ -37,6 +38,7 @@ def surface_mesh_render():
         sc.add_camera()
         im = sc.render()
         images.append(im)
+
     ds = fake_hexahedral_ds()
     for field in ds.field_list:
         if field[0] == "all":
@@ -46,6 +48,7 @@ def surface_mesh_render():
         sc.add_camera()
         im = sc.render()
         images.append(im)
+
     return images
 
 
@@ -79,7 +82,7 @@ hex8_fields = [("connect1", "diffused"), ("connect2", "convected")]
 
 def hex8_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(hex8, kwargs={"step": -1})
+    ds = data_dir_load(hex8, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_hex8_{field[0]}_{field[1]}")
@@ -104,7 +107,7 @@ tet4_fields = [("connect1", "u")]
 
 def tet4_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(tet4, kwargs={"step": -1})
+    ds = data_dir_load(tet4, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_tet4_{field[0]}_{field[1]}")
@@ -129,7 +132,7 @@ hex20_fields = [("connect2", "temp")]
 
 def hex20_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(hex20, kwargs={"step": -1})
+    ds = data_dir_load(hex20, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_hex20_{field[0]}_{field[1]}")
@@ -154,7 +157,7 @@ wedge6_fields = [("connect1", "diffused")]
 
 def wedge6_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(wedge6, kwargs={"step": -1})
+    ds = data_dir_load(wedge6, kwargs={"step": -1})
     sc = create_scene(ds, field)
     im = sc.render()
     return compare(ds, im, f"{engine}_render_answers_wedge6_{field[0]}_{field[1]}")
@@ -179,7 +182,7 @@ tet10_fields = [("connect1", "uz")]
 
 def tet10_render(engine, field):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(tet10, kwargs={"step": -1})
+    ds = data_dir_load(tet10, kwargs={"step": -1})
     sc = create_scene(ds, field)
     ms = sc.get_source(0)
     ms.color_bounds = (-0.01, 0.2)
@@ -202,7 +205,7 @@ def test_tet10_render():
 
 def perspective_mesh_render(engine):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(hex8)
+    ds = data_dir_load(hex8)
     sc = create_scene(ds, ("connect2", "diffused"))
     cam = sc.add_camera(ds, lens_type="perspective")
     cam.focus = ds.arr([0.0, 0.0, 0.0], "code_length")
@@ -227,7 +230,7 @@ def test_perspective_mesh_render():
 
 def composite_mesh_render(engine):
     ytcfg["yt", "ray_tracing_engine"] = engine
-    ds = utils.data_dir_load(hex8)
+    ds = data_dir_load(hex8)
     sc = Scene()
     cam = sc.add_camera(ds)
     cam.focus = ds.arr([0.0, 0.0, 0.0], "code_length")

@@ -1,4 +1,28 @@
-import pytest
+from yt.fields.xray_emission_fields import add_xray_emissivity_field
+from yt.utilities.answer_testing.framework import (
+    FieldValuesTest,
+    ProjectionValuesTest,
+    can_run_ds,
+    data_dir_load,
+    requires_ds,
+)
+
+
+def setup():
+    from yt.config import ytcfg
+
+    ytcfg["yt", "__withintesting"] = "True"
+
+
+def check_xray_fields(ds_fn, fields):
+    if not can_run_ds(ds_fn):
+        return
+    dso = [None, ("sphere", ("m", (0.1, "unitary")))]
+    for field in fields:
+        for dobj_name in dso:
+            for axis in [0, 1, 2]:
+                yield ProjectionValuesTest(ds_fn, axis, field, None, dobj_name)
+            yield FieldValuesTest(ds_fn, field, dobj_name)
 
 
 def setup():

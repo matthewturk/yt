@@ -1,13 +1,14 @@
+import glob
+import os
+
 import numpy as np
-import pytest
 from numpy.testing import assert_raises
 
 from yt.config import ytcfg
 from yt.data_objects.particle_filters import particle_filter
 from yt.data_objects.time_series import DatasetSeries
 from yt.testing import fake_particle_ds
-from yt.utilities.answer_testing import utils
-from yt.utilities.answer_testing.answer_tests import generic_array
+from yt.utilities.answer_testing.framework import GenericArrayTest, requires_ds
 from yt.utilities.exceptions import YTIllDefinedParticleData
 
 
@@ -29,21 +30,20 @@ vfields = [
 ]
 
 
-@pytest.mark.answer_test
-class TestParticleTrajectories:
-    answer_file = None
-    saved_hashes = None
-
-    @pytest.mark.usefixtures("hashing")
-    @utils.requires_ds("Orbit/orbit_hdf5_chk_0000")
-    def test_orbit_traj(self, field, orbit_traj):
-        ds, traj = orbit_traj
+@requires_ds("Orbit/orbit_hdf5_chk_0000")
+def test_orbit_traj():
+    fields = ["particle_velocity_x", "particle_velocity_y", "particle_velocity_z"]
+    my_fns = glob.glob(os.path.join(data_path, "Orbit/orbit_hdf5_chk_00[0-9][0-9]"))
+    my_fns.sort()
+    ts = DatasetSeries(my_fns)
+    ds = ts[0]
+    traj = ts.particle_trajectories([1, 2], fields=fields, suppress_logging=True)
+    for field in pfields + vfields:
 
         def field_func(name):
             return traj[field]
 
-        ga = generic_array(field_func, args=[field])
-        self.hashes.update({"generic_array": ga})
+        yield GenericArrayTest(ds, field_func, args=[field])
 
         yield GenericArrayTest(ds, field_func, args=[field])
 

@@ -17,8 +17,8 @@ import unittest
     ytcfg["yt", "internals", "within_testing"] = True
 
 import yt
-from yt.testing import fake_amr_ds, requires_module
-from yt.utilities.answer_testing.answer_tests import generic_image
+from yt.testing import ANSWER_TEST_TAG, fake_amr_ds, requires_module
+from yt.utilities.answer_testing.framework import GenericImageTest
 from yt.visualization.geo_plot_utils import get_mpl_transform, transform_list
 
 
@@ -53,13 +53,15 @@ def test_geo_slices_amr():
 
 
 class TestGeoProjections(unittest.TestCase):
+    @requires_module("cartopy")
     def setUp(self):
         self.ds = fake_amr_ds(geometry="geographic")
 
+    @requires_module("cartopy")
     def tearDown(self):
         del self.ds
-        del self.slc
 
+    @requires_module("cartopy")
     def test_geo_projection_setup(self):
 
         from yt.utilities.on_demand_imports import _cartopy as cartopy
@@ -76,6 +78,7 @@ class TestGeoProjections(unittest.TestCase):
             type(self.slc.plots[("stream", "Density")].axes.projection),
         )
 
+    @requires_module("cartopy")
     def test_geo_projections(self):
         from yt.utilities.on_demand_imports import _cartopy as cartopy
 
@@ -99,6 +102,7 @@ class TestGeoProjections(unittest.TestCase):
                 self.slc.plots[("stream", "Density")].axes.projection, proj_type
             )
 
+    @requires_module("cartopy")
     def test_projection_object(self):
         from yt.utilities.on_demand_imports import _cartopy as cartopy
 
@@ -118,6 +122,7 @@ class TestGeoProjections(unittest.TestCase):
                 self.slc.plots[("stream", "Density")].axes.projection, proj_type
             )
 
+    @requires_module("cartopy")
     def test_nondefault_transform(self):
         from yt.utilities.on_demand_imports import _cartopy as cartopy
 
