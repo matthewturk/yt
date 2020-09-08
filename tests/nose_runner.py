@@ -77,9 +77,11 @@ def generate_tasks_input():
         "--with-answer-testing",
         "--answer-store",
         f"--local-dir={os.path.join(ytcfg.get('yt', 'test_data_dir'), 'answers')}",
+        "-c=pytest_answer.ini",
         # f"-n {int(os.environ.get('NUM_WORKERS', 6))}",
         # "--dist loadfile",
         # "--cov=yt/",
+        # "--cov-report=xml:yt_test_coverage.xml",
     ]
 
     args = []
