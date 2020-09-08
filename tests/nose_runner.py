@@ -4,6 +4,7 @@ import sys
 
 import nose
 import numpy
+import pytest
 import yaml
 
 from yt.config import ytcfg
@@ -74,8 +75,11 @@ def generate_tasks_input():
     base_answer_argv = [
         f"--local-dir={answers_dir}",
         "--with-answer-testing",
-        "--answer-big-data",
-        "--local",
+        "--answer-store",
+        f"--local-dir={os.path.join(ytcfg.get('yt', 'test_data_dir'), 'answers')}",
+        # f"-n {int(os.environ.get('NUM_WORKERS', 6))}",
+        # "--dist loadfile",
+        # "--cov=yt/",
     ]
 
     args = []
