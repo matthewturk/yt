@@ -79,6 +79,7 @@ def generate_tasks_input():
         f"--local-dir={os.path.join(ytcfg.get('yt', 'test_data_dir'), 'answers')}",
         "-c=pytest_answer.ini",
         "--junitxml=unittests.xml",
+        "--answer-big-data",
         # f"-n {int(os.environ.get('NUM_WORKERS', 6))}",
         # "--dist loadfile",
         # "--cov=yt/",
