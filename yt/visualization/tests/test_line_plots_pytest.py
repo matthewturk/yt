@@ -1,42 +1,17 @@
-"""
-Tests for making line plots
-
-import yt
-from yt.testing import ANSWER_TEST_TAG, assert_equal, fake_random_ds
-from yt.utilities.answer_testing.framework import GenericImageTest
-from yt.visualization.line_plot import _validate_point
-
-
-def setup():
-    """Test specific setup."""
-    from yt.config import ytcfg
-
-    ytcfg["yt", "internals", "within_testing"] = True
-
-
-def compare(ds, plot, test_prefix, test_name, decimals=12):
-    def image_from_plot(filename_prefix):
-        return plot.save(filename_prefix)
-
-    image_from_plot.__name__ = f"line_{test_prefix}"
-    test = GenericImageTest(ds, image_from_plot, decimals)
-    test.prefix = test_prefix
-    test.answer_name = test_name
-    return test
-
 import pytest
 
 import yt
-from yt.testing import ANSWER_TEST_TAG, assert_equal, fake_random_ds
-from yt.utilities.answer_testing.framework import GenericImageTest
+from yt.testing import assert_equal, fake_random_ds
+from yt.utilities.answer_testing.answer_tests import generic_image
 from yt.visualization.line_plot import _validate_point
 
 
-def image_from_plot(plot):
-    tmpfd, tmpfname = tempfile.mkstemp(suffix=".png")
-    os.close(tmpfd)
-    plot.save(tmpfname)
-    return tmpfname
+def compare(plot):
+    def image_from_plot(im_name):
+        return plot.save(im_name)
+
+    gi = generic_image(image_from_plot)
+    return gi[0]
 
 
 @pytest.mark.answer_test
@@ -57,8 +32,7 @@ class TestLinePlots:
         plot.set_x_unit("cm")
         plot.set_unit(fields[0], "kg/cm**3")
         plot.annotate_title(fields[0], "Density Plot")
-        img_fname = image_from_plot(plot)
-        gi = generic_image(img_fname)
+        gi = compare(plot)
         self.hashes.update({"generic_image": gi})
 
     def test_multi_line_plot(self):
@@ -73,39 +47,36 @@ class TestLinePlots:
         plot = yt.LinePlot.from_lines(ds, fields, lines, field_labels=field_labels)
         plot.annotate_legend(fields[0])
         plot.annotate_legend(fields[1])
-        img_fname = image_from_plot(plot)
-        gi = generic_image(img_fname)
+        gi = compare(plot)
         self.hashes.update({"generic_image": gi})
 
 
 def test_line_buffer():
     ds = fake_random_ds(32)
     lb = yt.LineBuffer(ds, (0, 0, 0), (1, 1, 1), 512, label="diag")
-    lb[("gas", "density")]
-    lb[("gas", "velocity_x")]
-    assert_equal(lb[("gas", "density")].size, 512)
-    lb[("gas", "density")] = 0
-    assert_equal(lb[("gas", "density")], 0)
-    assert_equal(set(lb.keys()), {("gas", "density"), ("gas", "velocity_x")})
-    del lb[("gas", "velocity_x")]
-    assert_equal(set(lb.keys()), {("gas", "density")})
+    lb["density"]
+    lb["velocity_x"]
+    assert_equal(lb["density"].size, 512)
+    lb["density"] = 0
+    assert_equal(lb["density"], 0)
+    assert_equal(set(lb.keys()), set(["density", "velocity_x"]))
+    del lb["velocity_x"]
+    assert_equal(set(lb.keys()), set(["density"]))
 
 
 def test_validate_point():
     ds = fake_random_ds(3)
-    with assert_raises(RuntimeError) as ex:
+    with pytest.raises(RuntimeError) as ex:
         _validate_point(0, ds, start=True)
-    assert_equal(str(ex.exception), "Input point must be array-like")
+    assert "Input point must be array-like" in str(ex.value)
 
-    with assert_raises(RuntimeError) as ex:
+    with pytest.raises(RuntimeError) as ex:
         _validate_point(ds.arr([[0], [1]], "code_length"), ds, start=True)
-    assert_equal(str(ex.exception), "Input point must be a 1D array")
+    assert "Input point must be a 1D array" in str(ex.value)
 
-    with assert_raises(RuntimeError) as ex:
+    with pytest.raises(RuntimeError) as ex:
         _validate_point(ds.arr([0, 1], "code_length"), ds, start=True)
-    assert_equal(
-        str(ex.exception), "Input point must have an element for each dimension"
-    )
+    assert "Input point must have an element for each dimension" in str(ex.value)
 
     ds = fake_random_ds([32, 32, 1])
     _validate_point(ds.arr([0, 1], "code_length"), ds, start=True)

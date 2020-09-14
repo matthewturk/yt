@@ -14,11 +14,17 @@ import os
 import tempfile
 
 import numpy as np
-import pytest
+from nose.plugins.attrib import attr
 
 import yt
-from yt.testing import small_fake_hexahedral_ds
-from yt.utilities.answer_testing.answer_tests import generic_image
+from yt.testing import (
+    ANSWER_TEST_TAG,
+    fake_amr_ds,
+    fake_hexahedral_ds,
+    fake_tetrahedral_ds,
+    small_fake_hexahedral_ds,
+)
+from yt.utilities.answer_testing.framework import GenericImageTest
 from yt.utilities.lib.geometry_utils import triangle_plane_intersect
 from yt.utilities.lib.mesh_triangulation import triangulate_indices
 
@@ -110,6 +116,7 @@ def test_perfect_element_intersection():
     # https://github.com/yt-project/yt/pull/1437 this test falsely
     # yielded three annotation lines, whereas the correct result is four
     # corresponding to the four edges of the top hex face.
+
     ds = small_fake_hexahedral_ds()
     indices = ds.index.meshes[0].connectivity_indices
     coords = ds.index.meshes[0].connectivity_coords

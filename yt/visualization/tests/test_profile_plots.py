@@ -17,7 +17,7 @@ import shutil
 import tempfile
 import unittest
 
-import pytest
+from nose.plugins.attrib import attr
 
 import yt
 from yt.data_objects.profiles import create_profile
@@ -319,8 +319,8 @@ def test_phaseplot_set_log():
     # make sure we can set the log-scaling using the tuple without erroring out
     p1.set_log(("gas", "density"), False)
     p2.set_log(("gas", "temperature"), False)
-    assert p1.y_log["gas", "density"] is False
-    assert p2.y_log is False
+    assert not p1.y_log["gas", "density"]
+    assert not p2.y_log
 
     # make sure we can set the log-scaling using a string without erroring out
     p1.set_log(("gas", "density"), True)
@@ -331,8 +331,8 @@ def test_phaseplot_set_log():
     # make sure we can set the log-scaling using a field object
     p1.set_log(ds.fields.gas.density, False)
     p2.set_log(ds.fields.gas.temperature, False)
-    assert p1.y_log["gas", "density"] is False
-    assert p2.y_log is False
+    assert not p1.y_log["gas", "density"]
+    assert not p2.y_log
 
 
 def test_phaseplot_showhide_colorbar_axes():
