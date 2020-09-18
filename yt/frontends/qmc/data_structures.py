@@ -3,7 +3,7 @@ import weakref
 
 import numpy as np
 
-from yt.data_objects.grid_patch import AMRGridPatch
+from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.static_output import Dataset
 from yt.geometry.grid_geometry_handler import GridIndex
 
@@ -76,24 +76,22 @@ class SkeletonHierarchy(GridIndex):
         pass
 
 
-class SkeletonDataset(Dataset):
-    _index_class = SkeletonHierarchy
-    _field_info_class = SkeletonFieldInfo
+class QMCDataset(Dataset):
+    _index_class = QMCHierarchy
+    _field_info_class = QMCFieldInfo
 
     def __init__(
         self,
         filename,
-        dataset_type="skeleton",
+        dataset_type="qmc",
         storage_filename=None,
         units_override=None,
     ):
-        self.fluid_types += ("skeleton",)
-        super(SkeletonDataset, self).__init__(
+        self.fluid_types += ("qmc",)
+        super(QMCDataset, self).__init__(
             filename, dataset_type, units_override=units_override
         )
         self.storage_filename = storage_filename
-        # refinement factor between a grid and its subgrid
-        # self.refine_by = 2
 
     def _set_code_unit_attributes(self):
         # This is where quantities are created that represent the various
@@ -146,12 +144,8 @@ class SkeletonDataset(Dataset):
         pass
 
     @classmethod
-    def _is_valid(self, *args, **kwargs):
-        # This accepts a filename or a set of arguments and returns True or
-        # False depending on if the file is of the type requested.
-        #
-        # The functionality in this method should be unique enough that it can
-        # differentiate the frontend from others. Sometimes this means looking
-        # for specific fields or attributes in the dataset in addition to
-        # looking at the file name or extension.
-        return False
+    def _is_valid(cls, *args, **kwargs):
+        # Returns True or False depending on if the file is the right type 
+        if (f"{args[0]}").endswith(".traj"):
+            return True
+        return os.path.exists(f"{args[0]}.traj")
