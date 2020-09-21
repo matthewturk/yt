@@ -7,10 +7,10 @@ from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.static_output import Dataset
 from yt.geometry.grid_geometry_handler import GridIndex
 
-from .fields import SkeletonFieldInfo
+from .fields import QMCFieldInfo
 
 
-class SkeletonGrid(AMRGridPatch):
+class QMCGrid(AMRGridPatch):
     _id_offset = 0
 
     def __init__(self, id, index, level):
