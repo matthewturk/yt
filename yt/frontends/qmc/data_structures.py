@@ -12,23 +12,22 @@ from .fields import QMCFieldInfo
 
 class QMCGrid(AMRGridPatch):
     _id_offset = 0
+    _offset = -1
 
-    def __init__(self, id, index, level):
-        super(SkeletonGrid, self).__init__(
-            id, filename=index.index_filename, index=index
-        )
-        self.Parent = None
-        self.Children = []
-        self.Level = level
+    def __init__(self, grid_id, index=None):
+        super(QMCGrid, self).__init__(grid_id, filename=None, index=index)
+        self._children_ids = []
+        self._parent_id = -1
+        self.Level = -1
 
     def __repr__(self):
-        return "SkeletonGrid_%04i (%s)" % (self.id, self.ActiveDimensions)
+        return "QMCGrid_%04i" % (self.id)
 
 
-class SkeletonHierarchy(GridIndex):
-    grid = SkeletonGrid
+class QMCHierarchy(GridIndex):
+    grid = QMCGrid
 
-    def __init__(self, ds, dataset_type="skeleton"):
+    def __init__(self, ds, dataset_type="qmc"):
         self.dataset_type = dataset_type
         self.dataset = weakref.proxy(ds)
         # for now, the index file is the dataset!
@@ -36,7 +35,7 @@ class SkeletonHierarchy(GridIndex):
         self.directory = os.path.dirname(self.index_filename)
         # float type for the simulation edges and must be float64 now
         self.float_type = np.float64
-        super(SkeletonHierarchy, self).__init__(ds, dataset_type)
+        super(QMCHierarchy, self).__init__(ds, dataset_type)
 
     def _detect_output_fields(self):
         # This needs to set a self.field_list that contains all the available,
@@ -45,11 +44,14 @@ class SkeletonHierarchy(GridIndex):
         # fluid type or particle type.  Convention suggests that the on-disk
         # fluid type is usually the dataset_type and the on-disk particle type
         # (for a single population of particles) is "io".
-        pass
+        self.field_list = [
+            ("qmc", "numbers"),
+            ("qmc", "positions"),
+        ]
 
     def _count_grids(self):
         # This needs to set self.num_grids (int)
-        pass
+        self.num_grids = 1
 
     def _parse_index(self):
         # This needs to fill the following arrays, where N is self.num_grids:
@@ -60,7 +62,8 @@ class SkeletonHierarchy(GridIndex):
         #   self.grid_levels            (N, 1) <= int
         #   self.grids                  (N, 1) <= grid objects
         #   self.max_level = self.grid_levels.max()
-        pass
+        self.grid_left_edge = np.zeros((self.num_grids, 3), dtype=np.float64)
+        self.grid_right_edge = np.zeros((self.num_grids, 3), dtype=np.float64)
 
     def _populate_grid_objects(self):
         # the minimal form of this method is

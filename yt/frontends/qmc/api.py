@@ -1,3 +1,3 @@
-from .data_structures import SkeletonDataset, SkeletonGrid, SkeletonHierarchy
-from .fields import SkeletonFieldInfo
-from .io import SkeletonIOHandler
+from .data_structures import QMCDataset, QMCGrid, QMCHierarchy
+from .fields import QMCFieldInfo
+from .io import QMCIOHandler
