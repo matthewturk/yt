@@ -1,7 +1,7 @@
 import unyt
 
 
-qmc_unit_sys = unyt.unit_systems.UnitSystem(
+qmc_unit_sys = unyt.UnitSystem(
     "qmc",
     unyt.angstrom,
     unyt.amu,
