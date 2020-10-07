@@ -23,8 +23,13 @@ class IOHandlerQMC(BaseIOHandler):
     * Reads data from disk
     """
     _dataset_type = "qmc"
+    _vector_fields = (
+        ("Coordinates", 3),
+    )
 
     def __init__(self, ds, *args, **kwargs):
+        self._vector_fields = dict(self._vector_fields)
+        self.data_files = set([])
         super().__init__(ds, *args, **kwargs)
 
     def _read_fluid_selection(self, chunks, selector, fields, size):
