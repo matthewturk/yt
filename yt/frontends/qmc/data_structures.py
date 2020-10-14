@@ -64,6 +64,8 @@ class QMCDataset(ParticleDataset):
         self.omega_matter = 0.0
         self.hubble_constant = 0.0
         self.geometry = "cartesian"
+        self.filename_template = self.parameter_filename
+        self.file_count = 1
 
     def _set_code_unit_attributes(self):
         self.length_unit = self.quan(1.0, self._unit_system["length"])

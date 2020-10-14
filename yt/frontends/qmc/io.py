@@ -1,3 +1,5 @@
+from ase.io import read
+
 from yt.utilities.io_handler import BaseIOHandler
 
 
@@ -40,7 +42,33 @@ class IOHandlerQMC(BaseIOHandler):
         This is called in _count_particles_chunks in utilities/io_handler.py,
         which, in turn, is called by io handler's _read_particle_selection.
         """
-        raise NotImplementedError
+        # This needs to *yield* a series of tuples of (ptype, (x, y, z)).
+        # chunks is a list of chunks, and ptf is a dict where the keys are
+        # ptypes and the values are lists of fields.
+        import pdb; pdb.set_trace()
+        data_files = set([])
+        for chunk in chunks:
+            for obj in chunk.objs:
+                data_files.update(obj.data_files)
+        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+            poff = data_file.field_offsets
+            tp = data_file.total_particles
+            f = open(data_file.filename, "rb")
+            for ptype in ptf:
+                f.seek(poff[ptype, "Coordinates"], os.SEEK_SET)
+                pos = self._read_field_from_file(f, tp[ptype], "Coordinates")
+                if ptype == self.ds._sph_ptypes[0]:
+                    f.seek(poff[ptype, "SmoothingLength"], os.SEEK_SET)
+                    hsml = self._read_field_from_file(f, tp[ptype], "SmoothingLength")
+                else:
+                    hsml = 0.0
+                yield ptype, (pos[:, 0], pos[:, 1], pos[:, 2]), hsml
+            f.close()
 
     def _read_particle_fields(self, chunks, ptf, selector):
         raise NotImplementedError
+
+    def _count_particles(self, data_file):
+        atoms = read(data_file.filename)
+        npart = {"io" : len(atoms)}
+        return npart
