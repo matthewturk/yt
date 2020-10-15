@@ -1,3 +1,4 @@
+import os
 import uuid
 
 from ase.io.formats import filetype
