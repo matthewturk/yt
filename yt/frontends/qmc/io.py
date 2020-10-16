@@ -45,7 +45,6 @@ class IOHandlerQMC(BaseIOHandler):
         # This needs to *yield* a series of tuples of (ptype, (x, y, z)).
         # chunks is a list of chunks, and ptf is a dict where the keys are
         # ptypes and the values are lists of fields.
-        import pdb; pdb.set_trace()
         data_files = set([])
         for chunk in chunks:
             for obj in chunk.objs:
