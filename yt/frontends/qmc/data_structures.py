@@ -77,7 +77,7 @@ class QMCDataset(ParticleDataset):
     @classmethod
     def _is_valid(cls, *args, **kwargs):
         try:
-            file_format = filetype(args[0])
+            file_format = filetype(args[0], guess=False)
         except UnknownFileTypeError:
             return False
         return True
