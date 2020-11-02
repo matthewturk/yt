@@ -1,4 +1,5 @@
 from ase.io import read
+import numpy as np
 
 from yt.utilities.io_handler import BaseIOHandler
 
@@ -68,6 +69,17 @@ class IOHandlerQMC(BaseIOHandler):
         raise NotImplementedError
 
     def _count_particles(self, data_file):
-        atoms = read(data_file.filename)
-        npart = {"io" : len(atoms)}
+        si, ei = data_file.start, data_file.end
+        pcount = np.array(len(read(data_file.filename)))
+        if None not in (si, ei):
+            np.clip(pcount - si, 0, ei - si, out=pcount)
+        npart = {"io" : pcount}
         return npart
+
+    def _identify_fields(self, domain):
+        field_list = [
+            "numbers",
+            "positions",
+            "momenta",
+        ]
+        return field_list, {}
