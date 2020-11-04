@@ -5,8 +5,8 @@ class QMCFieldInfo(FieldInfoContainer):
     known_other_fields = ()
 
     known_particle_fields = (
-        ("Coordinates", ("code_length", ["particle_positions"], None)),
-        ("Numbers", ("", [], None)),
+        ("positions", ("code_length", [], None)),
+        ("numbers", ("", [], None)),
     )
 
     def setup_particle_fields(self, ptype, *args, **kwargs):
