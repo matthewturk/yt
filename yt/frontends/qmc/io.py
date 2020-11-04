@@ -78,8 +78,11 @@ class IOHandlerQMC(BaseIOHandler):
 
     def _identify_fields(self, domain):
         field_list = [
-            "numbers",
-            "positions",
-            "momenta",
+            ("io", "numbers"),
+            ("io", "positions"),
+            ("io", "momenta"),
         ]
         return field_list, {}
+
+    def _yield_coordinates(self, data_file, needed_ptype=None):
+        raise NotImplementedError
