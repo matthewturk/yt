@@ -85,4 +85,11 @@ class IOHandlerQMC(BaseIOHandler):
         return field_list, {}
 
     def _yield_coordinates(self, data_file, needed_ptype=None):
-        raise NotImplementedError
+        atoms = read(data_file.filename)
+        for ptype, count in data_file.total_particles.items():
+            if count == 0:
+                continue
+            if needed_ptype is not None and ptype != needed_ptype:
+                continue
+            pp = atoms.arrays["positions"]
+            yield ptype, pp
