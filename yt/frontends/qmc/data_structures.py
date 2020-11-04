@@ -54,7 +54,7 @@ class QMCDataset(ParticleDataset):
         self.unique_identifier = uuid.uuid4()
         self.parameters = {}
         self.domain_left_edge = np.array([0., 0., 0.], np.float)
-        self.domain_left_edge = np.array([1., 1., 1.], np.float)
+        self.domain_right_edge = np.array([1., 1., 1.], np.float)
         self.dimensionality = 3
         self.domain_dimensions = np.array([1, 1, 1], np.int)
         self.periodicity = (True, True, True)
