@@ -9,8 +9,8 @@ class QMCFieldInfo(FieldInfoContainer):
         ("numbers", ("", [], None)),
     )
 
-    def setup_particle_fields(self, ptype, *args, **kwargs):
-        pass
+    def __init__(self, ds, field_list, slice_info=None):
+        super(QMCFieldInfo, self).__init__(ds, field_list, slice_info=slice_info)
 
-    def setup_fluid_index_fields(self):
-        pass
+    def setup_particle_fields(self, ptype, *args, **kwargs):
+        super().setup_particle_fields(ptype, *args, **kwargs)
