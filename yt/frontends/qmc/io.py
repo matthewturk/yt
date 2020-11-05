@@ -80,7 +80,6 @@ class IOHandlerQMC(BaseIOHandler):
         field_list = [
             ("io", "numbers"),
             ("io", "positions"),
-            ("io", "momenta"),
         ]
         return field_list, {}
 
