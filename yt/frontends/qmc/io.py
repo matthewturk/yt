@@ -27,7 +27,7 @@ class IOHandlerQMC(BaseIOHandler):
     """
     _dataset_type = "qmc"
     _vector_fields = (
-        ("Coordinates", 3),
+        ("positions", 3),
     )
 
     def __init__(self, ds, *args, **kwargs):
@@ -51,22 +51,35 @@ class IOHandlerQMC(BaseIOHandler):
             for obj in chunk.objs:
                 data_files.update(obj.data_files)
         for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
-            poff = data_file.field_offsets
             tp = data_file.total_particles
-            f = open(data_file.filename, "rb")
+            atoms = read(data_file.filename)
             for ptype in ptf:
-                f.seek(poff[ptype, "Coordinates"], os.SEEK_SET)
-                pos = self._read_field_from_file(f, tp[ptype], "Coordinates")
-                if ptype == self.ds._sph_ptypes[0]:
-                    f.seek(poff[ptype, "SmoothingLength"], os.SEEK_SET)
-                    hsml = self._read_field_from_file(f, tp[ptype], "SmoothingLength")
-                else:
-                    hsml = 0.0
-                yield ptype, (pos[:, 0], pos[:, 1], pos[:, 2]), hsml
-            f.close()
+                pos = atoms.arrays["positions"]
+                yield ptype, (pos[:, 0], pos[:, 1], pos[:, 2])
 
     def _read_particle_fields(self, chunks, ptf, selector):
-        raise NotImplementedError
+        data_files = set([])
+        for chunk in chunks:
+            for obj in chunk.objs:
+                data_files.update(obj.data_files)
+        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+            tp = data_file.total_particles
+            atoms = read(data_file.filename)
+            for ptype, field_list in sorted(ptf.items()):
+                if tp[ptype] == 0:
+                    continue
+                if getattr(selector, "is_all_data", False):
+                    mask = slice(None, None, None)
+                else:
+                    pos = atoms.arrays["positions"] 
+                    mask = selector.select_points(pos[:, 0], pos[:, 1], pos[:, 2])
+                    del pos
+                if mask is None:
+                    continue
+                for field in field_list:
+                    data = atoms.arrays[field] 
+                    data = data[mask, ...]
+                    yield (ptype, field), data
 
     def _count_particles(self, data_file):
         si, ei = data_file.start, data_file.end
@@ -92,3 +105,19 @@ class IOHandlerQMC(BaseIOHandler):
                 continue
             pp = atoms.arrays["positions"]
             yield ptype, pp
+
+    def _count_particles_chunks(self, psize, chunks, ptf, selector):
+        if getattr(selector, "is_all_data", False):
+            chunks = list(chunks)
+            data_files = set([])
+            for chunk in chunks:
+                for obj in chunk.objs:
+                    data_files.update(obj.data_files)
+            data_files = sorted(data_files, key=lambda x: (x.filename, x.start))
+            for data_file in data_files:
+                for ptype in ptf.keys():
+                    psize[ptype] += data_file.total_particles[ptype]
+        else:
+            for ptype, (x, y, z) in self._read_particle_coords(chunks, ptf):
+                psize[ptype] += selector.count_points(x, y, z)
+        return dict(psize)
