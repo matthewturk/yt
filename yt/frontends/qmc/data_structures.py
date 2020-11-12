@@ -8,6 +8,7 @@ import numpy as np
 from yt.data_objects.static_output import ParticleDataset
 from yt.data_objects.static_output import ParticleFile
 from yt.geometry.particle_geometry_handler import ParticleIndex
+from yt.utilities.logger import ytLogger as mylog
 
 from .definitions import qmc_unit_sys
 from .fields import QMCFieldInfo
@@ -19,10 +20,67 @@ class QMCIndex(ParticleIndex):
         self._initialize_index()
 
     def _initialize_index(self):
+        ds = self.dataset
+        ds._file_hash = self._generate_hash()
+        self.io._generate_smoothing_length(self)
         super()._initialize_index()
 
     def _initialize_frontend_specific(self):
         super()._initialize_frontend_specific()
+
+    def _generate_kdtree(self, fname):
+        from yt.utilities.lib.cykdtree import PyKDTree
+
+        if fname is not None:
+            if os.path.exists(fname):
+                mylog.info("Loading KDTree from %s", os.path.basename(fname))
+                kdtree = PyKDTree.from_file(fname)
+                if kdtree.data_version != self.ds._file_hash:
+                    mylog.info("Detected hash mismatch, regenerating KDTree")
+                else:
+                    self._kdtree = kdtree
+                    return
+        positions = []
+        for data_file in self.data_files:
+            for _, ppos in self.io._yield_coordinates(
+                data_file, needed_ptype=self.ds._sph_ptypes[0]
+            ):
+                positions.append(ppos)
+        if positions == []:
+            self._kdtree = None
+            return
+        positions = np.concatenate(positions)
+        mylog.info("Allocating KDTree for %s particles", positions.shape[0])
+        self._kdtree = PyKDTree(
+            positions.astype("float64"),
+            left_edge=self.ds.domain_left_edge,
+            right_edge=self.ds.domain_right_edge,
+            periodic=np.array(self.ds.periodicity),
+            leafsize=2 * int(self.ds._num_neighbors),
+            data_version=self.ds._file_hash,
+        )
+        if fname is not None:
+            self._kdtree.save(fname)
+
+    @property
+    def kdtree(self):
+        if hasattr(self, "_kdtree"):
+            return self._kdtree
+
+        ds = self.ds
+
+        if getattr(ds, "kdtree_filename", None) is None:
+            if os.path.exists(ds.parameter_filename):
+                fname = ds.parameter_filename + ".kdtree"
+            else:
+                # we don't want to write to disk for in-memory data
+                fname = None
+        else:
+            fname = ds.kdtree_filename
+
+        self._generate_kdtree(fname)
+
+        return self._kdtree
 
 
 class QMCFile(ParticleFile):
@@ -36,6 +94,8 @@ class QMCDataset(ParticleDataset):
     _field_info_class = QMCFieldInfo
     _particle_coordinates_name = "Coordinates"
     _suffix = ""
+    _sph_ptypes = ("io",)
+    _num_neighbors = 8
 
     def __init__(self, filename, dataset_type="qmc", unit_system=qmc_unit_sys):
         if self._instantiated:
@@ -44,6 +104,7 @@ class QMCDataset(ParticleDataset):
         self.domain_right_edge = None
         self.domain_dimensions = np.ones(3, "int32")
         self.periodicity = (True, True, True)
+        self.gen_hsmls = True
         self._unit_system=unit_system
         super().__init__(filename, dataset_type, unit_system=unit_system)
 
