@@ -179,6 +179,7 @@ class IOHandlerQMC(BaseIOHandler):
                 begin = si + offsets[fn]
                 end = min(ei, d.size) + offsets[fn]
                 d[si:ei] = hsml[begin:end]
+        return hsml
 
     def _get_smoothing_length(self, data_file, position_dtype, position_shape):
         ptype = self.ds._sph_ptypes[0]
