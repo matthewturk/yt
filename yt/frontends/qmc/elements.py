@@ -1,120 +1,122 @@
 # from: https://www.britannica.com/science/atomic-weight
 # Element Symbol Atomic Number Mass(amu)
-hydrogen       H    1    1.00784
-helium         He   2    4.002602
-lithium        Li   3    6.938
-beryllium      Be   4    9.0121831
-boron          B    5    10.806
-carbon         C    6    12.0096
-nitrogen       N    7    14.00643
-oxygen         O    8    15.99903
-fluorine       F    9    18.998403163
-neon           Ne   10   20.1797
-sodium         Na   11   22.98976928
-magnesium      Mg   12   24.304
-aluminum       Al   13   26.9815385
-silicon        Si   14   28.084
-phosphorus     P    15   30.973761998
-sulfur         S    16   32.059
-chlorine       Cl   17   35.446
-argon          Ar   18   39.948
-potassium      K    19   39.0983
-calcium        Ca   20   40.078
-scandium       Sc   21   44.955908
-titanium       Ti   22   47.867
-vanadium       V    23   50.9415
-chromium       Cr   24   51.9961
-manganese      Mn   25   54.938044
-iron           Fe   26   55.845
-cobalt         Co   27   58.933194
-nickel         Ni   28   58.6934
-copper         Cu   29   63.546
-zinc           Zn   30   65.38
-gallium        Ga   31   69.723
-germanium      Ge   32   72.630
-arsenic        As   33   74.921595
-selenium       Se   34   78.971
-bromine        Br   35   79.901
-krypton        Kr   36   83.798
-rubidium       Rb   37   85.4678
-strontium      Sr   38   87.62
-yttrium        Y    39   88.90594
-zirconium      Zr   40   91.224
-niobium        Nb   41   92.90637
-molybdenum     Mo   42   95.95
-technetium     Tc   43   97
-ruthenium      Ru   44   101.07
-rhodium        Rh   45   102.90550
-palladium      Pd   46   106.42
-silver         Ag   47   107.8682
-cadmium        Cd   48   112.414
-indium         In   49   114.818
-tin            Sn   50   118.710
-antimony       Sb   51   121.760
-tellurium      Te   52   127.60
-iodine         I    53   126.90447
-xenon          Xe   54   131.293
-cesium         Cs   55   132.90545196
-barium         Ba   56   137.327
-lanthanum      La   57   138.90547
-cerium         Ce   58   140.116
-praseodymium   Pr   59   140.90766
-neodymium      Nd   60   144.242
-promethium     Pm   61   145
-samarium       Sm   62   150.36
-europium       Eu   63   151.964
-gadolinium     Gd   64   157.25
-terbium        Tb   65   158.92535
-dysprosium     Dy   66   162.500
-holmium        Ho   67   164.93033
-erbium         Er   68   167.259
-thulium        Tm   69   168.93422
-ytterbium      Yb   70   173.045
-lutetium       Lu   71   174.9668
-hafnium        Hf   72   178.49
-tantalum       Ta   73   180.94788
-tungsten       W    74   183.84
-rhenium        Re   75   186.207
-osmium         Os   76   190.23
-iridium        Ir   77   192.217
-platinum       Pt   78   195.084
-gold           Au   79   196.966569
-mercury        Hg   80   200.592
-thallium       Tl   81   204.382
-lead           Pb   82   207.2
-bismuth        Bi   83   208.98040
-polonium       Po   84   209
-astatine       At   85   210
-radon          Rn   86   222
-francium       Fr   87   223
-radium         Ra   88   226
-actinium       Ac   89   227
-thorium        Th   90   232.0377
-protactinium   Pa   91   231.03588
-uranium        U    92   238.02891
-neptunium      Np   93   237
-plutonium      Pu   94   244
-americium      Am   95   243
-curium         Cm   96   247
-berkelium      Bk   97   247
-californium    Cf   98   251
-einsteinium    Es   99   252
-fermium        Fm   100  257
-mendelevium    Md   101  258
-nobelium       No   102  259
-lawrencium     Lr   103  262
-rutherfordium  Rf   104  263
-dubnium        Db   105  268
-seaborgium     Sg   106  271
-bohrium        Bh   107  270
-hassium        Hs   108  270
-meitnerium     Mt   109  278
-darmstadtium   Ds   110  281
-roentgenium    Rg   111  281
-copernicium    Cn   112  285
-ununtrium      Uut  113  286
-flerovium      Fl   114  289
-ununpentium    Uup  115  289
-livermorium    Lv   116  293
-ununseptium    Uus  117  294
-ununoctium     Uuo  118  294
+elementRegister = {
+    1   : ["hydrogen     ",  "H  ",   1.00784],
+    2   : ["helium       ",  "He ",   4.002602],
+    3   : ["lithium      ",  "Li ",   6.938],
+    4   : ["beryllium    ",  "Be ",   9.0121831],
+    5   : ["boron        ",  "B  ",   10.806],
+    6   : ["carbon       ",  "C  ",   12.0096],
+    7   : ["nitrogen     ",  "N  ",   14.00643],
+    8   : ["oxygen       ",  "O  ",   15.99903],
+    9   : ["fluorine     ",  "F  ",   18.998403163],
+    10  : ["neon         ",  "Ne ",   20.1797],
+    11  : ["sodium       ",  "Na ",   22.98976928],
+    12  : ["magnesium    ",  "Mg ",   24.304],
+    13  : ["aluminum     ",  "Al ",   26.9815385],
+    14  : ["silicon      ",  "Si ",   28.084],
+    15  : ["phosphorus   ",  "P  ",   30.973761998],
+    16  : ["sulfur       ",  "S  ",   32.059],
+    17  : ["chlorine     ",  "Cl ",   35.446],
+    18  : ["argon        ",  "Ar ",   39.948],
+    19  : ["potassium    ",  "K  ",   39.0983],
+    20  : ["calcium      ",  "Ca ",   40.078],
+    21  : ["scandium     ",  "Sc ",   44.955908],
+    22  : ["titanium     ",  "Ti ",   47.867],
+    23  : ["vanadium     ",  "V  ",   50.9415],
+    24  : ["chromium     ",  "Cr ",   51.9961],
+    25  : ["manganese    ",  "Mn ",   54.938044],
+    26  : ["iron         ",  "Fe ",   55.845],
+    27  : ["cobalt       ",  "Co ",   58.933194],
+    28  : ["nickel       ",  "Ni ",   58.6934],
+    29  : ["copper       ",  "Cu ",   63.546],
+    30  : ["zinc         ",  "Zn ",   65.38],
+    31  : ["gallium      ",  "Ga ",   69.723],
+    32  : ["germanium    ",  "Ge ",   72.630],
+    33  : ["arsenic      ",  "As ",   74.921595],
+    34  : ["selenium     ",  "Se ",   78.971],
+    35  : ["bromine      ",  "Br ",   79.901],
+    36  : ["krypton      ",  "Kr ",   83.798],
+    37  : ["rubidium     ",  "Rb ",   85.4678],
+    38  : ["strontium    ",  "Sr ",   87.62],
+    39  : ["yttrium      ",  "Y  ",   88.90594],
+    40  : ["zirconium    ",  "Zr ",   91.224],
+    41  : ["niobium      ",  "Nb ",   92.90637],
+    42  : ["molybdenum   ",  "Mo ",   95.95],
+    43  : "[technetium  " ,  "T",    97],
+    44  : ["ruthenium    ",  "Ru ",   101.07],
+    45  : ["rhodium      ",  "Rh ",   102.90550],
+    46  : ["palladium    ",  "Pd ",   106.42],
+    47  : ["silver       ",  "Ag ",   107.8682],
+    48  : ["cadmium      ",  "Cd ",   112.414],
+    49  : ["indium       ",  "In ",   114.818],
+    50  : ["tin          ",  "Sn ",   118.710],
+    51  : ["antimony     ",  "Sb ",   121.760],
+    52  : ["tellurium    ",  "Te ",   127.60],
+    53  : ["iodine       ",  "I  ",   126.90447],
+    54  : ["xenon        ",  "Xe ",   131.293],
+    55  : ["cesium       ",  "Cs ",   132.90545196],
+    56  : ["barium       ",  "Ba ",   137.327],
+    57  : ["lanthanum    ",  "La ",   138.90547],
+    58  : ["cerium       ",  "Ce ",   140.116],
+    59  : ["praseodymium ",  "Pr ",   140.90766],
+    60  : ["neodymium    ",  "Nd ",   144.242],
+    61  : ["promethium   ",  "Pm ",   145],
+    62  : ["samarium     ",  "Sm ",   150.36],
+    63  : ["europium     ",  "Eu ",   151.964],
+    64  : ["gadolinium   ",  "Gd ",   157.25],
+    65  : ["terbium      ",  "Tb ",   158.92535],
+    66  : ["dysprosium   ",  "Dy ",   162.500],
+    67  : ["holmium      ",  "Ho ",   164.93033],
+    68  : ["erbium       ",  "Er ",   167.259],
+    69  : ["thulium      ",  "Tm ",   168.93422],
+    70  : ["ytterbium    ",  "Yb ",   173.045],
+    71  : ["lutetium     ",  "Lu ",   174.9668],
+    72  : ["hafnium      ",  "Hf ",   178.49],
+    73  : ["tantalum     ",  "Ta ",   180.94788],
+    74  : ["tungsten     ",  "W  ",   183.84],
+    75  : ["rhenium      ",  "Re ",   186.207],
+    76  : ["osmium       ",  "Os ",   190.23],
+    77  : ["iridium      ",  "Ir ",   192.217],
+    78  : ["platinum     ",  "Pt ",   195.084],
+    79  : ["gold         ",  "Au ",   196.966569],
+    80  : ["mercury      ",  "Hg ",   200.592],
+    81  : ["thallium     ",  "Tl ",   204.382],
+    82  : ["lead         ",  "Pb ",   207.2],
+    83  : ["bismuth      ",  "Bi ",   208.98040],
+    84  : ["polonium     ",  "Po ",   209],
+    85  : ["astatine     ",  "At ",   210],
+    86  : ["radon        ",  "Rn ",   222],
+    87  : ["francium     ",  "Fr ",   223],
+    88  : ["radium       ",  "Ra ",   226],
+    89  : ["actinium     ",  "Ac ",   227],
+    90  : ["thorium      ",  "Th ",   232.0377],
+    91  : ["protactinium ",  "Pa ",   231.03588],
+    92  : ["uranium      ",  "U  ",   238.02891],
+    93  : ["neptunium    ",  "Np ",   237],
+    94  : ["plutonium    ",  "Pu ",   244],
+    95  : ["americium    ",  "Am ",   243],
+    96  : ["curium       ",  "Cm ",   247],
+    97  : ["berkelium    ",  "Bk ",   247],
+    98  : ["californium  ",  "Cf ",   251],
+    99  : ["einsteinium  ",  "Es ",   252],
+    100 : ["fermium      ",  "Fm ",   257],
+    101 : ["mendelevium  ",  "Md ",   258],
+    102 : ["nobelium     ",  "No ",   259],
+    103 : ["lawrencium   ",  "Lr ",   262],
+    104 : ["rutherfordium",  "Rf ",   263],
+    105 : ["dubnium      ",  "Db ",   268],
+    106 : ["seaborgium   ",  "Sg ",   271],
+    107 : ["bohrium      ",  "Bh ",   270],
+    108 : ["hassium      ",  "Hs ",   270],
+    109 : ["meitnerium   ",  "Mt ",   278],
+    110 : ["darmstadtium ",  "Ds ",   281],
+    111 : ["roentgenium  ",  "Rg ",   281],
+    112 : ["copernicium  ",  "Cn ",   285],
+    113 : ["ununtrium    ",  "Uut",   286],
+    114 : ["flerovium    ",  "Fl ",   289],
+    115 : ["ununpentium  ",  "Uup",   289],
+    116 : ["livermorium  ",  "Lv ",   293],
+    117 : ["ununseptium  ",  "Uus",   294],
+    118 : ["ununoctium   ",  "Uuo",   294],
+}
