@@ -1,6 +1,7 @@
 from yt.fields.field_info_container import FieldInfoContainer
 from yt.utilities.lib.cykdtree import PyKDTree
 from yt.utilities.logger import ytLogger as mylog
+from yt.units import amu
 
 from .definitions import elementRegister
 
@@ -20,6 +21,8 @@ class QMCFieldInfo(FieldInfoContainer):
         self._setup_masses()
         self._setup_densities()
         super().setup_particle_fields(ptype, *args, **kwargs)
+        self._setup_masses()
+        self._setup_densities()
 
     def _setup_masses(self):
         """
@@ -64,9 +67,8 @@ class QMCFieldInfo(FieldInfoContainer):
         d_unit = "code_mass / code_length**3"
         def _density(field, data):
             # Read basic fields
-            ad = data.ds.all_data()
-            pos = ad[sph_ptype, "positions"].to(l_unit).d
-            mass = ad[sph_ptype, "mass"].to(m_unit).d
+            pos = data[sph_ptype, "positions"].to(l_unit).d
+            mass = data[sph_ptype, "mass"].to(m_unit).d
             # Construct k-d tree
             kdtree = PyKDTree(
                 pos.astype("float64"),
@@ -92,7 +94,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
                 data[(sph_ptype, "smoothing_length")] = (hsml, l_unit)
             else:
-                hsml = ad[sph_ptype, fname].to(l_unit).d
+                hsml = data[sph_ptype, fname].to(l_unit).d
             # Add density field
             fname = "density"
             if not exists(fname):
@@ -107,7 +109,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 data[(sph_ptype, "density")] = (dens, d_unit)
                 return data[(sph_ptype, "density")]
         self.add_field(
-            ("io", "density"),
+            (sph_ptype, "density"),
             sampling_type="particle",
             function=_density,
             units="amu/angstrom**3",
