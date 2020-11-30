@@ -22,6 +22,7 @@ class QMCIndex(ParticleIndex):
     def _initialize_index(self):
         ds = self.dataset
         ds._file_hash = self._generate_hash()
+        self.io._generate_smoothing_length(self)
         super()._initialize_index()
 
     def _initialize_frontend_specific(self):
