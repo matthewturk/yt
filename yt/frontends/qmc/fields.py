@@ -11,8 +11,6 @@ class QMCFieldInfo(FieldInfoContainer):
     known_particle_fields = (
         ("positions", ("code_length", [], None)),
         ("numbers", ("", [], None)),
-        ("mass", ("code_mass", [], None)),
-        ("density", ("code_mass/code_length**3", [], None)),
     )
 
     def __init__(self, ds, field_list, slice_info=None):
