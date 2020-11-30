@@ -19,8 +19,8 @@ class QMCFieldInfo(FieldInfoContainer):
         super(QMCFieldInfo, self).__init__(ds, field_list, slice_info=slice_info)
 
     def setup_particle_fields(self, ptype, *args, **kwargs):
-        # self._setup_masses()
-        # self._setup_densities()
+        self._setup_masses()
+        self._setup_densities()
         super().setup_particle_fields(ptype, *args, **kwargs)
 
     def _setup_masses(self):
@@ -29,7 +29,9 @@ class QMCFieldInfo(FieldInfoContainer):
         masses.
         """
         def _atomic_mass(field, data):
-            return elementRegister[data[("io", "numbers")]]["mass"]
+            n = data[("io", "numbers")]
+            n = int(n.d[0])
+            return elementRegister[n][2]
         self.add_field(
             ("io", "mass"),
             sampling_type="particle",
