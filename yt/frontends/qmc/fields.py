@@ -1,4 +1,5 @@
 from yt.fields.field_info_container import FieldInfoContainer
+from yt.utilities.lib.cykdtree import PyKDTree
 from yt.utilities.logger import ytLogger as mylog
 
 from .definitions import elementRegister
@@ -18,8 +19,8 @@ class QMCFieldInfo(FieldInfoContainer):
         super(QMCFieldInfo, self).__init__(ds, field_list, slice_info=slice_info)
 
     def setup_particle_fields(self, ptype, *args, **kwargs):
-        self._setup_masses()
-        self._setup_densities()
+        # self._setup_masses()
+        # self._setup_densities()
         super().setup_particle_fields(ptype, *args, **kwargs)
 
     def _setup_masses(self):
