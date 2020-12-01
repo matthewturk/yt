@@ -134,15 +134,10 @@ class IOHandlerQMC(BaseIOHandler):
         _, extension = os.path.splitext(data_files[0].filename)
         hsml_fn = data_files[0].filename.replace(extension, ".hsml.hdf5")
         if os.path.exists(hsml_fn):
-            with h5py.File(hsml_fn, mode="r") as f:
-                file_hash = f.attrs["q"]
-            if file_hash != self.ds._file_hash:
-                mylog.warning("Replacing hsml files.")
-                for data_file in data_files:
-                    hfn = data_file.filename.replace(extension, ".hsml.hdf5")
-                    os.remove(hfn)
-            else:
-                return
+            mylog.warning("Replacing hsml files.")
+            for data_file in data_files:
+                hfn = data_file.filename.replace(extension, ".hsml.hdf5")
+                os.remove(hfn)
         particle_positions = []
         counts = defaultdict(int)
         for data_file in data_files:
