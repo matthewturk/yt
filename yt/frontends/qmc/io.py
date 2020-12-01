@@ -34,7 +34,7 @@ class IOHandlerQMC(BaseIOHandler):
     """
     _dataset_type = "qmc"
     _vector_fields = (
-        ("positions", 3),
+        ("particle_positions", 3),
     )
 
     def __init__(self, ds, *args, **kwargs):
@@ -99,7 +99,7 @@ class IOHandlerQMC(BaseIOHandler):
     def _identify_fields(self, domain):
         field_list = [
             ("io", "numbers"),
-            ("io", "positions"),
+            ("io", "particle_positions"),
         ]
         return field_list, {}
 
@@ -143,15 +143,15 @@ class IOHandlerQMC(BaseIOHandler):
                     os.remove(hfn)
             else:
                 return
-        positions = []
+        particle_positions = []
         counts = defaultdict(int)
         for data_file in data_files:
             for _, ppos in self._yield_coordinates(
                 data_file, needed_ptype=self.ds._sph_ptypes[0]
             ):
                 counts[data_file.filename] += ppos.shape[0]
-                positions.append(ppos)
-        if not positions:
+                particle_positions.append(ppos)
+        if not particle_positions:
             return
         offsets = {}
         offset = 0
@@ -159,9 +159,9 @@ class IOHandlerQMC(BaseIOHandler):
             offsets[fn] = offset
             offset += count
         kdtree = index.kdtree
-        positions = uconcatenate(positions)[kdtree.idx]
-        hsml = generate_smoothing_length(positions, kdtree, self.ds._num_neighbors)
-        dtype = positions.dtype
+        particle_positions = uconcatenate(particle_positions)[kdtree.idx]
+        hsml = generate_smoothing_length(particle_positions, kdtree, self.ds._num_neighbors)
+        dtype = particle_positions.dtype
         hsml = hsml[np.argsort(kdtree.idx)].astype(dtype)
         mylog.warning("Writing smoothing lengths to hsml files.")
         for i, data_file in enumerate(data_files):
