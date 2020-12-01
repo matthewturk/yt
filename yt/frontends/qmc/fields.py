@@ -10,7 +10,7 @@ class QMCFieldInfo(FieldInfoContainer):
     known_other_fields = ()
 
     known_particle_fields = (
-        ("positions", ("code_length", [], None)),
+        ("particle_position", ("code_length", [], None)),
         ("numbers", ("", [], None)),
     )
 
@@ -67,7 +67,7 @@ class QMCFieldInfo(FieldInfoContainer):
         d_unit = "code_mass / code_length**3"
         def _density(field, data):
             # Read basic fields
-            pos = data[sph_ptype, "positions"].to(l_unit).d
+            pos = data[sph_ptype, "particle_positions"].to(l_unit).d
             mass = data[sph_ptype, "mass"].to(m_unit).d
             # Construct k-d tree
             kdtree = PyKDTree(
@@ -107,7 +107,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 )
                 dens = dens[order]
                 data[(sph_ptype, "density")] = (dens, d_unit)
-                return data[(sph_ptype, "density")]
+            return data[(sph_ptype, "density")]
         self.add_field(
             (sph_ptype, "density"),
             sampling_type="particle",
