@@ -12,8 +12,10 @@ namespace svr {
 // Represents a spherical voxel coordinate.
 struct SphericalVoxel {
   int radial;
-  int polar;
-  int azimuthal;
+  int lat;
+  int lon;
+
+  // Entrance and exit time into the given voxel.
   double enter_t;
   double exit_t;
 };
@@ -35,7 +37,7 @@ std::vector<SphericalVoxel> walkSphericalVolume(
 std::vector<SphericalVoxel> walkSphericalVolume(
     double *ray_origin, double *ray_direction, double *min_bound,
     double *max_bound, std::size_t num_radial_voxels,
-    std::size_t num_polar_voxels, std::size_t num_azimuthal_voxels,
+    std::size_t num_lat_voxels, std::size_t num_lon_voxels,
     double *sphere_center, double max_t) noexcept;
 
 }  // namespace svr
