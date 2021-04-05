@@ -19,18 +19,12 @@ import weakref
 
 from yt.funcs import \
     mylog
-from yt.geometry.unstructured_mesh_handler import \
-    UnstructuredIndex
-from yt.data_objects.unstructured_mesh import \
-    SemiStructuredMesh
-from yt.data_objects.grid_patch import \
-    AMRGridPatch
-from yt.geometry.grid_geometry_handler import \
-    GridIndex
-from yt.data_objects.static_output import \
-    Dataset
-from yt.utilities.file_handler import \
-    HDF5FileHandler
+from yt.geometry.unstructured_mesh_handler import UnstructuredIndex
+from yt.data_objects.index_subobjects.unstructured_mesh import SemiStructuredMesh
+from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
+from yt.geometry.grid_geometry_handler import GridIndex
+from yt.data_objects.static_output import Dataset
+from yt.utilities.file_handler import HDF5FileHandler
 from itertools import chain, product
 from .fields import IHarmFieldInfo
 
