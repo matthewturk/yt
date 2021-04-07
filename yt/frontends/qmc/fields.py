@@ -13,7 +13,7 @@ class QMCFieldInfo(FieldInfoContainer):
     known_other_fields = ()
 
     known_particle_fields = (
-        ("particle_positions", ("code_length", [], None)),
+        ("positions", ("code_length", [], None)),
         ("numbers", ("", [], None)),
     )
 

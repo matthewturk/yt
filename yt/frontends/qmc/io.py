@@ -34,7 +34,7 @@ class IOHandlerQMC(BaseIOHandler):
     """
     _dataset_type = "qmc"
     _vector_fields = (
-        ("particle_positions", 3),
+        ("positions", 3),
     )
 
     def __init__(self, ds, *args, **kwargs):
@@ -99,7 +99,7 @@ class IOHandlerQMC(BaseIOHandler):
     def _identify_fields(self, domain):
         field_list = [
             ("io", "numbers"),
-            ("io", "particle_positions"),
+            ("io", "positions"),
         ]
         return field_list, {}
 
