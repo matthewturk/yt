@@ -2,14 +2,21 @@ import os
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 import pytest
 import yaml
 
 import yt
 from yt.config import ytcfg
-from yt.utilities.answer_testing import utils
-from yt.utilities.logger import ytLogger
+from yt.utilities.answer_testing.testing_utilities import (
+    _compare_raw_arrays,
+    _hash_results,
+    _save_raw_arrays,
+    _save_result,
+    _streamline_for_io,
+    data_dir_load,
+)
 
 
 def pytest_addoption(parser):
@@ -17,39 +24,41 @@ def pytest_addoption(parser):
     Lets options be passed to test functions.
     """
     parser.addoption(
-        "--with-answer-testing", action="store_true",
+        "--with-answer-testing",
+        action="store_true",
     )
     parser.addoption(
-        "--answer-store", action="store_true",
+        "--answer-store",
+        action="store_true",
     )
     parser.addoption(
-        "--answer-big-data", action="store_true",
+        "--answer-raw-arrays",
+        action="store_true",
     )
     parser.addoption(
-        "--answer-raw-arrays", action="store_true",
+        "--raw-answer-store",
+        action="store_true",
     )
     parser.addoption(
-        "--raw-answer-store", action="store_true",
+        "--force-overwrite",
+        action="store_true",
     )
     parser.addoption(
-        "--force-overwrite", action="store_true",
-    )
-    parser.addoption(
-        "--no-hash", action="store_true",
+        "--no-hash",
+        action="store_true",
     )
     parser.addoption("--local-dir", default=None, help="Where answers are saved.")
     # Tell pytest about the local-dir option in the ini files. This
     # option is used for creating the answer directory on CI
-    parser.addini("local-dir", default="../answer-store", help="answer directory.")
+    parser.addini(
+        "local-dir",
+        default=str(Path(__file__).parent / "answer-store"),
+        help="answer directory.",
+    )
     parser.addini(
         "test_data_dir",
         default=ytcfg.get("yt", "test_data_dir"),
         help="Directory where data for tests is stored.",
-    )
-    parser.addini(
-        "answer_file_list",
-        default="./tests/tests_pytest.yaml",
-        help="Contains answer file names",
     )
 
 
@@ -58,10 +67,7 @@ def pytest_configure(config):
     Reads in the tests/tests.yaml file. This file contains a list of
     each answer test's answer file (including the changeset number).
     """
-    yt._called_from_pytest = True
-    # Read the list of answer test classes and their associated answer file
-    with open(config.getini("answer_file_list"), "r") as f:
-        pytest.answer_files = yaml.safe_load(f)
+    ytcfg["yt", "internals", "within_pytest"] = True
     # Register custom marks for answer tests and big data
     config.addinivalue_line("markers", "answer_test: Run the answer tests.")
     config.addinivalue_line(
@@ -129,7 +135,7 @@ def _param_list(request):
     # Convert python-specific data objects (such as tuples) to a more
     # io-friendly format (in order to not have python-specific anchors
     # in the answer yaml file)
-    test_params = utils._streamline_for_io(test_params)
+    test_params = _streamline_for_io(test_params)
     return test_params
 
 
@@ -137,16 +143,8 @@ def _get_answer_files(request):
     """
     Gets the path to where the hashed and raw answers are saved.
     """
-    try:
-        answer_file, raw_answer_file = pytest.answer_files[request.cls.__name__]
-    except KeyError:
-        ytLogger.error(f"Answer files for `{request.cls.__name__}` not found.")
-        sys.exit()
-    except ValueError:
-        msg = "Missing either hashed file name or raw file name for "
-        msg += f"`{request.cls.__name__}`in "
-        msg += f"`{request.config.getini('answer_file_list')}`."
-        ytLogger.error(msg)
+    answer_file = f"{request.cls.__name__}_{request.cls.answer_version}.yaml"
+    raw_answer_file = f"{request.cls.__name__}_{request.cls.answer_version}.h5"
     # Add the local-dir aspect of the path. If there's a command line value,
     # have that override the ini file value
     clLocalDir = request.config.getoption("--local-dir")
@@ -199,17 +197,13 @@ def hashing(request):
         )
     if not no_hash and not store_hash and request.cls.saved_hashes is None:
         try:
-            with open(request.cls.answer_file, "r") as fd:
+            with open(request.cls.answer_file) as fd:
                 request.cls.saved_hashes = yaml.safe_load(fd)
         except FileNotFoundError:
-            # On travis and appveyor only a minimal set of answer tests are
-            # run, which means that, for most answer tests, there won't be
-            # an existing answer file when comparing. There is currently no
-            # list of the minimal answer tests, so they can't be marked.
-            # As such, if we're comparing and the file of saved hashes isn't
-            # found, we just skip the test. We do the skip before the test
-            # is run to save time
-            pytest.skip("Answer file not found.")
+            module_filename = f"{request.function.__module__.replace('.', os.sep)}.py"
+            with open(f"generate_test_{os.getpid()}.txt", "a") as fp:
+                fp.write(f"{module_filename}::{request.cls.__name__}\n")
+            pytest.fail(msg="Answer file not found.", pytrace=False)
     request.cls.hashes = {}
     # Load the saved answers if we're comparing. We don't do this for the raw
     # answers because those are huge
@@ -218,27 +212,32 @@ def hashing(request):
     params = _param_list(request)
     # Hash the test results. Don't save to request.cls.hashes so we still have
     # raw data, in case we want to work with that
-    hashes = utils._hash_results(request.cls.hashes)
+    hashes = _hash_results(request.cls.hashes)
     # Add the other test parameters
     hashes.update(params)
     # Add the function name as the "master" key to the hashes dict
     hashes = {request.node.name: hashes}
     # Save hashes
     if not no_hash and store_hash:
-        utils._save_result(hashes, request.cls.answer_file)
+        _save_result(hashes, request.cls.answer_file)
     # Compare hashes
     elif not no_hash and not store_hash:
-        utils._compare_result(hashes, request.cls.saved_hashes)
+        try:
+            for test_name, test_hash in hashes.items():
+                assert test_name in request.cls.saved_hashes
+                assert test_hash == request.cls.saved_hashes[test_name]
+        except AssertionError:
+            pytest.fail(f"Comparison failure: {request.node.name}", pytrace=False)
     # Save raw data
     if raw and raw_store:
-        utils._save_raw_arrays(
+        _save_raw_arrays(
             request.cls.hashes, request.cls.raw_answer_file, request.node.name
         )
     # Compare raw data. This is done one test at a time because the
     # arrays can get quite large and storing everything in memory would
     # be bad
     if raw and not raw_store:
-        utils._compare_raw_arrays(
+        _compare_raw_arrays(
             request.cls.hashes, request.cls.raw_answer_file, request.node.name
         )
 
@@ -262,26 +261,24 @@ def temp_dir():
 
 @pytest.fixture(scope="class")
 def ds(request):
+    # data_dir_load can take the cls, args, and kwargs. These optional
+    # arguments, if present,  are given in a dictionary as the second
+    # element of the list
+    if isinstance(request.param, str):
+        ds_fn = request.param
+        opts = {}
+    else:
+        ds_fn, opts = request.param
     try:
-        if isinstance(request.param, list):
-            # data_dir_load can take the cls, args, and kwargs. These optional
-            # arguments are given in a dictionary as the second element of the
-            # list
-            ds_fn = request.param[0]
-            opts = request.param[1]
-            cls = None if "cls" not in opts.keys() else opts["cls"]
-            args = None if "args" not in opts.keys() else opts["args"]
-            kwargs = None if "kwargs" not in opts.keys() else opts["kwargs"]
-            dataset = utils.data_dir_load(ds_fn, cls=cls, args=args, kwargs=kwargs)
-        else:
-            dataset = utils.data_dir_load(request.param)
-        return dataset
+        return data_dir_load(
+            ds_fn, cls=opts.get("cls"), args=opts.get("args"), kwargs=opts.get("kwargs")
+        )
     except FileNotFoundError:
         return pytest.skip(f"Data file: `{request.param}` not found.")
 
 
 @pytest.fixture(scope="class")
-def f(request):
+def field(request):
     """
     Fixture for returning the field. Needed because indirect=True is
     used for loading the datasets.
@@ -290,7 +287,7 @@ def f(request):
 
 
 @pytest.fixture(scope="class")
-def d(request):
+def dobj(request):
     """
     Fixture for returning the ds_obj. Needed because indirect=True is
     used for loading the datasets.
@@ -299,7 +296,7 @@ def d(request):
 
 
 @pytest.fixture(scope="class")
-def a(request):
+def axis(request):
     """
     Fixture for returning the axis. Needed because indirect=True is
     used for loading the datasets.
@@ -308,7 +305,7 @@ def a(request):
 
 
 @pytest.fixture(scope="class")
-def w(request):
+def weight(request):
     """
     Fixture for returning the weight_field. Needed because
     indirect=True is used for loading the datasets.
@@ -326,22 +323,9 @@ def ds_repr(request):
 
 
 @pytest.fixture(scope="class")
-def N(request):
+def Npart(request):
     """
     Fixture for returning the number of particles in a dataset.
     Needed because indirect=True is used for loading the datasets.
     """
     return request.param
-
-
-@pytest.fixture(scope="class")
-def big_data(request):
-    """
-    There isn't a way to access command-line options given to pytest from
-    an actual test, so we need a fixture that retrieves and returns its
-    value. In this case, the --answer-big-data option.
-    """
-    if request.config.getoption("--answer-big-data"):
-        return True
-    else:
-        return False

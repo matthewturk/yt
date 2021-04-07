@@ -231,8 +231,20 @@ def _compare_result(new_data, old_data):
     old_data: dict
         Previously saved hashed test results.
     """
-    for key, value in new_data.items():
-        assert value == old_data[key]
+    # Load the saved data
+    with open(outputFile) as f:
+        savedData = yaml.safe_load(f)
+
+    # Define the comparison function
+    def _check_vals(newVals, oldVals):
+        for key, value in newVals.items():
+            if isinstance(value, dict):
+                _check_vals(value, oldVals[key])
+            else:
+                assert value == oldVals[key]
+
+    # Compare
+    _check_vals(data, savedData)
 
 
 def _save_raw_arrays(arrays, answer_file, func_name):
@@ -458,7 +470,7 @@ def compare_unit_attributes(ds1, ds2):
 
 def fake_halo_catalog(data):
     filename = "catalog.0.h5"
-    ftypes = dict((field, ".") for field in data)
+    ftypes = {field: "." for field in data}
     extra_attrs = {"data_type": "halo_catalog", "num_halos": data["particle_mass"].size}
     ds = {
         "cosmological_simulation": 1,
