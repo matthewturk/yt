@@ -63,23 +63,23 @@ will work best for you depends on your precise situation:
 
 .. _branches-of-yt:
 
-Branches of yt: ``master``, ``stable``, and ``yt-2.x``
+Branches of yt: ``main``, ``stable``, and ``yt-2.x``
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Before you install yt, you must decide which branch (i.e. version) of the code
 you prefer to use:
 
-* ``master`` -- The most up-to-date *development* version with the most current
+* ``main`` -- The most up-to-date *development* version with the most current
   features but sometimes unstable (the development version of the next release).
 * ``stable`` -- The latest stable release of ``yt-3.x``.
 * ``yt-2.x`` -- The last stable release of ``yt-2.x``.
 
 If this is your first time using the code, we recommend using ``stable``, unless
 you specifically need some piece of brand-new functionality only available in
-``master`` or need to run an old script developed for ``yt-2.x``.  There were major
+``main`` or need to run an old script developed for ``yt-2.x``.  There were major
 API and functionality changes made in yt for version 3.0.  For a detailed
 description of the changes between versions 2.x (e.g. branch ``yt-2.x``) and 3.x
-(e.g. branches ``master`` and ``stable``) see :ref:`yt3differences`.  Lastly, don't
+(e.g. branches ``main`` and ``stable``) see :ref:`yt3differences`.  Lastly, don't
 feel like you're locked into one branch when you install yt, because you can
 easily change the active branch by following the instructions in
 :ref:`switching-between-yt-versions`.
@@ -113,13 +113,13 @@ You can download the installation script with the following command:
 
 .. code-block:: bash
 
-  $ wget https://raw.githubusercontent.com/yt-project/yt/master/doc/install_script.sh
+  $ wget https://raw.githubusercontent.com/yt-project/yt/main/doc/install_script.sh
 
 If you do not have ``wget``, the following should also work:
 
 .. code-block:: bash
 
-  $ curl -OL https://raw.githubusercontent.com/yt-project/yt/master/doc/install_script.sh
+  $ curl -OL https://raw.githubusercontent.com/yt-project/yt/main/doc/install_script.sh
 
 By default, the bash install script will create a python environment based on
 the `miniconda python distribution <https://docs.conda.io/en/latest/miniconda.html>`_,
@@ -252,36 +252,6 @@ For both the Anaconda and Miniconda installations, make sure that the Anaconda
 
 which will install stable branch of yt along with all of its dependencies.
 
-.. _nightly-conda-builds:
-
-Nightly Conda Builds
-^^^^^^^^^^^^^^^^^^^^
-
-If you would like to install latest development version of yt, you can download
-it from our custom anaconda channel:
-
-.. code-block:: bash
-
-  $ conda install -c yt-project/label/dev -c conda-forge yt
-
-New packages for development branch are built after every pull request is
-merged. In order to make sure you are running latest version, it's recommended
-to update frequently:
-
-.. code-block:: bash
-
-  $ conda update -c yt-project/label/dev -c conda-forge yt
-
-We recommend trying to install dependencies from conda-forge as indicated above
-since focused individual communities stand a better chance of successfully
-maintaining build recipes. However, if you wish to use the default anaconda
-packages, simply remove ``-c conda-forge`` during conda installation.
-
-Location of our channel can be added to ``.condarc`` to avoid retyping it during
-each *conda* invocation. Please refer to `Conda Manual
-<https://conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#channel-locations-channels>`_
-for detailed instructions.
-
 .. _conda-intel-python:
 
 Using the Intel Distribution for Python from conda
@@ -364,7 +334,7 @@ you to see the tip of the development branch.
 
 .. code-block:: bash
 
-  $ git checkout master
+  $ git checkout main
   $ pip install -e .
 
 This will make sure you are running a version of yt corresponding to the
@@ -409,14 +379,14 @@ source include:
 
 - ``git``
 - A C compiler such as ``gcc`` or ``clang``
-- ``Python >= 3.5``
+- ``Python >= 3.6``
 
 In addition, building yt from source requires ``numpy`` and ``cython``
 which can be installed with ``pip``:
 
 .. code-block:: bash
 
-  $ pip install numpy cython
+  $ pip install --upgrade numpy cython
 
 You may also want to install some of yt's optional dependencies, including
 ``jupyter``, ``h5py`` (which in turn depends on the HDF5 library), ``scipy``,
@@ -430,7 +400,7 @@ development version of yt instead of the latest stable release, you will need
 
   $ git clone https://github.com/yt-project/yt
   $ cd yt
-  $ git checkout master
+  $ git checkout main
   $ pip install . --user --install-option="--prefix="
 
 .. note::
@@ -443,8 +413,8 @@ development version of yt instead of the latest stable release, you will need
   if you are curious why ``--install-option="--prefix="`` is necessary on some systems.
 
 This will install yt into a folder in your home directory
-(``$HOME/.local/lib64/python2.7/site-packages`` on Linux,
-``$HOME/Library/Python/2.7/lib/python/site-packages/`` on OSX) Please refer to
+(e.g. ``$HOME/.local/lib64/python<py_version>/site-packages`` on Linux,
+``$HOME/Library/Python/<py_version>/lib/python/site-packages/`` on OSX) Please refer to
 the ``setuptools`` documentation for the additional options.
 
 If you are unable to locate the ``yt`` executable (i.e. executing ``yt version``
@@ -462,7 +432,7 @@ repository the "active" installed copy:
 
   $ git clone https://github.com/yt-project/yt
   $ cd yt
-  $ git checkout master
+  $ git checkout main
   $ pip install -e . --user --install-option="--prefix="
 
 As above, you can leave off ``--user --install-option="--prefix="`` if you want to install yt into
@@ -532,7 +502,7 @@ for more details.
 
 .. _switching-between-yt-versions:
 
-Switching versions of yt: ``yt-2.x``, ``stable``, and ``master`` branches
+Switching versions of yt: ``yt-2.x``, ``stable``, and ``main`` branches
 -------------------------------------------------------------------------
 
 Here we explain how to switch between different development branches of yt.
@@ -579,7 +549,7 @@ you installed using ``INST_YT_SOURCE=1``.
 Conda-based installs (``INST_YT_SOURCE=0``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In this case you can either install one of the nightly conda builds (see :ref:`nightly-conda-builds`), or you can follow the instructions above to build yt from source under conda (see
+In this case you can follow the instructions above to build yt from source under conda (see
 :ref:`conda-source-build`).
 
 Source-based installs (``INST_YT_SOURCE=1``)

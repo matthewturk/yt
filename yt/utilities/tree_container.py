@@ -1,4 +1,4 @@
-class TreeContainer(object):
+class TreeContainer:
     r"""A recursive data container for things like merger trees and
     clump-finder trees.
 
@@ -14,5 +14,4 @@ class TreeContainer(object):
         if children is None:
             return
         for child in children:
-            for a_node in child:
-                yield a_node
+            yield from child
