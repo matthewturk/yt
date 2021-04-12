@@ -134,24 +134,19 @@ class IOHandlerQMC(BaseIOHandler):
         _, extension = os.path.splitext(data_files[0].filename)
         hsml_fn = data_files[0].filename.replace(extension, ".hsml.hdf5")
         if os.path.exists(hsml_fn):
-            with h5py.File(hsml_fn, mode="r") as f:
-                file_hash = f.attrs["q"]
-            if file_hash != self.ds._file_hash:
-                mylog.warning("Replacing hsml files.")
-                for data_file in data_files:
-                    hfn = data_file.filename.replace(extension, ".hsml.hdf5")
-                    os.remove(hfn)
-            else:
-                return
-        positions = []
+            mylog.warning("Replacing hsml files.")
+            for data_file in data_files:
+                hfn = data_file.filename.replace(extension, ".hsml.hdf5")
+                os.remove(hfn)
+        particle_positions = []
         counts = defaultdict(int)
         for data_file in data_files:
             for _, ppos in self._yield_coordinates(
                 data_file, needed_ptype=self.ds._sph_ptypes[0]
             ):
                 counts[data_file.filename] += ppos.shape[0]
-                positions.append(ppos)
-        if not positions:
+                particle_positions.append(ppos)
+        if not particle_positions:
             return
         offsets = {}
         offset = 0
@@ -159,9 +154,9 @@ class IOHandlerQMC(BaseIOHandler):
             offsets[fn] = offset
             offset += count
         kdtree = index.kdtree
-        positions = uconcatenate(positions)[kdtree.idx]
-        hsml = generate_smoothing_length(positions, kdtree, self.ds._num_neighbors)
-        dtype = positions.dtype
+        particle_positions = uconcatenate(particle_positions)[kdtree.idx]
+        hsml = generate_smoothing_length(particle_positions, kdtree, self.ds._num_neighbors)
+        dtype = particle_positions.dtype
         hsml = hsml[np.argsort(kdtree.idx)].astype(dtype)
         mylog.warning("Writing smoothing lengths to hsml files.")
         for i, data_file in enumerate(data_files):

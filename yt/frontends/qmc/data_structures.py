@@ -8,6 +8,8 @@ import numpy as np
 from yt.data_objects.static_output import ParticleDataset
 from yt.data_objects.static_output import ParticleFile
 from yt.geometry.particle_geometry_handler import ParticleIndex
+from yt.units import dimensions
+from yt.units.unit_registry import UnitRegistry
 from yt.utilities.logger import ytLogger as mylog
 
 from .definitions import qmc_unit_sys
@@ -22,6 +24,7 @@ class QMCIndex(ParticleIndex):
     def _initialize_index(self):
         ds = self.dataset
         ds._file_hash = self._generate_hash()
+        self.io._generate_smoothing_length(self)
         super()._initialize_index()
 
     def _initialize_frontend_specific(self):
@@ -39,19 +42,19 @@ class QMCIndex(ParticleIndex):
                 else:
                     self._kdtree = kdtree
                     return
-        positions = []
+        particle_positions = []
         for data_file in self.data_files:
             for _, ppos in self.io._yield_coordinates(
                 data_file, needed_ptype=self.ds._sph_ptypes[0]
             ):
-                positions.append(ppos)
-        if positions == []:
+                particle_positions.append(ppos)
+        if particle_positions == []:
             self._kdtree = None
             return
-        positions = np.concatenate(positions)
-        mylog.info("Allocating KDTree for %s particles", positions.shape[0])
+        particle_positions = np.concatenate(particle_positions)
+        mylog.info("Allocating KDTree for %s particles", particle_positions.shape[0])
         self._kdtree = PyKDTree(
-            positions.astype("float64"),
+            particle_positions.astype("float64"),
             left_edge=self.ds.domain_left_edge,
             right_edge=self.ds.domain_right_edge,
             periodic=np.array(self.ds.periodicity),
@@ -102,6 +105,19 @@ class QMCDataset(ParticleDataset):
         self.gen_hsmls = True
         self._unit_system=unit_system
         super().__init__(filename, dataset_type, unit_system=unit_system)
+
+    def _create_unit_registry(self, unit_system):
+        # Overwrites Dataset's _create_unit_registry method to use the
+        # custom unit system for qmc and remove astro-specific units
+        self.unit_registry = UnitRegistry(unit_system=unit_system)
+        self.unit_registry.add("code_length", 1.0, dimensions.length)
+        self.unit_registry.add("code_mass", 1.0, dimensions.mass)
+        self.unit_registry.add("code_density", 1.0, dimensions.density)
+        self.unit_registry.add("code_time", 1.0, dimensions.time)
+        self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
+        self.unit_registry.add("code_velocity", 1.0, dimensions.velocity)
+        self.unit_registry.add("code_pressure", 1.0, dimensions.pressure)
+        self.unit_registry.add("code_specific_energy", 1.0, dimensions.energy / dimensions.mass)
 
     def __repr__(self):
         return os.path.basename(self.parameter_filename).split(".")[0]
