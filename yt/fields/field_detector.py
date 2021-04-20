@@ -154,6 +154,7 @@ class FieldDetector(defaultdict):
                 or "Velocities" in (item, item[1])
                 or "Coordinates" in (item, item[1])
                 or "MagneticField" in (item, item[1])
+                or "positions" in (item, item[1])
             ):
                 # A vector
                 self[item] = YTArray(
