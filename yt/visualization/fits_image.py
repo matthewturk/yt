@@ -108,20 +108,21 @@ class FITSImageData:
 
         >>> # This example uses a FRB.
         >>> ds = load("sloshing_nomag2_hdf5_plt_cnt_0150")
-        >>> prj = ds.proj(2, "kT", weight_field="density")
+        >>> prj = ds.proj(2, "kT", weight_field=("gas", "density"))
         >>> frb = prj.to_frb((0.5, "Mpc"), 800)
         >>> # This example just uses the FRB and puts the coords in kpc.
-        >>> f_kpc = FITSImageData(frb, fields="kT", length_unit="kpc",
-        ...                       time_unit=(1.0, "Gyr"))
+        >>> f_kpc = FITSImageData(
+        ...     frb, fields="kT", length_unit="kpc", time_unit=(1.0, "Gyr")
+        ... )
         >>> # This example specifies a specific WCS.
         >>> from astropy.wcs import WCS
         >>> w = WCS(naxis=self.dimensionality)
-        >>> w.wcs.crval = [30., 45.] # RA, Dec in degrees
-        >>> w.wcs.cunit = ["deg"]*2
+        >>> w.wcs.crval = [30.0, 45.0]  # RA, Dec in degrees
+        >>> w.wcs.cunit = ["deg"] * 2
         >>> nx, ny = 800, 800
-        >>> w.wcs.crpix = [0.5*(nx+1), 0.5*(ny+1)]
-        >>> w.wcs.ctype = ["RA---TAN","DEC--TAN"]
-        >>> scale = 1./3600. # One arcsec per pixel
+        >>> w.wcs.crpix = [0.5 * (nx + 1), 0.5 * (ny + 1)]
+        >>> w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+        >>> scale = 1.0 / 3600.0  # One arcsec per pixel
         >>> w.wcs.cdelt = [-scale, scale]
         >>> f_deg = FITSImageData(frb, fields="kT", wcs=w)
         >>> f_deg.writeto("temp.fits")
@@ -203,7 +204,7 @@ class FITSImageData:
         elif isinstance(data, np.ndarray):
             if fields is None:
                 mylog.warning(
-                    "No field name given for this array. " "Calling it 'image_data'."
+                    "No field name given for this array. Calling it 'image_data'."
                 )
                 fn = "image_data"
                 fields = [fn]
@@ -408,7 +409,7 @@ class FITSImageData:
                 uq.convert_to_cgs()
 
             if attr == "length_unit" and uq.value != 1.0:
-                mylog.warning("Converting length units " "from %s to %s.", uq, uq.units)
+                mylog.warning("Converting length units from %s to %s.", uq, uq.units)
                 uq = YTQuantity(1.0, uq.units)
 
             setattr(self, attr, uq)
@@ -489,7 +490,7 @@ class FITSImageData:
 
         Examples
         --------
-        >>> fid = FITSSlice(ds, "z", "density")
+        >>> fid = FITSSlice(ds, "z", ("gas", "density"))
         >>> fid.convolve("density", (3.0, "kpc"))
         """
         if self.dimensionality == 3:
@@ -794,7 +795,7 @@ class FITSImageData:
             scaleq = YTQuantity(sky_scale[0], sky_scale[1])
         if scaleq.units.dimensions != dimensions.angle / dimensions.length:
             raise RuntimeError(
-                f"sky_scale {sky_scale} not in correct " + "dimensions of angle/length!"
+                f"sky_scale {sky_scale} not in correct dimensions of angle/length!"
             )
         deltas = old_wcs.wcs.cdelt
         units = [str(unit) for unit in old_wcs.wcs.cunit]

@@ -101,8 +101,8 @@ def amrspace(extent, levels=7, cells=8):
 
     Examples
     --------
-    >>> l, r, lvl = amrspace([0.0, 2.0, 1.0, 2.0, 0.0, 3.14], levels=(3,3,0), cells=2)
-    >>> print l
+    >>> l, r, lvl = amrspace([0.0, 2.0, 1.0, 2.0, 0.0, 3.14], levels=(3, 3, 0), cells=2)
+    >>> print(l)
     [[ 0.     1.     0.   ]
      [ 0.25   1.     0.   ]
      [ 0.     1.125  0.   ]
@@ -729,8 +729,7 @@ def add_noise_fields(ds):
 
     def _binary_noise(field, data):
         """random binary data"""
-        res = prng.random_integers(0, 1, data.size).astype("float64")
-        return res
+        return prng.randint(low=0, high=2, size=data.size).astype("float64")
 
     def _positive_noise(field, data):
         """random strictly positive data"""
@@ -744,10 +743,10 @@ def add_noise_fields(ds):
         """random data with mixed signs"""
         return 2 * prng.random_sample(data.size) - 1
 
-    ds.add_field("noise0", _binary_noise, sampling_type="cell")
-    ds.add_field("noise1", _positive_noise, sampling_type="cell")
-    ds.add_field("noise2", _negative_noise, sampling_type="cell")
-    ds.add_field("noise3", _even_noise, sampling_type="cell")
+    ds.add_field(("gas", "noise0"), _binary_noise, sampling_type="cell")
+    ds.add_field(("gas", "noise1"), _positive_noise, sampling_type="cell")
+    ds.add_field(("gas", "noise2"), _negative_noise, sampling_type="cell")
+    ds.add_field(("gas", "noise3"), _even_noise, sampling_type="cell")
 
 
 def expand_keywords(keywords, full=False):
@@ -789,8 +788,8 @@ def expand_keywords(keywords, full=False):
     --------
 
     >>> keywords = {}
-    >>> keywords['dpi'] = (50, 100, 200)
-    >>> keywords['cmap'] = ('arbre', 'kelp')
+    >>> keywords["dpi"] = (50, 100, 200)
+    >>> keywords["cmap"] = ("arbre", "kelp")
     >>> list_of_kwargs = expand_keywords(keywords)
     >>> print(list_of_kwargs)
 
@@ -1090,7 +1089,7 @@ def check_results(func):
     ... def field_checker(dd, field_name):
     ...     return dd[field_name]
 
-    >>> field_checker(ds.all_data(), 'density', result_basename='density')
+    >>> field_checker(ds.all_data(), "density", result_basename="density")
 
     """
 
@@ -1109,7 +1108,7 @@ def check_results(func):
             st = _rv.std(dtype="float64")
             su = _rv.sum(dtype="float64")
             si = _rv.size
-            ha = hashlib.md5(_rv.tostring()).hexdigest()
+            ha = hashlib.md5(_rv.tobytes()).hexdigest()
             fn = f"func_results_ref_{name}.cpkl"
             with open(fn, "wb") as f:
                 pickle.dump((mi, ma, st, su, si, ha), f)
@@ -1138,7 +1137,7 @@ def check_results(func):
                 _rv.std(dtype="float64"),
                 _rv.sum(dtype="float64"),
                 _rv.size,
-                hashlib.md5(_rv.tostring()).hexdigest(),
+                hashlib.md5(_rv.tobytes()).hexdigest(),
             )
             fn = f"func_results_ref_{name}.cpkl"
             if not os.path.exists(fn):
