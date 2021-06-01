@@ -1,12 +1,3 @@
-"""
-Title: test_gizmo.py
-Purpose: Gizmo frontend tests
-Notes:
-    Copyright (c) 2015, yt Development Team.
-    Distributed under the terms of the Modified BSD License.
-    The full license is in the file COPYING.txt, distributed with this
-    software.
-"""
 import pytest
 
 import yt
@@ -35,8 +26,7 @@ class TestGizmo:
 
     @requires_file(gmhd)
     def test_gizmo_mhd(self):
-        r"""Magnetic fields should be loaded correctly when they are present.
-        """
+        r"""Magnetic fields should be loaded correctly when they are present."""
         ds = yt.load(gmhd, bounding_box=gmhd_bbox, unit_system="code")
         ad = ds.all_data()
         ptype = "PartType0"
@@ -53,8 +43,7 @@ class TestGizmo:
 
     @requires_file(gmhd)
     def test_gas_particle_fields(self):
-        r"""Test fields set up in GizmoFieldInfo.setup_gas_particle_fields.
-        """
+        r"""Test fields set up in GizmoFieldInfo.setup_gas_particle_fields."""
         ds = yt.load(gmhd, bounding_box=gmhd_bbox)
         ptype = "PartType0"
         derived_fields = []
@@ -83,8 +72,7 @@ class TestGizmo:
 
     @requires_file(gmhd)
     def test_star_particle_fields(self):
-        r"""Test fields set up in GizmoFieldInfo.setup_star_particle_fields.
-        """
+        r"""Test fields set up in GizmoFieldInfo.setup_star_particle_fields."""
         ds = yt.load(gmhd, bounding_box=gmhd_bbox)
         ptype = "PartType4"
         derived_fields = ["creation_time", "age"]

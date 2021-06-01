@@ -3,14 +3,112 @@ import os
 import sys
 
 import nose
-import numpy
-import pytest
 import yaml
 
 from yt.config import ytcfg
 from yt.utilities.answer_testing.framework import AnswerTesting
 
-numpy.set_printoptions(threshold=5, edgeitems=1, precision=4)
+#     config_file=".coveragerc",
+#     branch=True,
+#     auto_data=True,
+#     concurrency="multiprocessing",
+# )
+# cov.start()
+#
+# numpy.set_printoptions(threshold=5, edgeitems=1, precision=4)
+#
+#
+# class NoseWorker(multiprocessing.Process):
+#     def __init__(self, task_queue, result_queue):
+#         multiprocessing.Process.__init__(self)
+#         self.task_queue = task_queue
+#         self.result_queue = result_queue
+#
+#     def run(self):
+#         proc_name = self.name
+#         while True:
+#             next_task = self.task_queue.get()
+#             if next_task is None:
+#                 print("%s: Exiting" % proc_name)
+#                 self.task_queue.task_done()
+#                 break
+#             print("%s: %s" % (proc_name, next_task))
+#             result = next_task()
+#             self.task_queue.task_done()
+#             self.result_queue.put(result)
+#             if next_task.exclusive:
+#                 print("%s: Exiting (exclusive)" % proc_name)
+#                 break
+#         return
+#
+#
+# class NoseTask(object):
+#     def __init__(self, job):
+#         argv, exclusive = job
+#         self.argv = argv
+#         self.name = argv[0]
+#         self.exclusive = exclusive
+#
+#     def __call__(self):
+#         old_stderr = sys.stderr
+#         sys.stderr = mystderr = StringIO()
+#         test_dir = ytcfg.get("yt", "test_data_dir")
+#         answers_dir = os.path.join(test_dir, "answers")
+#         if "--with-answer-testing" in self.argv and not os.path.isdir(
+#             os.path.join(answers_dir, self.name)
+#         ):
+#             nose.run(
+#                 argv=self.argv + ["--answer-store"],
+#                 addplugins=[AnswerTesting()],
+#                 exit=False,
+#             )
+#         if os.path.isfile("{}.xml".format(self.name)):
+#             os.remove("{}.xml".format(self.name))
+#         nose.run(argv=self.argv, addplugins=[AnswerTesting()], exit=False)
+#         sys.stderr = old_stderr
+#         return mystderr.getvalue()
+#
+#     def __str__(self):
+#         return "WILL DO self.name = %s" % self.name
+#
+#
+# def generate_tasks_input():
+#     pyver = "py{}{}".format(sys.version_info.major, sys.version_info.minor)
+#
+#     test_dir = ytcfg.get("yt", "test_data_dir")
+#     answers_dir = os.path.join(test_dir, "answers")
+#     with open("tests/tests.yaml", "r") as obj:
+#         lines = obj.read()
+#     data = "\n".join([line for line in lines.split("\n") if "py2" not in line])
+#     tests = yaml.load(data, Loader=yaml.FullLoader)
+#
+#     base_argv = ["-s", "--nologcapture", "--with-xunit"]
+#
+#     base_answer_argv = [
+#         "--local-dir=%s" % answers_dir,
+#         "--with-answer-testing",
+#         "--answer-big-data",
+#         "--local",
+#     ]
+#
+#     args = []
+#
+#     for test in list(tests["other_tests"].keys()):
+#         args.append(([test] + base_argv + tests["other_tests"][test], True))
+#     for answer in list(tests["answer_tests"].keys()):
+#         if tests["answer_tests"][answer] is None:
+#             continue
+#         argv = ["{}_{}".format(pyver, answer)]
+#         argv += base_argv + base_answer_argv
+#         argv.append("--answer-name=%s" % argv[0])
+#         argv += tests["answer_tests"][answer]
+#         args.append((argv, False))
+#
+#     args = [
+#         (item + ["--xunit-file=%s.xml" % item[0]], exclusive)
+#         for item, exclusive in args
+#     ]
+#     return args
 
 
 class NoseWorker(multiprocessing.Process):

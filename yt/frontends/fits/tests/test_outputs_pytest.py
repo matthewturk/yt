@@ -1,12 +1,3 @@
-"""
-Title: test_fits.py
-Purpose: FITS frontend tests
-Notes:
-    Copyright (c) 2013, yt Development Team.
-    Distributed under the terms of the Modified BSD License.
-    The full license is in the file COPYING.txt, distributed with this
-    software.
-"""
 import pytest
 
 from yt.frontends.fits.data_structures import (
@@ -119,7 +110,13 @@ class TestFits:
     def test_SpectralCubeFITSDataset(self, ds):
         assert isinstance(ds, SpectralCubeFITSDataset)
 
-    @pytest.mark.parametrize("ds", [get_acis(),], indirect=True)
+    @pytest.mark.parametrize(
+        "ds",
+        [
+            get_acis(),
+        ],
+        indirect=True,
+    )
     def test_EventsFITSDataset(self, ds):
         assert isinstance(ds, EventsFITSDataset)
 

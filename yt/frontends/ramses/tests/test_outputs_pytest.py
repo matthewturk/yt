@@ -1,12 +1,3 @@
-"""
-Title: test_ramses.py
-Purpose: RAMSES frontend tests
-Notes:
-    Copyright (c) 2013, yt Development Team.
-    Distributed under the terms of the Modified BSD License.
-    The full license is in the file COPYING.txt, distributed with this
-    software.
-"""
 import os
 
 import numpy as np
@@ -433,7 +424,7 @@ class TestRamses:
 
         ds = data_dir_load(ramses_new_format)
         namelist_fname = os.path.join(ds.directory, "namelist.txt")
-        with open(namelist_fname, "r") as f:
+        with open(namelist_fname) as f:
             ref = f90nml.read(f)
         nml = ds.parameters["namelist"]
         assert nml == ref

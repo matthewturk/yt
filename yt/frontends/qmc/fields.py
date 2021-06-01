@@ -1,10 +1,10 @@
 import numpy as np
 
 from yt.fields.field_info_container import FieldInfoContainer
+from yt.units import amu
 from yt.utilities.lib.cykdtree import PyKDTree
 from yt.utilities.lib.particle_kdtree_tools import estimate_density
 from yt.utilities.logger import ytLogger as mylog
-from yt.units import amu
 
 from .definitions import elementRegister
 
@@ -18,11 +18,9 @@ class QMCFieldInfo(FieldInfoContainer):
     )
 
     def __init__(self, ds, field_list, slice_info=None):
-        super(QMCFieldInfo, self).__init__(ds, field_list, slice_info=slice_info)
+        super().__init__(ds, field_list, slice_info=slice_info)
 
     def setup_particle_fields(self, ptype, *args, **kwargs):
-        self._setup_masses()
-        self._setup_densities()
         super().setup_particle_fields(ptype, *args, **kwargs)
         self._setup_masses()
         self._setup_densities()
@@ -32,10 +30,11 @@ class QMCFieldInfo(FieldInfoContainer):
         Maps the element numbers from the numbers field to element
         masses.
         """
+
         def _atomic_mass(field, data):
-            n = data[("io", "numbers")]
-            n = int(n.d[0])
-            return elementRegister[n][2]
+            mass = data["io", "numbers"].d.copy() * amu
+            return mass * elementRegister[int(data[("io", "numbers")].d[0])][2]
+
         self.add_field(
             ("io", "mass"),
             sampling_type="particle",
@@ -75,6 +74,7 @@ class QMCFieldInfo(FieldInfoContainer):
         l_unit = "angstrom"
         m_unit = "amu"
         d_unit = "amu / angstrom**3"
+
         def _density(field, data):
             # Read basic fields
             pos = data["io", "particle_positions"].to(l_unit).d
@@ -85,7 +85,7 @@ class QMCFieldInfo(FieldInfoContainer):
             # which is right... the kdtree needs the positions to be the right
             # shape, is why this is done
             if pos.shape == (1,):
-                pos = np.ones((1,3))
+                pos = np.ones((1, 3))
             # Construct k-d tree
             kdtree = PyKDTree(
                 pos.astype("float64"),
@@ -95,6 +95,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 leafsize=2 * int(n_neighbors),
             )
             order = np.argsort(kdtree.idx)
+
             def exists(fname):
                 if ("gas", fname) in data.ds.derived_field_list:
                     mylog.info(
@@ -104,6 +105,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 else:
                     mylog.info("Generating field ('%s','%s')", "gas", fname)
                     return False
+
             # Add smoothing length field
             fname = "smoothing_length"
             if not exists(fname):
@@ -124,6 +126,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 dens = dens[order]
                 data[("gas", "density")] = (dens, d_unit)
             return data[("gas", "density")]
+
         self.add_field(
             ("gas", "density"),
             sampling_type="particle",
