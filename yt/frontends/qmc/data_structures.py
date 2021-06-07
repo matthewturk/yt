@@ -99,7 +99,7 @@ class QMCDataset(ParticleDataset):
         self.domain_left_edge = None
         self.domain_right_edge = None
         self.domain_dimensions = np.ones(3, "int32")
-        self.force_periodicity
+        self._periodicity = (True, True, True)
         self.gen_hsmls = True
         self._unit_system = unit_system
         super().__init__(filename, dataset_type, unit_system=unit_system)
@@ -129,7 +129,7 @@ class QMCDataset(ParticleDataset):
         self.domain_right_edge = np.array([1.0, 1.0, 1.0], np.float)
         self.dimensionality = 3
         self.domain_dimensions = np.array([1, 1, 1], np.int)
-        self.force_periodicity
+        self._periodicity = (True, True, True)
         self.current_time = 0.0
         self.cosmological_simulation = 0
         self.current_redshift = 0.0
