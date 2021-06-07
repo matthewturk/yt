@@ -77,7 +77,7 @@ class QMCFieldInfo(FieldInfoContainer):
 
         def _density(field, data):
             # Read basic fields
-            pos = data["io", "particle_positions"].to(l_unit).d
+            pos = data["io", "particle_position"].to(l_unit).d
             mass = data["io", "mass"].to(m_unit).d
             # NOTE: This is VERY BAD and should be fixed, but is done to get
             # to the next step, for now. Despite being marked as a vector field,
