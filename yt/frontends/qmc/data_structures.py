@@ -118,6 +118,7 @@ class QMCDataset(ParticleDataset):
         self.unit_registry.add(
             "code_specific_energy", 1.0, dimensions.energy / dimensions.mass
         )
+        self.unit_registry.add("h", 1.0, dimensions.dimensionless, r"h")
 
     def __repr__(self):
         return os.path.basename(self.parameter_filename).split(".")[0]
