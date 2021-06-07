@@ -97,7 +97,7 @@ class QMCFieldInfo(FieldInfoContainer):
             order = np.argsort(kdtree.idx)
 
             def exists(fname):
-                if ("gas", fname) in data.ds.derived_field_list:
+                if ("io", fname) in data.ds.derived_field_list:
                     mylog.info(
                         "Field ('%s','%s') already exists. Skipping", sph_ptype, fname
                     )
@@ -110,9 +110,9 @@ class QMCFieldInfo(FieldInfoContainer):
             fname = "smoothing_length"
             if not exists(fname):
                 hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
-                data[("gas", "smoothing_length")] = (hsml, l_unit)
+                data[("io", "smoothing_length")] = (hsml, l_unit)
             else:
-                hsml = data["gas", fname].to(l_unit).d
+                hsml = data["io", fname].to(l_unit).d
             # Add density field
             fname = "density"
             if not exists(fname):
@@ -124,11 +124,11 @@ class QMCFieldInfo(FieldInfoContainer):
                     kernel_name=kernel,
                 )
                 dens = dens[order]
-                data[("gas", "density")] = (dens, d_unit)
-            return data[("gas", "density")]
+                data[("io", "density")] = (dens, d_unit)
+            return data[("io", "density")]
 
         self.add_field(
-            ("gas", "density"),
+            ("io", "density"),
             sampling_type="particle",
             function=_density,
             units="amu/angstrom**3",
