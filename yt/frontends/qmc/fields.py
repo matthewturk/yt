@@ -87,7 +87,9 @@ class QMCFieldInfo(FieldInfoContainer):
 
         def _hsml(field, data):
             if not _exists("smoothing_length", data):
-                hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
+                # hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
+                # data[("io", "smoothing_length")] = (hsml, l_unit)
+                hsml = np.random.rand(16)
                 data[("io", "smoothing_length")] = (hsml, l_unit)
             return data[("io", "smoothing_length")]
 
