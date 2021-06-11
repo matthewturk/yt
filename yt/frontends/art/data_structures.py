@@ -151,6 +151,7 @@ class ARTDataset(Dataset):
         file_particle_stars=None,
         units_override=None,
         unit_system="cgs",
+        default_species_fields=None,
     ):
         self.fluid_types += ("art",)
         if fields is None:
@@ -175,6 +176,7 @@ class ARTDataset(Dataset):
             dataset_type,
             units_override=units_override,
             unit_system=unit_system,
+            default_species_fields=default_species_fields,
         )
         self.storage_filename = storage_filename
 
@@ -201,7 +203,7 @@ class ARTDataset(Dataset):
             else:
                 setattr(self, "_file_" + filetype, None)
 
-    def __repr__(self):
+    def __str__(self):
         return self._file_amr.split("/")[-1]
 
     def _set_code_unit_attributes(self):
@@ -482,7 +484,7 @@ class DarkMatterARTDataset(ARTDataset):
             else:
                 setattr(self, "_file_" + filetype, None)
 
-    def __repr__(self):
+    def __str__(self):
         return self._file_particle.split("/")[-1]
 
     def _set_code_unit_attributes(self):

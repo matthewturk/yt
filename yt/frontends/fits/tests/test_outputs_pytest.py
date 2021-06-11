@@ -110,7 +110,13 @@ class TestFits:
     def test_SpectralCubeFITSDataset(self, ds):
         assert isinstance(ds, SpectralCubeFITSDataset)
 
-    @pytest.mark.parametrize("ds", [get_acis(),], indirect=True)
+    @pytest.mark.parametrize(
+        "ds",
+        [
+            get_acis(),
+        ],
+        indirect=True,
+    )
     def test_EventsFITSDataset(self, ds):
         assert isinstance(ds, EventsFITSDataset)
 

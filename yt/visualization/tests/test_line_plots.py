@@ -1,5 +1,5 @@
-from nose.plugins.attrib import attr
-from nose.tools import assert_raises
+"""
+Tests for making line plots
 
 import yt
 from yt.testing import ANSWER_TEST_TAG, assert_equal, fake_random_ds
@@ -24,55 +24,71 @@ def compare(ds, plot, test_prefix, test_name, decimals=12):
     test.answer_name = test_name
     return test
 
+import pytest
 
-@attr(ANSWER_TEST_TAG)
-def test_line_plot():
-    ds = fake_random_ds(4)
-    fields = [field for field in ds.field_list if field[0] == "stream"]
-    field_labels = {f: f[1] for f in fields}
-    plot = yt.LinePlot(
-        ds, fields, (0, 0, 0), (1, 1, 0), 1000, field_labels=field_labels
-    )
-    plot.annotate_legend(fields[0])
-    plot.annotate_legend(fields[1])
-    plot.set_x_unit("cm")
-    plot.set_unit(fields[0], "kg/cm**3")
-    plot.annotate_title(fields[0], "Density Plot")
-    yield compare(
-        ds, plot, test_prefix="answers_line_plot", test_name="answers_line_plot"
-    )
+import yt
+from yt.testing import ANSWER_TEST_TAG, assert_equal, fake_random_ds
+from yt.utilities.answer_testing.framework import GenericImageTest
+from yt.visualization.line_plot import _validate_point
 
 
-@attr(ANSWER_TEST_TAG)
-def test_multi_line_plot():
-    ds = fake_random_ds(4)
-    fields = [field for field in ds.field_list if field[0] == "stream"]
-    field_labels = {f: f[1] for f in fields}
-    lines = []
-    lines.append(yt.LineBuffer(ds, [0.25, 0, 0], [0.25, 1, 0], 100, label="x = 0.5"))
-    lines.append(yt.LineBuffer(ds, [0.5, 0, 0], [0.5, 1, 0], 100, label="x = 0.5"))
-    plot = yt.LinePlot.from_lines(ds, fields, lines, field_labels=field_labels)
-    plot.annotate_legend(fields[0])
-    plot.annotate_legend(fields[1])
-    yield compare(
-        ds,
-        plot,
-        test_prefix="answers_multi_line_plot",
-        test_name="answers_multi_line_plot",
-    )
+def image_from_plot(plot):
+    tmpfd, tmpfname = tempfile.mkstemp(suffix=".png")
+    os.close(tmpfd)
+    plot.save(tmpfname)
+    return tmpfname
+
+
+@pytest.mark.answer_test
+@pytest.mark.usefixtures("temp_dir", "hashing")
+class TestLinePlots:
+    answer_file = None
+    saved_hashes = None
+
+    def test_line_plot(self):
+        ds = fake_random_ds(4)
+        fields = [field for field in ds.field_list if field[0] == "stream"]
+        field_labels = {f: f[1] for f in fields}
+        plot = yt.LinePlot(
+            ds, fields, (0, 0, 0), (1, 1, 0), 1000, field_labels=field_labels
+        )
+        plot.annotate_legend(fields[0])
+        plot.annotate_legend(fields[1])
+        plot.set_x_unit("cm")
+        plot.set_unit(fields[0], "kg/cm**3")
+        plot.annotate_title(fields[0], "Density Plot")
+        img_fname = image_from_plot(plot)
+        gi = generic_image(img_fname)
+        self.hashes.update({"generic_image": gi})
+
+    def test_multi_line_plot(self):
+        ds = fake_random_ds(4)
+        fields = [field for field in ds.field_list if field[0] == "stream"]
+        field_labels = {f: f[1] for f in fields}
+        lines = []
+        lines.append(
+            yt.LineBuffer(ds, [0.25, 0, 0], [0.25, 1, 0], 100, label="x = 0.5")
+        )
+        lines.append(yt.LineBuffer(ds, [0.5, 0, 0], [0.5, 1, 0], 100, label="x = 0.5"))
+        plot = yt.LinePlot.from_lines(ds, fields, lines, field_labels=field_labels)
+        plot.annotate_legend(fields[0])
+        plot.annotate_legend(fields[1])
+        img_fname = image_from_plot(plot)
+        gi = generic_image(img_fname)
+        self.hashes.update({"generic_image": gi})
 
 
 def test_line_buffer():
     ds = fake_random_ds(32)
     lb = yt.LineBuffer(ds, (0, 0, 0), (1, 1, 1), 512, label="diag")
-    lb["density"]
-    lb["velocity_x"]
-    assert_equal(lb["density"].size, 512)
-    lb["density"] = 0
-    assert_equal(lb["density"], 0)
-    assert_equal(set(lb.keys()), {"density", "velocity_x"})
-    del lb["velocity_x"]
-    assert_equal(set(lb.keys()), {"density"})
+    lb[("gas", "density")]
+    lb[("gas", "velocity_x")]
+    assert_equal(lb[("gas", "density")].size, 512)
+    lb[("gas", "density")] = 0
+    assert_equal(lb[("gas", "density")], 0)
+    assert_equal(set(lb.keys()), {("gas", "density"), ("gas", "velocity_x")})
+    del lb[("gas", "velocity_x")]
+    assert_equal(set(lb.keys()), {("gas", "density")})
 
 
 def test_validate_point():

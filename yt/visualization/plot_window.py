@@ -1,6 +1,6 @@
-import types
 from collections import defaultdict
 from distutils.version import LooseVersion
+from functools import wraps
 from numbers import Number
 
 import matplotlib
@@ -552,9 +552,9 @@ class PlotWindow(ImagePlotContainer):
         >>> import yt
         >>> ds = yt.load("")
         >>> p = yt.SlicePlot(ds, "altitude", "AIRDENS")
-        >>> p.set_mpl_projection('AIRDENS', 'Mollweide')
+        >>> p.set_mpl_projection("AIRDENS", "Mollweide")
         >>> p._setup_plots()
-        >>> p.plots['AIRDENS'].axes.coastlines()
+        >>> p.plots["AIRDENS"].axes.coastlines()
         >>> p.show()
 
         This will move the PlateCarree central longitude to 90 degrees and
@@ -563,11 +563,12 @@ class PlotWindow(ImagePlotContainer):
         >>> import yt
         >>> ds = yt.load("")
         >>> p = yt.SlicePlot(ds, "altitude", "AIRDENS")
-        >>> p.set_mpl_projection('AIRDENS', ('PlateCarree', () ,
-        ...                      {central_longitude=90, globe=None} ))
+        >>> p.set_mpl_projection(
+        ...     "AIRDENS", ("PlateCarree", (), {"central_longitude": 90, "globe": None})
+        ... )
         >>> p._setup_plots()
-        >>> p.plots['AIRDENS'].axes.set_global()
-        >>> p.plots['AIRDENS'].axes.coastlines()
+        >>> p.plots["AIRDENS"].axes.set_global()
+        >>> p.plots["AIRDENS"].axes.coastlines()
         >>> p.show()
 
 
@@ -579,10 +580,10 @@ class PlotWindow(ImagePlotContainer):
         >>> import yt
         >>> ds = yt.load("")
         >>> p = yt.SlicePlot(ds, "altitude", "AIRDENS")
-        >>> p.set_mpl_projection(('RotatedPole', (177.5, 37.5))
+        >>> p.set_mpl_projection("RotatedPole", (177.5, 37.5))
         >>> p._setup_plots()
-        >>> p.plots['AIRDENS'].axes.set_global()
-        >>> p.plots['AIRDENS'].axes.coastlines()
+        >>> p.plots["AIRDENS"].axes.set_global()
+        >>> p.plots["AIRDENS"].axes.coastlines()
         >>> p.show()
 
         This will create a RoatatedPole projection with the unrotated pole
@@ -592,11 +593,12 @@ class PlotWindow(ImagePlotContainer):
         >>> import yt
         >>> ds = yt.load("")
         >>> p = yt.SlicePlot(ds, "altitude", "AIRDENS")
-        >>> p.set_mpl_projection(('RotatedPole', (), {'pole_latitude':37.5,
-        ...                       'pole_longitude':177.5}))
+        >>> p.set_mpl_projection(
+        ...     ("RotatedPole", (), {"pole_latitude": 37.5, "pole_longitude": 177.5})
+        ... )
         >>> p._setup_plots()
-        >>> p.plots['AIRDENS'].axes.set_global()
-        >>> p.plots['AIRDENS'].axes.coastlines()
+        >>> p.plots["AIRDENS"].axes.set_global()
+        >>> p.plots["AIRDENS"].axes.coastlines()
         >>> p.show()
 
         """
@@ -932,9 +934,7 @@ class PWViewerMPL(PlotWindow):
         y_in_bounds = yc >= yllim and yc <= yrlim
 
         if not x_in_bounds and not y_in_bounds:
-            msg = (
-                "origin inputs not in bounds of specified coordinate sytem" + "domain."
-            )
+            msg = "origin inputs not in bounds of specified coordinate system domain."
             msg = msg.format(self.origin)
             raise RuntimeError(msg)
 
@@ -953,7 +953,7 @@ class PWViewerMPL(PlotWindow):
             axis_index = self.data_source.axis
 
             xc, yc = self._setup_origin()
-            if self.ds.unit_system.name.startswith("us") or self.ds.no_cgs_equiv_length:
+            if self.ds.unit_system._code_flag or self.ds.no_cgs_equiv_length:
                 # this should happen only if the dataset was initialized with
                 # argument unit_system="code" or if it's set to have no CGS
                 # equivalent.  This only needs to happen here in the specific
@@ -1006,16 +1006,36 @@ class PWViewerMPL(PlotWindow):
                 elif np.nanmax(image) > 0.0 and np.nanmin(image) < 0:
                     msg = (
                         "Plot image for field %s has both positive "
-                        "and negative values. Min = %f, Max = %f."
+                        "and negative/zero values. Min = %f, Max = %f."
                         % (f, np.nanmin(image), np.nanmax(image))
                     )
                     use_symlog = True
+                elif np.nanmax(image) > 0.0 and np.nanmin(image) == 0:
+                    # normally, a LogNorm scaling would still be OK here because
+                    # LogNorm will mask 0 values when calculating vmin. But
+                    # due to a bug in matplotlib's imshow, if the data range
+                    # spans many orders of magnitude while containing zero points
+                    # vmin can get rescaled to 0, resulting in an error when the image
+                    # gets drawn. So here we switch to symlog to avoid that until
+                    # a fix is in -- see PR #3161 and linked issue.
+                    cutoff_sigdigs = 15
+                    if (
+                        np.log10(np.nanmax(image[np.isfinite(image)]))
+                        - np.log10(np.nanmin(image[image > 0]))
+                        > cutoff_sigdigs
+                    ):
+                        msg = (
+                            "Plot image for field %s has both positive "
+                            "and zero values with large dynamic range." % (f,)
+                        )
+                        use_symlog = True
                 if msg is not None:
                     mylog.warning(msg)
                     if use_symlog:
                         mylog.warning(
-                            "Switching to symlog colorbar scaling "
-                            "unless linear scaling is specified later"
+                            "Log-scaling specified: switching to symlog "
+                            "colorbar scaling unless linear scaling is "
+                            "specified later"
                         )
                         self._field_transform[f] = symlog_transform
                         self._field_transform[f].func = None
@@ -1104,13 +1124,13 @@ class PWViewerMPL(PlotWindow):
                             0, self.xlim, self.ylim
                         )
                     else:
-                        xmin, xmax = [float(x) for x in extentx]
+                        xmin, xmax = (float(x) for x in extentx)
                     if yax in coordinates.axis_field:
                         ymin, ymax = coordinates.axis_field[yax](
                             1, self.xlim, self.ylim
                         )
                     else:
-                        ymin, ymax = [float(y) for y in extenty]
+                        ymin, ymax = (float(y) for y in extenty)
                     self.plots[f].image.set_extent((xmin, xmax, ymin, ymax))
                     self.plots[f].axes.set_aspect("auto")
 
@@ -1242,10 +1262,31 @@ class PWViewerMPL(PlotWindow):
             if key in ignored:
                 continue
             cbname = callback_registry[key]._type_name
-            CallbackMaker = callback_registry[key]
-            callback = invalidate_plot(apply_callback(CallbackMaker))
-            callback.__doc__ = CallbackMaker.__doc__
-            self.__dict__["annotate_" + cbname] = types.MethodType(callback, self)
+
+            # We need to wrap to create a closure so that
+            # CallbackMaker is bound to the wrapped method.
+            def closure():
+                CallbackMaker = callback_registry[key]
+
+                @wraps(CallbackMaker)
+                def method(*args, **kwargs):
+                    # We need to also do it here as "invalidate_plot"
+                    # and "apply_callback" require the functions'
+                    # __name__ in order to work properly
+                    @wraps(CallbackMaker)
+                    def cb(self, *a, **kwa):
+                        # We construct the callback method
+                        # skipping self
+                        return CallbackMaker(*a, **kwa)
+
+                    # Create callback
+                    cb = invalidate_plot(apply_callback(cb))
+
+                    return cb(self, *args, **kwargs)
+
+                return method
+
+            self.__dict__["annotate_" + cbname] = closure()
 
     def annotate_clear(self, index=None):
         """
@@ -1286,7 +1327,7 @@ class PWViewerMPL(PlotWindow):
     def list_annotations(self):
         """
         List the current callbacks for the plot, along with their index.  This
-        index can be used with annotate_clear to remove a callback from the
+        index can be used with `clear_annotations` to remove a callback from the
         current plot.
         """
         for i, cb in enumerate(self._callbacks):
@@ -1360,11 +1401,11 @@ class PWViewerMPL(PlotWindow):
 
         >>> import yt
         >>> ds = yt.load_sample("IsolatedGalaxy")
-        >>> fields = ['density', 'velocity_x', 'velocity_y', 'velocity_magnitude']
-        >>> p = yt.SlicePlot(ds, 'z', fields)
-        >>> p.set_log('velocity_x', False)
-        >>> p.set_log('velocity_y', False)
-        >>> fig = p.export_to_mpl_figure((2,2))
+        >>> fields = ["density", "velocity_x", "velocity_y", "velocity_magnitude"]
+        >>> p = yt.SlicePlot(ds, "z", fields)
+        >>> p.set_log("velocity_x", False)
+        >>> p.set_log("velocity_y", False)
+        >>> fig = p.export_to_mpl_figure((2, 2))
         >>> fig.tight_layout()
         >>> fig.savefig("test.png")
 
@@ -1509,9 +1550,9 @@ class AxisAlignedSlicePlot(PWViewerMPL):
     This will save an image in the file 'sliceplot_Density.png'
 
     >>> from yt import load
-    >>> ds = load('IsolatedGalaxy/galaxy0030/galaxy0030')
-    >>> p = SlicePlot(ds, 2, 'density', 'c', (20, 'kpc'))
-    >>> p.save('sliceplot')
+    >>> ds = load("IsolatedGalaxy/galaxy0030/galaxy0030")
+    >>> p = SlicePlot(ds, 2, "density", "c", (20, "kpc"))
+    >>> p.save("sliceplot")
 
     """
     _plot_type = "Slice"
@@ -1726,8 +1767,8 @@ class ProjectionPlot(PWViewerMPL):
     center of the simulation box:
 
     >>> from yt import load
-    >>> ds = load('IsolateGalaxygalaxy0030/galaxy0030')
-    >>> p = ProjectionPlot(ds, "z", "density", width=(20, "kpc"))
+    >>> ds = load("IsolateGalaxygalaxy0030/galaxy0030")
+    >>> p = ProjectionPlot(ds, "z", ("gas", "density"), width=(20, "kpc"))
 
     """
     _plot_type = "Projection"
@@ -2380,10 +2421,11 @@ def SlicePlot(ds, normal=None, fields=None, axis=None, *args, **kwargs):
 
     >>> from yt import load
     >>> ds = load("IsolatedGalaxy/galaxy0030/galaxy0030")
-    >>> slc = SlicePlot(ds, "x", "density", center=[0.2,0.3,0.4])
-    >>>
-    >>> slc = SlicePlot(ds, [0.4, 0.2, -0.1], "pressure",
-    ...                 north_vector=[0.2,-0.3,0.1])
+    >>> slc = SlicePlot(ds, "x", ("gas", "density"), center=[0.2, 0.3, 0.4])
+
+    >>> slc = SlicePlot(
+    ...     ds, [0.4, 0.2, -0.1], ("gas", "pressure"), north_vector=[0.2, -0.3, 0.1]
+    ... )
 
     """
     if axis is not None:

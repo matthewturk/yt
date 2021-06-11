@@ -1,3 +1,18 @@
+"""
+Tests for making unstructured mesh slices
+
+"""
+
+# -----------------------------------------------------------------------------
+# Copyright (c) 2013, yt Development Team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# -----------------------------------------------------------------------------
+import os
+import tempfile
+
 import numpy as np
 from nose.plugins.attrib import attr
 
@@ -91,6 +106,7 @@ def test_mesh_slices_hexahedral():
             sl_obj = ds.slice(idir, ds.domain_center[idir])
             assert sl_obj[field].shape[0] == mesh.count(sl_obj.selector)
             assert sl_obj[field].shape[0] < ad[field].shape[0]
+
 
 
 def test_perfect_element_intersection():

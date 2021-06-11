@@ -149,7 +149,7 @@ slice.  To instead use the coordinates as defined in the dataset, use
 the optional argument: ``origin="native"``
 
 If supplied without units, the center is assumed by in code units.  There are also
-the following alternative options for the `center` keyword:
+the following alternative options for the ``center`` keyword:
 
 * ``"center"``, ``"c"``: the domain center
 * ``"max"``, ``"m"``: the position of the maximum density
@@ -174,9 +174,16 @@ Here is an example that combines all of the options we just discussed.
 
    import yt
    from yt.units import kpc
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', center=[0.5, 0.5, 0.5],
-                      width=(20,'kpc'), buff_size=(1000, 1000))
+   slc = yt.SlicePlot(
+       ds,
+       "z",
+       "density",
+       center=[0.5, 0.5, 0.5],
+       width=(20, "kpc"),
+       buff_size=(1000, 1000),
+   )
    slc.save()
 
 The above example will display an annotated plot of a slice of the
@@ -191,11 +198,12 @@ into the data. For example:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'pressure', center='c')
+   slc = yt.SlicePlot(ds, "z", "pressure", center="c")
    slc.save()
    slc.zoom(30)
-   slc.save('zoom')
+   slc.save("zoom")
 
 will save a plot of the pressure field in a slice along the z
 axis across the entire simulation domain followed by another plot that
@@ -228,6 +236,7 @@ of a three-dimensional one:
 .. python-script::
 
     import yt
+
     ds = yt.load("WindTunnel/windtunnel_4lev_hdf5_plt_cnt_0030")
     p = yt.plot_2d(ds, "density", center=[1.0, 0.4])
     p.set_log("density", False)
@@ -255,11 +264,11 @@ plane, and the name of the fields to plot.  Just like an
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   L = [1,1,0] # vector normal to cutting plane
-   north_vector = [-1,1,0]
-   cut = yt.SlicePlot(ds, L, 'density', width=(25, 'kpc'),
-                      north_vector=north_vector)
+   L = [1, 1, 0]  # vector normal to cutting plane
+   north_vector = [-1, 1, 0]
+   cut = yt.SlicePlot(ds, L, "density", width=(25, "kpc"), north_vector=north_vector)
    cut.save()
 
 In this case, a normal vector for the cutting plane is supplied in the second
@@ -282,9 +291,16 @@ example:
 
    import yt
    from yt.units import kpc
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   prj = yt.ProjectionPlot(ds, 2, 'temperature', width=25*kpc,
-                           weight_field='density', buff_size=(1000, 1000))
+   prj = yt.ProjectionPlot(
+       ds,
+       2,
+       "temperature",
+       width=25 * kpc,
+       weight_field="density",
+       buff_size=(1000, 1000),
+   )
    prj.save()
 
 will create a density-weighted projection of the temperature field along
@@ -372,11 +388,13 @@ projection through a simulation.
 
 .. python-script::
 
-   import yt
    import numpy as np
+
+   import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   L = [1,1,0] # vector normal to cutting plane
-   north_vector = [-1,1,0]
+   L = [1, 1, 0]  # vector normal to cutting plane
+   north_vector = [-1, 1, 0]
    W = [0.02, 0.02, 0.02]
    c = [0.5, 0.5, 0.5]
    N = 512
@@ -395,11 +413,13 @@ to project along, and a field to project.  For example:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   L = [1,1,0] # vector normal to cutting plane
-   north_vector = [-1,1,0]
-   prj = yt.OffAxisProjectionPlot(ds,L,'density',width=(25, 'kpc'),
-                                  north_vector=north_vector)
+   L = [1, 1, 0]  # vector normal to cutting plane
+   north_vector = [-1, 1, 0]
+   prj = yt.OffAxisProjectionPlot(
+       ds, L, "density", width=(25, "kpc"), north_vector=north_vector
+   )
    prj.save()
 
 OffAxisProjectionPlots can also be created with a number of
@@ -417,8 +437,9 @@ Here is an example script using a publicly available MOOSE dataset:
 .. python-script::
 
    import yt
+
    ds = yt.load("MOOSE_sample_data/out.e-s010")
-   sl = yt.SlicePlot(ds, 'x', ('connect1', 'diffused'))
+   sl = yt.SlicePlot(ds, "x", ("connect1", "diffused"))
    sl.zoom(0.75)
    sl.save()
 
@@ -431,8 +452,9 @@ to the ``'z'`` direction through the mesh labelled by ``'connect2'``, we do:
 .. python-script::
 
    import yt
+
    ds = yt.load("MOOSE_sample_data/out.e-s010")
-   sl = yt.SlicePlot(ds, 'z', ('connect2', 'convected'))
+   sl = yt.SlicePlot(ds, "z", ("connect2", "convected"))
    sl.zoom(0.75)
    sl.save()
 
@@ -445,8 +467,9 @@ plot element-centered fields:
 .. python-script::
 
    import yt
-   ds = yt.load('MOOSE_sample_data/out.e-s010')
-   sl = yt.SlicePlot(ds, 'y', ('connect1', 'conv_indicator'))
+
+   ds = yt.load("MOOSE_sample_data/out.e-s010")
+   sl = yt.SlicePlot(ds, "y", ("connect1", "conv_indicator"))
    sl.zoom(0.75)
    sl.save()
 
@@ -455,9 +478,10 @@ We can also annotate the mesh lines, as follows:
 .. python-script::
 
    import yt
-   ds = yt.load('MOOSE_sample_data/out.e-s010')
-   sl = yt.SlicePlot(ds, 'z', ('connect1', 'diffused'))
-   sl.annotate_mesh_lines(plot_args={'color':'black'})
+
+   ds = yt.load("MOOSE_sample_data/out.e-s010")
+   sl = yt.SlicePlot(ds, "z", ("connect1", "diffused"))
+   sl.annotate_mesh_lines(plot_args={"color": "black"})
    sl.zoom(0.75)
    sl.save()
 
@@ -470,8 +494,9 @@ a dataset that uses 6-node wedge elements:
 .. python-script::
 
    import yt
+
    ds = yt.load("MOOSE_sample_data/wedge_out.e")
-   sl = yt.SlicePlot(ds, 2, ('connect2', 'diffused'))
+   sl = yt.SlicePlot(ds, 2, ("connect2", "diffused"))
    sl.save()
 
 Slices can also be used to examine 2D unstructured mesh datasets, but the
@@ -481,8 +506,9 @@ an example using another MOOSE dataset that uses triangular mesh elements:
 .. python-script::
 
    import yt
-   ds = yt.load('MOOSE_sample_data/out.e')
-   sl = yt.SlicePlot(ds, 2, ('connect1', 'nodal_aux'))
+
+   ds = yt.load("MOOSE_sample_data/out.e")
+   sl = yt.SlicePlot(ds, 2, ("connect1", "nodal_aux"))
    sl.save()
 
 You may run into situations where you have a variable you want to visualize that
@@ -492,10 +518,62 @@ simply pass ``all`` as the first argument of the field tuple:
 .. python-script::
 
    import yt
+
    ds = yt.load("MultiRegion/two_region_example_out.e", step=-1)
-   sl = yt.SlicePlot(ds, 'z', ('all', 'diffused'))
+   sl = yt.SlicePlot(ds, "z", ("all", "diffused"))
    sl.save()
 
+.. _particle-plotting-workarounds:
+
+Additional Notes for Plotting Particle Data
+-------------------------------------------
+
+Below are some important caveats to note when visualizing particle data.
+
+1. Off axis slice plotting is not available for any particle data.
+   However, axis-aligned slice plots (as described in :ref:`slice-plots`)
+   will work.
+
+2. Off axis projections (as in :ref:`off-axis-projection`) will only work
+   for SPH particles, i.e., particles that have a defined smoothing length.
+
+Two workaround methods are available for plotting non-SPH particles with off-axis
+projections.
+
+1. :ref:`smooth-non-sph` - this method involves extracting particle data to be
+   reloaded with :ref:`~yt.loaders.load_particles` and using the
+   :ref:`~yt.frontends.stream.data_structures.add_SPH_fields` function to
+   create smoothing lengths. This works well for relatively small datasets,
+   but is not parallelized and may take too long for larger data.
+
+2. Plot from a saved
+   :class:`~yt.data_objects.construction_data_containers.YTCoveringGrid`,
+   :class:`~yt.data_objects.construction_data_containers.YTSmoothedCoveringGrid`,
+   or :class:`~yt.data_objects.construction_data_containers.YTArbitraryGrid`
+   dataset.
+
+This second method is illustrated below. First, construct one of the grid data
+objects listed above. Then, use the
+:func:`~yt.data_objects.data_containers.YTDataContainer.save_as_dataset`
+function (see :ref:`saving_data`) to save a deposited particle field
+(see :ref:`deposited-particle-fields`) as a reloadable dataset. This dataset
+can then be loaded and visualized using both off-axis projections and slices.
+Note, the change in the field name from ``("deposit", "nbody_mass")`` to
+``("grid", "nbody_mass")`` after reloading.
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load("gadget_cosmology_plus/snap_N128L16_132.hdf5")
+   # create a 128^3 covering grid over the entire domain
+   L = 7
+   cg = ds.covering_grid(level=L, left_edge=ds.domain_left_edge, dims=[2**L]*3)
+
+   fn = cg.save_as_dataset(fields=[("deposit", "nbody_mass")])
+   ds_grid = yt.load(fn)
+   p = yt.OffAxisProjectionPlot(ds_grid, [1, 1, 1], ("grid", "nbody_mass"))
+   p.save()
 
 Plot Customization: Recentering, Resizing, Colormaps, and More
 --------------------------------------------------------------
@@ -507,8 +585,9 @@ will modify the following plot.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.save()
 
 Panning and zooming
@@ -523,9 +602,10 @@ deltas.
 
    import yt
    from yt.units import kpc
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.pan((2*kpc, 2*kpc))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.pan((2 * kpc, 2 * kpc))
    slc.save()
 
 :meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.pan_rel` accepts deltas
@@ -534,8 +614,9 @@ in units relative to the field of view of the plot.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.pan_rel((0.1, -0.1))
    slc.save()
 
@@ -544,8 +625,9 @@ in units relative to the field of view of the plot.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.zoom(2)
    slc.save()
 
@@ -558,9 +640,10 @@ the axes unit labels.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_axes_unit('Mpc')
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_axes_unit("Mpc")
    slc.save()
 
 The same result could have been accomplished by explicitly setting the ``width``
@@ -575,9 +658,10 @@ the customization of the units used for the image and colorbar.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_unit('density', 'Msun/pc**3')
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_unit("density", "Msun/pc**3")
    slc.save()
 
 If the unit you would like to convert to needs an equivalency, this can be
@@ -588,9 +672,10 @@ an energy unit instead of a temperature unit:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'temperature', width=(10,'kpc'))
-   slc.set_unit('temperature', 'keV', equivalency='thermal')
+   slc = yt.SlicePlot(ds, "z", "temperature", width=(10, "kpc"))
+   slc.set_unit("temperature", "keV", equivalency="thermal")
    slc.save()
 
 Set the plot center
@@ -603,8 +688,9 @@ two element tuples.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.set_center((0.5, 0.503))
    slc.save()
 
@@ -620,15 +706,16 @@ by the user at initialization:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   #slicing with non right-handed coordinates
-   slc = yt.SlicePlot(ds, 'x', 'velocity_x', right_handed=False)
-   slc.annotate_title('Not Right Handed')
+   # slicing with non right-handed coordinates
+   slc = yt.SlicePlot(ds, "x", "velocity_x", right_handed=False)
+   slc.annotate_title("Not Right Handed")
    slc.save("NotRightHanded.png")
 
-   #switching to right-handed coordinates
+   # switching to right-handed coordinates
    slc.toggle_right_handed()
-   slc.annotate_title('Right Handed')
+   slc.annotate_title("Right Handed")
    slc.save("Standard.png")
 
 .. _hiding-colorbar-and-axes:
@@ -643,14 +730,15 @@ minimal plots that focus on the data:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.hide_colorbar()
    slc.hide_axes()
    slc.save()
 
-See the cookbook recipe :ref:`show-hide-axes-colorbar` and the
-`full function description ~yt.visualization.plot_window.PlotWindow` for more
+See the cookbook recipe :ref:`show-hide-axes-colorbar` and the full function
+description :class:`~yt.visualization.plot_window.PlotWindow` for more
 information.
 
 Fonts
@@ -662,10 +750,10 @@ customization.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_font({'family': 'sans-serif', 'style': 'italic',
-                 'weight': 'bold', 'size': 24})
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_font({"family": "sans-serif", "style": "italic", "weight": "bold", "size": 24})
    slc.save()
 
 Colormaps
@@ -682,9 +770,10 @@ Use any of the colormaps listed in the :ref:`colormaps` section.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_cmap('density', 'RdBu_r')
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_cmap("density", "RdBu_r")
    slc.save()
 
 The :meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.set_log` function
@@ -695,9 +784,10 @@ linear.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_log('density', False)
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_log("density", False)
    slc.save()
 
 Specifically, a field containing both positive and negative values can be plotted
@@ -710,9 +800,10 @@ under symlog scale with the linear range of ``(0, linthresh)``.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'x-velocity', width=(30,'kpc'))
-   slc.set_log('x-velocity', True, linthresh=1.e1)
+   slc = yt.SlicePlot(ds, "z", "x-velocity", width=(30, "kpc"))
+   slc.set_log("x-velocity", True, linthresh=1.0e1)
    slc.save()
 
 The :meth:`~yt.visualization.plot_container.ImagePlotContainer.set_background_color`
@@ -723,12 +814,13 @@ value of the color map.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(1.5, 'Mpc'))
-   slc.set_background_color('density')
-   slc.save('bottom_colormap_background')
-   slc.set_background_color('density', color='black')
-   slc.save('black_background')
+   slc = yt.SlicePlot(ds, "z", "density", width=(1.5, "Mpc"))
+   slc.set_background_color("density")
+   slc.save("bottom_colormap_background")
+   slc.set_background_color("density", color="black")
+   slc.save("black_background")
 
 If you would like to change the background for a plot and also hide the axes,
 you will need to make use of the ``draw_frame`` keyword argument for the ``hide_axes`` function. If you do not use this keyword argument, the call to
@@ -737,13 +829,14 @@ you will need to make use of the ``draw_frame`` keyword argument for the ``hide_
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   field = ('deposit', 'all_density')
-   slc = yt.ProjectionPlot(ds, 'z', field, width=(1.5, 'Mpc'))
+   field = ("deposit", "all_density")
+   slc = yt.ProjectionPlot(ds, "z", field, width=(1.5, "Mpc"))
    slc.set_background_color(field)
    slc.hide_axes(draw_frame=True)
    slc.hide_colorbar()
-   slc.save('just_image')
+   slc.save("just_image")
 
 Lastly, the :meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.set_zlim`
 function makes it possible to set a custom colormap range.
@@ -751,9 +844,10 @@ function makes it possible to set a custom colormap range.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_zlim('density', 1e-30, 1e-25)
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_zlim("density", 1e-30, 1e-25)
    slc.save()
 
 Annotations
@@ -767,8 +861,9 @@ For example:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.annotate_grids()
    slc.save()
 
@@ -791,8 +886,9 @@ image to see the difference more clearly.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.set_figure_size(10)
    slc.save()
 
@@ -802,8 +898,9 @@ To change the resolution of the image, call the
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
    slc.set_buff_size(1600)
    slc.save()
 
@@ -824,10 +921,11 @@ function for the colorbar axis.
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   slc = yt.SlicePlot(ds, 'z', 'density', width=(10,'kpc'))
-   slc.set_minorticks('all', False)
-   slc.set_colorbar_minorticks('all', False)
+   slc = yt.SlicePlot(ds, "z", "density", width=(10, "kpc"))
+   slc.set_minorticks("all", False)
+   slc.set_colorbar_minorticks("all", False)
    slc.save()
 
 
@@ -891,8 +989,9 @@ to be profiled.
 
    import yt
    from yt.units import kpc
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-   my_galaxy = ds.disk(ds.domain_center, [0.0, 0.0, 1.0], 10*kpc, 3*kpc)
+   my_galaxy = ds.disk(ds.domain_center, [0.0, 0.0, 1.0], 10 * kpc, 3 * kpc)
    plot = yt.ProfilePlot(my_galaxy, "density", ["temperature"])
    plot.save()
 
@@ -908,10 +1007,10 @@ For instance:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    my_sphere = ds.sphere([0.5, 0.5, 0.5], (100, "kpc"))
-   plot = yt.ProfilePlot(my_sphere, "temperature", ["cell_mass"],
-                         weight_field=None)
+   plot = yt.ProfilePlot(my_sphere, "temperature", ["mass"], weight_field=None)
    plot.save()
 
 Note that because we have specified the weighting field to be ``None``, the
@@ -929,10 +1028,12 @@ generate a plot of the enclosed mass in a sphere:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    my_sphere = ds.sphere([0.5, 0.5, 0.5], (100, "kpc"))
-   plot = yt.ProfilePlot(my_sphere, "radius", ["cell_mass"],
-                         weight_field=None, accumulation=True)
+   plot = yt.ProfilePlot(
+       my_sphere, "radius", ["mass"], weight_field=None, accumulation=True
+   )
    plot.save()
 
 You can also access the data generated by profiles directly, which can be
@@ -944,12 +1045,12 @@ The profiled fields can be accessed from the dictionary ``field_data``.
 
 .. code-block:: python
 
-   plot = ProfilePlot(my_sphere, "temperature", ["cell_mass"], weight_field=None)
+   plot = ProfilePlot(my_sphere, "temperature", ["mass"], weight_field=None)
    profile = plot.profiles[0]
    # print the bin field, in this case temperature
    print(profile.x)
-   # print the profiled cell_mass field
-   print(profile["cell_mass"])
+   # print the profiled mass field
+   print(profile["mass"])
 
 Other options, such as the number of bins, are also configurable. See the
 documentation for :class:`~yt.visualization.profile_plotter.ProfilePlot` for
@@ -968,9 +1069,8 @@ method and then given to the ProfilePlot object.
    import yt
 
    # Create a time-series object.
-   es = yt.simulation("enzo_tiny_cosmology/32Mpc_32.enzo", "Enzo")
+   es = yt.load_simulation("enzo_tiny_cosmology/32Mpc_32.enzo", "Enzo")
    es.get_time_series(redshifts=[5, 4, 3, 2, 1, 0])
-
 
    # Lists to hold profiles, labels, and plot specifications.
    profiles = []
@@ -981,10 +1081,16 @@ method and then given to the ProfilePlot object.
        # Create a data container to hold the whole dataset.
        ad = ds.all_data()
        # Create a 1d profile of density vs. temperature.
-       profiles.append(yt.create_profile(ad, ["temperature"],
-                                         fields=["cell_mass"],
-                                         weight_field=None,
-                                         accumulation=True))
+       profiles.append(
+           yt.create_profile(
+               ad,
+               ["temperature"],
+               fields=["mass"],
+               weight_field=None,
+               accumulation=True,
+           )
+       )
+
        # Add labels
        labels.append("z = %.2f" % ds.current_redshift)
 
@@ -1010,12 +1116,16 @@ This function accepts a dictionary of ``(max, min)`` tuples keyed to field names
 
     import yt
     import yt.units as u
-    ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-    sp = ds.sphere('m', 10*u.kpc)
-    profiles = yt.create_profile(sp, "temperature", "density",
-                                 weight_field=None,
-                                 extrema={'temperature': (1e3, 1e7),
-                                          'density': (1e-26, 1e-22)})
+
+    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+    sp = ds.sphere("m", 10 * u.kpc)
+    profiles = yt.create_profile(
+        sp,
+        "temperature",
+        "density",
+        weight_field=None,
+        extrema={"temperature": (1e3, 1e7), "density": (1e-26, 1e-22)},
+    )
     plot = yt.ProfilePlot.from_profiles(profiles)
     plot.save()
 
@@ -1034,8 +1144,9 @@ does not accept a field name as the first argument.
 
    import yt
    import yt.units as u
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   sp = ds.sphere('m', 10*u.kpc)
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   sp = ds.sphere("m", 10 * u.kpc)
    plot = yt.ProfilePlot(sp, "temperature", "density", weight_field=None)
    plot.set_xlim(1e3, 1e7)
    plot.set_ylim("density", 1e-26, 1e-22)
@@ -1057,8 +1168,9 @@ masses per cubic parsec as a function of radius in kiloparsecs.
 
     import yt
     import yt.units as u
-    ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-    sp = ds.sphere('m', 10*u.kpc)
+
+    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+    sp = ds.sphere("m", 10 * u.kpc)
     plot = yt.ProfilePlot(sp, "radius", "density", weight_field=None)
     plot.set_unit("density", "msun/pc**3")
     plot.set_unit("radius", "kpc")
@@ -1081,8 +1193,9 @@ negative, we set the scaling to be linear for this field.
 
    import yt
    import yt.units as u
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   sp = ds.sphere('m', 10*u.kpc)
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   sp = ds.sphere("m", 10 * u.kpc)
    plot = yt.ProfilePlot(sp, "radius", "x-velocity", weight_field=None)
    plot.set_log("x-velocity", False)
    plot.save()
@@ -1104,10 +1217,10 @@ function of radius. The xlabel is set to "Radius", for all plots, and the ylabel
 .. python-script::
 
    import yt
+
    ds = yt.load("enzo_tiny_cosmology/DD0046/DD0046")
    ad = ds.all_data()
-   plot = yt.ProfilePlot(ad, "density", ["temperature", "velocity_x"],
-                    weight_field=None)
+   plot = yt.ProfilePlot(ad, "density", ["temperature", "velocity_x"], weight_field=None)
    plot.set_xlabel("Radius")
    plot.set_ylabel("velocity_x", "velocity in x direction")
    plot.save()
@@ -1126,6 +1239,7 @@ In the following example we create a plot and set the plot title.
 .. python-script::
 
    import yt
+
    ds = yt.load("enzo_tiny_cosmology/DD0046/DD0046")
    ad = ds.all_data()
    plot = yt.ProfilePlot(ad, "density", ["temperature"], weight_field=None)
@@ -1138,11 +1252,14 @@ specific plot.
 .. python-script::
 
    import yt
-   ds = yt.load('enzo_tiny_cosmology/DD0046/DD0046')
+
+   ds = yt.load("enzo_tiny_cosmology/DD0046/DD0046")
    sphere = ds.sphere("max", (1.0, "Mpc"))
    profiles = []
-   profiles.append(yt.create_profile(sphere, ["radius"], fields=["density"],n_bins=64))
-   profiles.append(yt.create_profile(sphere, ["radius"], fields=["dark_matter_density"],n_bins=64))
+   profiles.append(yt.create_profile(sphere, ["radius"], fields=["density"], n_bins=64))
+   profiles.append(
+       yt.create_profile(sphere, ["radius"], fields=["dark_matter_density"], n_bins=64)
+   )
    plot = yt.ProfilePlot.from_profiles(profiles)
    plot.annotate_title("Plot Title: Density", "density")
    plot.annotate_title("Plot Title: Dark Matter Density", "dark_matter_density")
@@ -1165,10 +1282,11 @@ In the following example we create a plot and add a simple annotation.
 .. python-script::
 
    import yt
+
    ds = yt.load("enzo_tiny_cosmology/DD0046/DD0046")
    ad = ds.all_data()
    plot = yt.ProfilePlot(ad, "density", ["temperature"], weight_field=None)
-   plot.annotate_text(1e-30, 1e7,"Annotated Text")
+   plot.annotate_text(1e-30, 1e7, "Annotated Text")
    plot.save()
 
 To add annotations to a particular set of fields we need to pass in the list of fields as follows:
@@ -1259,12 +1377,12 @@ respectively. The below code snippet combines all the features we've discussed:
 
    import yt
 
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
 
-   plot = yt.LinePlot(ds, 'density', [0, 0, 0], [1, 1, 1], 512)
-   plot.annotate_legend('density')
-   plot.set_x_unit('cm')
-   plot.set_unit('density', 'kg/cm**3')
+   plot = yt.LinePlot(ds, "density", [0, 0, 0], [1, 1, 1], 512)
+   plot.annotate_legend("density")
+   plot.set_x_unit("cm")
+   plot.set_unit("density", "kg/cm**3")
    plot.save()
 
 If a list of fields is passed to ``LinePlot``, yt will create a number of
@@ -1281,10 +1399,15 @@ labels passed in the initial construction of the ``LinePlot`` instance. Example:
    import yt
 
    ds = yt.load("SecondOrderTris/RZ_p_no_parts_do_nothing_bcs_cone_out.e", step=-1)
-   plot = yt.LinePlot(ds, [('all', 'v'), ('all', 'u')], [0, 0, 0], [0, 1, 0],
-                      100, field_labels={('all', 'u') : r"v$_x$",
-                                         ('all', 'v') : r"v$_y$"})
-   plot.annotate_legend(('all', 'u'))
+   plot = yt.LinePlot(
+       ds,
+       [("all", "v"), ("all", "u")],
+       [0, 0, 0],
+       [0, 1, 0],
+       100,
+       field_labels={("all", "u"): r"v$_x$", ("all", "v"): r"v$_y$"},
+   )
+   plot.annotate_legend(("all", "u"))
    plot.save()
 
 ``LinePlot`` is a bit different from yt ray objects which are data
@@ -1314,10 +1437,12 @@ temperature bins, you can do:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    my_sphere = ds.sphere("c", (50, "kpc"))
-   plot = yt.PhasePlot(my_sphere, "density", "temperature", ["cell_mass"],
-                       weight_field=None)
+   plot = yt.PhasePlot(
+       my_sphere, "density", "temperature", ["mass"], weight_field=None
+   )
    plot.save()
 
 If you would rather see the average value of a field as a function of two other
@@ -1328,6 +1453,7 @@ something like:
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    my_sphere = ds.sphere("c", (50, "kpc"))
    plot = yt.PhasePlot(my_sphere, "density", "temperature", ["H_fraction"])
@@ -1347,17 +1473,17 @@ and ``show_colorbar``.
 .. python-script::
 
    import yt
+
    ds = yt.load("sizmbhloz-clref04SNth-rs9_a0.9011/sizmbhloz-clref04SNth-rs9_a0.9011.art")
-   center = ds.arr([64.0, 64.0, 64.0], 'code_length')
+   center = ds.arr([64.0, 64.0, 64.0], "code_length")
    rvir = ds.quan(1e-1, "Mpccm/h")
    sph = ds.sphere(center, rvir)
 
-   plot = yt.PhasePlot(sph, "density", "temperature", "cell_mass",
-                       weight_field=None)
-   plot.set_unit('density', 'Msun/pc**3')
-   plot.set_unit('cell_mass', 'Msun')
-   plot.set_xlim(1e-5,1e1)
-   plot.set_ylim(1,1e7)
+   plot = yt.PhasePlot(sph, "density", "temperature", "mass", weight_field=None)
+   plot.set_unit("density", "Msun/pc**3")
+   plot.set_unit("mass", "Msun")
+   plot.set_xlim(1e-5, 1e1)
+   plot.set_ylim(1, 1e7)
    plot.save()
 
 It is also possible to construct a custom 2D profile object and then use the
@@ -1369,16 +1495,23 @@ limits.  The following example illustrates this workflow:
 .. python-script::
 
    import yt
+
    ds = yt.load("sizmbhloz-clref04SNth-rs9_a0.9011/sizmbhloz-clref04SNth-rs9_a0.9011.art")
-   center = ds.arr([64.0, 64.0, 64.0], 'code_length')
+   center = ds.arr([64.0, 64.0, 64.0], "code_length")
    rvir = ds.quan(1e-1, "Mpccm/h")
    sph = ds.sphere(center, rvir)
-   units = dict(density='Msun/pc**3', cell_mass='Msun')
+   units = dict(density="Msun/pc**3", cell_mass="Msun")
    extrema = dict(density=(1e-5, 1e1), temperature=(1, 1e7))
 
-   profile = yt.create_profile(sph, ['density', 'temperature'],
-                               n_bins=[128, 128], fields=['cell_mass'],
-                               weight_field=None, units=units, extrema=extrema)
+   profile = yt.create_profile(
+       sph,
+       ["density", "temperature"],
+       n_bins=[128, 128],
+       fields=["mass"],
+       weight_field=None,
+       units=units,
+       extrema=extrema,
+   )
 
    plot = yt.PhasePlot.from_profile(profile)
 
@@ -1407,7 +1540,7 @@ Particle Plots
 Slice and projection plots both provide a callback for over-plotting particle
 positions onto gas fields. However, sometimes you want to plot the particle
 quantities by themselves, perhaps because the gas fields are not relevant to
-the your point, or perhaps because your dataset doesn't contain any gas fields
+your use case, or perhaps because your dataset doesn't contain any gas fields
 in the first place. Additionally, you may want to plot your particles with a
 third field, such as particle mass or age,  mapped to a colorbar.
 :class:`~yt.visualization.particle_plots.ParticlePlot` provides a convenient
@@ -1461,8 +1594,9 @@ Here is a full example that shows the simplest way to use
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y')
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   p = yt.ParticlePlot(ds, "particle_position_x", "particle_position_y")
    p.save()
 
 In the above examples, we are simply splatting particle x and y positions onto
@@ -1473,10 +1607,10 @@ similar to a projection.
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y',
-                       'particle_mass')
-   p.set_unit('particle_mass', 'Msun')
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   p = yt.ParticlePlot(ds, "particle_position_x", "particle_position_y", "particle_mass")
+   p.set_unit("particle_mass", "Msun")
    p.zoom(32)
    p.save()
 
@@ -1486,10 +1620,16 @@ pixel is the weighted average along the line of sight.
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y',
-                       'particle_mass', weight_field='particle_ones')
-   p.set_unit('particle_mass', 'Msun')
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   p = yt.ParticlePlot(
+       ds,
+       "particle_position_x",
+       "particle_position_y",
+       "particle_mass",
+       weight_field="particle_ones",
+   )
+   p.set_unit("particle_mass", "Msun")
    p.zoom(32)
    p.save()
 
@@ -1501,6 +1641,17 @@ along the line of sight. The inner region is dominated by low mass
 star particles, whereas the outer region is comprised of higher mass
 dark matter particles.
 
+Both :class:`~yt.visualization.particle_plots.ParticleProjectionPlot` and
+:class:`~yt.visualization.particle_plots.ParticlePhasePlot` objects
+accept a ``deposition`` argument which controls the order of the "splatting"
+of the particles onto the pixels in the plot. The default option, ``"ngp"``,
+corresponds to the "Nearest-Grid-Point" (0th-order) method, which simply
+finds the pixel the particle is located in and deposits 100% of the particle
+or its plotted quantity into that pixel. The other option, ``"cic"``,
+corresponds to the "Cloud-In-Cell" (1st-order) method, which linearly
+interpolates the particle or its plotted quantity into the four nearest
+pixels in the plot.
+
 Here is a complete example that uses the ``particle_mass`` field
 to set the colorbar and shows off some of the modification functions for
 :class:`~yt.visualization.particle_plots.ParticleProjectionPlot`:
@@ -1508,12 +1659,18 @@ to set the colorbar and shows off some of the modification functions for
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_position_y',
-                       'particle_mass', width=(0.5, 0.5))
-   p.set_unit('particle_mass', 'Msun')
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   p = yt.ParticlePlot(
+       ds,
+       "particle_position_x",
+       "particle_position_y",
+       "particle_mass",
+       width=(0.5, 0.5),
+   )
+   p.set_unit("particle_mass", "Msun")
    p.zoom(32)
-   p.annotate_title('Zoomed-in Particle Plot')
+   p.annotate_title("Zoomed-in Particle Plot")
    p.save()
 
 If the fields passed in to :class:`~yt.visualization.particle_plots.ParticlePlot`
@@ -1533,11 +1690,12 @@ of ``particle_position_x`` versus ``particle_velocity_z``, with the ``particle_m
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   p = yt.ParticlePlot(ds, 'particle_position_x', 'particle_velocity_z', ['particle_mass'])
-   p.set_unit('particle_position_x', 'Mpc')
-   p.set_unit('particle_velocity_z', 'km/s')
-   p.set_unit('particle_mass', 'Msun')
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   p = yt.ParticlePlot(ds, "particle_position_x", "particle_velocity_z", ["particle_mass"])
+   p.set_unit("particle_position_x", "Mpc")
+   p.set_unit("particle_velocity_z", "km/s")
+   p.set_unit("particle_mass", "Msun")
    p.save()
 
 and here is one with the particle x and y velocities on the plot axes:
@@ -1545,11 +1703,12 @@ and here is one with the particle x and y velocities on the plot axes:
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-   p = yt.ParticlePlot(ds, 'particle_velocity_x', 'particle_velocity_y', 'particle_mass')
-   p.set_unit('particle_velocity_x', 'km/s')
-   p.set_unit('particle_velocity_y', 'km/s')
-   p.set_unit('particle_mass', 'Msun')
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   p = yt.ParticlePlot(ds, "particle_velocity_x", "particle_velocity_y", "particle_mass")
+   p.set_unit("particle_velocity_x", "km/s")
+   p.set_unit("particle_velocity_y", "km/s")
+   p.set_unit("particle_mass", "Msun")
    p.set_ylim(-400, 400)
    p.set_xlim(-400, 400)
    p.save()
@@ -1563,10 +1722,11 @@ domain:
 .. python-script::
 
    import yt
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
 
-   p = yt.ParticleProjectionPlot(ds, 2, ['particle_mass'], width=(0.5, 0.5), depth=0.01)
-   p.set_unit('particle_mass', 'Msun')
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+
+   p = yt.ParticleProjectionPlot(ds, 2, ["particle_mass"], width=(0.5, 0.5), depth=0.01)
+   p.set_unit("particle_mass", "Msun")
    p.save()
 
 and here is an example of using the ``data_source`` argument to :class:`~yt.visualization.particle_plots.ParticlePhasePlot`
@@ -1575,18 +1735,37 @@ to only consider the particles that lie within a 50 kpc sphere around the domain
 .. python-script::
 
    import yt
+
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
 
    my_sphere = ds.sphere("c", (50.0, "kpc"))
 
-   p = yt.ParticlePhasePlot(my_sphere, "particle_velocity_x", "particle_velocity_y",
-                            "particle_mass")
-   p.set_unit('particle_velocity_x', 'km/s')
-   p.set_unit('particle_velocity_y', 'km/s')
-   p.set_unit('particle_mass', 'Msun')
+   p = yt.ParticlePhasePlot(
+       my_sphere, "particle_velocity_x", "particle_velocity_y", "particle_mass"
+   )
+   p.set_unit("particle_velocity_x", "km/s")
+   p.set_unit("particle_velocity_y", "km/s")
+   p.set_unit("particle_mass", "Msun")
    p.set_ylim(-400, 400)
    p.set_xlim(-400, 400)
 
+   p.save()
+
+:class:`~yt.visualization.particle_plots.ParticleProjectionPlot` objects also admit a ``density``
+flag, which allows one to plot the surface density of a projected quantity. This simply divides
+the quantity in each pixel of the plot by the area of that pixel. It also changes the label on the
+colorbar to reflect the new units and the fact that it is a density. This may make most sense in
+the case of plotting the projected particle mass, in which case you can plot the projected particle
+mass density:
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+
+   p = yt.ParticleProjectionPlot(ds, 2, ["particle_mass"], width=(0.5, 0.5), density=True)
+   p.set_unit("particle_mass", "Msun/kpc**2") # Note that the dimensions reflect the density flag
    p.save()
 
 Finally, with 1D and 2D Profiles, you can create a :class:`~yt.data_objects.profiles.ParticleProfile`
@@ -1600,17 +1779,22 @@ pixel, instead of the total:
 
    import yt
 
-   ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
 
    ad = ds.all_data()
 
-   profile = yt.create_profile(ad, ['particle_velocity_x', 'particle_velocity_y'], ['particle_mass'],
-                               n_bins=800, weight_field='particle_ones')
+   profile = yt.create_profile(
+       ad,
+       ["particle_velocity_x", "particle_velocity_y"],
+       ["particle_mass"],
+       n_bins=800,
+       weight_field="particle_ones",
+   )
 
    p = yt.ParticlePhasePlot.from_profile(profile)
-   p.set_unit('particle_velocity_x', 'km/s')
-   p.set_unit('particle_velocity_y', 'km/s')
-   p.set_unit('particle_mass', 'Msun')
+   p.set_unit("particle_velocity_x", "km/s")
+   p.set_unit("particle_velocity_y", "km/s")
+   p.set_unit("particle_mass", "Msun")
    p.set_ylim(-400, 400)
    p.set_xlim(-400, 400)
    p.save()
@@ -1778,13 +1962,13 @@ For ``ProfilePlot``:
 .. code-block:: python
 
    ad = ds.all_data()
-   p1 = yt.ProfilePlot(ad, "density", "temperature", weight_field="cell_mass")
+   p1 = yt.ProfilePlot(ad, "density", "temperature", weight_field="mass")
 
    # note that ProfilePlots can hold a list of profiles
    fn = p1.profiles[0].save_as_dataset()
 
    new_ds = yt.load(fn)
-   p2 = yt.ProfilePlot(new_ds.data, "density", "temperature", weight_field="cell_mass")
+   p2 = yt.ProfilePlot(new_ds.data, "density", "temperature", weight_field="mass")
    p2.save()
 
 For ``PhasePlot``:
@@ -1792,11 +1976,11 @@ For ``PhasePlot``:
 .. code-block:: python
 
    ad = ds.all_data()
-   p1 = yt.PhasePlot(ad, "density", "temperature", "cell_mass", weight_field=None)
+   p1 = yt.PhasePlot(ad, "density", "temperature", "mass", weight_field=None)
    fn = p1.profile.save_as_dataset()
 
    new_ds = yt.load(fn)
-   p2 = yt.PhasePlot(new_ds.data, "density", "temperature", "cell_mass", weight_field=None)
+   p2 = yt.PhasePlot(new_ds.data, "density", "temperature", "mass", weight_field=None)
    p2.save()
 
 .. _eps-writer:
@@ -1876,7 +2060,7 @@ an example that includes slices and phase plots:
 
 .. code-block:: python
 
-    from yt import SlicePlot, PhasePlot
+    from yt import PhasePlot, SlicePlot
     from yt.visualization.eps_writer import multiplot_yt
 
     ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
@@ -1889,9 +2073,9 @@ an example that includes slices and phase plots:
     p2.set_cmap("temperature", "hot")
 
     sph = ds.sphere(ds.domain_center, (10, "kpc"))
-    p3 = PhasePlot(sph, "radius", "density", "temperature", weight_field="cell_mass")
+    p3 = PhasePlot(sph, "radius", "density", "temperature", weight_field="mass")
 
-    p4 = PhasePlot(sph, "radius", "density", "pressure", "cell_mass")
+    p4 = PhasePlot(sph, "radius", "density", "pressure", "mass")
 
     mp = multiplot_yt(
         2,

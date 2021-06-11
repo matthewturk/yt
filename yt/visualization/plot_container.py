@@ -1,11 +1,13 @@
 import base64
 import builtins
 import os
+import textwrap
 from collections import defaultdict
 from functools import wraps
 
 import matplotlib
 import numpy as np
+from matplotlib.cm import get_cmap
 from more_itertools.more import always_iterable
 
 from yt._maintenance.deprecation import issue_deprecation_warning
@@ -16,9 +18,38 @@ from yt.units import YTQuantity
 from yt.units.unit_object import Unit
 from yt.utilities.definitions import formatted_length_unit_names
 from yt.utilities.exceptions import YTNotInsideNotebook
-from yt.visualization.color_maps import yt_colormaps
 
 from ._commons import validate_image_name
+
+try:
+    import cmocean  # noqa
+except ImportError:
+    cmocean = None
+
+CMOCEAN_DEPR_MSG = textwrap.dedent(
+    """\
+    It looks like you requested a colormap from the cmocean library. In the future, yt won't
+    recognize this bare (unprefixed) name. Please follow the recommended usage from cmocean's doc:
+    add an explicit `import cmocean` to your script, and prefix their colormap names with 'cmo.'
+    See our release notes for why this change was necessary."""
+)
+
+
+def _sanitize_cmap(cmap):
+    # this function should be removed entierly after yt 4.0.0 is released
+    if not isinstance(cmap, str):
+        return cmap
+    if cmocean is not None:
+        try:
+            cmo_cmap = f"cmo.{cmap}"
+            get_cmap(cmo_cmap)
+            issue_deprecation_warning(CMOCEAN_DEPR_MSG, since="4.0.0", removal="4.1.0")
+            return cmo_cmap
+        except ValueError:
+            pass
+    get_cmap(cmap)
+    return cmap
+
 
 latex_prefixes = {
     "u": r"\mu",
@@ -448,9 +479,16 @@ class PlotContainer:
         This sets the font to be 24-pt, blue, sans-serif, italic, and
         bold-face.
 
-        >>> slc = SlicePlot(ds, 'x', 'Density')
-        >>> slc.set_font({'family':'sans-serif', 'style':'italic',
-        ...               'weight':'bold', 'size':24, 'color':'blue'})
+        >>> slc = SlicePlot(ds, "x", "Density")
+        >>> slc.set_font(
+        ...     {
+        ...         "family": "sans-serif",
+        ...         "style": "italic",
+        ...         "weight": "bold",
+        ...         "size": 24,
+        ...         "color": "blue",
+        ...     }
+        ... )
 
         """
         from matplotlib.font_manager import FontProperties
@@ -511,21 +549,30 @@ class PlotContainer:
         mpl_kwargs : dict
            A dict of keyword arguments to be passed to matplotlib.
 
-        >>> slc.save(mpl_kwargs={'bbox_inches':'tight'})
+        >>> slc.save(mpl_kwargs={"bbox_inches": "tight"})
 
         """
         names = []
         if mpl_kwargs is None:
             mpl_kwargs = {}
-        if isinstance(name, (tuple, list)):
-            name = os.path.join(*name)
+
         if name is None:
             name = str(self.ds)
+
+        # ///// Magic area. Muggles, keep out !
+        if isinstance(name, (tuple, list)):
+            name = os.path.join(*name)
+
         name = os.path.expanduser(name)
-        if name[-1] == os.sep and not os.path.isdir(name):
-            ensure_dir(name)
-        if os.path.isdir(name) and name != str(self.ds):
-            name = name + (os.sep if name[-1] != os.sep else "") + str(self.ds)
+
+        parent_dir, _, prefix1 = name.replace(os.sep, "/").rpartition("/")
+        parent_dir = parent_dir.replace("/", os.sep)
+
+        if parent_dir and not os.path.isdir(parent_dir):
+            ensure_dir(parent_dir)
+
+        if name.endswith(("/", os.path.sep)):
+            name = os.path.join(name, str(self.ds))
 
         new_name = validate_image_name(name, suffix)
         if new_name == name:
@@ -584,7 +631,9 @@ class PlotContainer:
         --------
 
         >>> from yt.mods import SlicePlot
-        >>> slc = SlicePlot(ds, "x", ["Density", "VelocityMagnitude"])
+        >>> slc = SlicePlot(
+        ...     ds, "x", [("gas", "density"), ("gas", "velocity_magnitude")]
+        ... )
         >>> slc.show()
 
         """
@@ -634,7 +683,7 @@ class PlotContainer:
         label : str
             The new string for the x-axis.
 
-        >>>  plot.set_xlabel("H2I Number Density (cm$^{-3}$)")
+        >>> plot.set_xlabel("H2I Number Density (cm$^{-3}$)")
 
         """
         self._xlabel = label
@@ -651,7 +700,7 @@ class PlotContainer:
         label : str
             The new string for the y-axis.
 
-        >>>  plot.set_ylabel("Temperature (K)")
+        >>> plot.set_ylabel("Temperature (K)")
 
         """
         self._ylabel = label
@@ -733,16 +782,16 @@ class PlotContainer:
         This will save an image with no colorbar.
 
         >>> import yt
-        >>> ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-        >>> s = SlicePlot(ds, 2, 'density', 'c', (20, 'kpc'))
+        >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+        >>> s = SlicePlot(ds, 2, "density", "c", (20, "kpc"))
         >>> s.hide_colorbar()
         >>> s.save()
 
         This will save an image with no axis or colorbar.
 
         >>> import yt
-        >>> ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-        >>> s = SlicePlot(ds, 2, 'density', 'c', (20, 'kpc'))
+        >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+        >>> s = SlicePlot(ds, 2, "density", "c", (20, "kpc"))
         >>> s.hide_axes()
         >>> s.hide_colorbar()
         >>> s.save()
@@ -793,16 +842,16 @@ class PlotContainer:
         This will save an image with no axes.
 
         >>> import yt
-        >>> ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-        >>> s = SlicePlot(ds, 2, 'density', 'c', (20, 'kpc'))
+        >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+        >>> s = SlicePlot(ds, 2, "density", "c", (20, "kpc"))
         >>> s.hide_axes()
         >>> s.save()
 
         This will save an image with no axis or colorbar.
 
         >>> import yt
-        >>> ds = yt.load('IsolatedGalaxy/galaxy0030/galaxy0030')
-        >>> s = SlicePlot(ds, 2, 'density', 'c', (20, 'kpc'))
+        >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+        >>> s = SlicePlot(ds, 2, "density", "c", (20, "kpc"))
         >>> s.hide_axes()
         >>> s.hide_colorbar()
         >>> s.save()
@@ -870,7 +919,7 @@ class ImagePlotContainer(PlotContainer):
 
         """
         self._colorbar_valid = False
-        self._colormap_config[field] = cmap
+        self._colormap_config[field] = _sanitize_cmap(cmap)
         return self
 
     @accepts_all_fields
@@ -892,10 +941,7 @@ class ImagePlotContainer(PlotContainer):
         if color is None:
             cmap = self._colormap_config[field]
             if isinstance(cmap, str):
-                try:
-                    cmap = yt_colormaps[cmap]
-                except KeyError:
-                    cmap = getattr(matplotlib.cm, cmap)
+                cmap = get_cmap(cmap)
             color = cmap(0)
         self._background_color[field] = color
         return self
@@ -1021,7 +1067,9 @@ class ImagePlotContainer(PlotContainer):
         label : str
           The new label
 
-        >>>  plot.set_colorbar_label("density", "Dark Matter Density (g cm$^{-3}$)")
+        >>> plot.set_colorbar_label(
+        ...     ("gas", "density"), "Dark Matter Density (g cm$^{-3}$)"
+        ... )
 
         """
         self._colorbar_label[field] = label

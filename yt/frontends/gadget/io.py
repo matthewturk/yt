@@ -14,7 +14,7 @@ from .definitions import SNAP_FORMAT_2_OFFSET, gadget_hdf5_ptypes
 
 class IOHandlerGadgetHDF5(IOHandlerSPH):
     _dataset_type = "gadget_hdf5"
-    _vector_fields = ("Coordinates", "Velocity", "Velocities")
+    _vector_fields = ("Coordinates", "Velocity", "Velocities", "MagneticField")
     _known_ptypes = gadget_hdf5_ptypes
     _var_mass = None
     _element_names = (
@@ -209,6 +209,9 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
                     elif field.startswith("Chemistry_"):
                         col = int(field.rsplit("_", 1)[-1])
                         data = g["ChemistryAbundances"][si:ei, col][mask]
+                    elif field.startswith("PassiveScalars_"):
+                        col = int(field.rsplit("_", 1)[-1])
+                        data = g["PassiveScalars"][si:ei, col][mask]
                     elif field == "smoothing_length":
                         # This is for frontends which do not store
                         # the smoothing length on-disk, so we do not
@@ -272,8 +275,11 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
                     for j in gp.keys():
                         kk = j
                         fields.append((ptype, str(kk)))
-                elif k in ["Metallicity", "GFM_Metals"] and len(g[k].shape) > 1:
-                    # Vector of metallicity
+                elif (
+                    k in ["Metallicity", "GFM_Metals", "PassiveScalars"]
+                    and len(g[k].shape) > 1
+                ):
+                    # Vector of metallicity or passive scalar
                     for i in range(g[k].shape[1]):
                         fields.append((ptype, "%s_%02i" % (k, i)))
                 elif k == "ChemistryAbundances" and len(g[k].shape) > 1:
@@ -304,7 +310,9 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
         ("Coordinates", 3),
         ("Velocity", 3),
         ("Velocities", 3),
+        ("MagneticField", 3),
         ("FourMetalFractions", 4),
+        ("ElevenMetalMasses", 11),
     )
 
     # Particle types (Table 3 in GADGET-2 user guide)

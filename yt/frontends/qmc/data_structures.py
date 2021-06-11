@@ -1,12 +1,10 @@
 import os
 import uuid
 
-from ase.io.formats import filetype
-from ase.io.formats import UnknownFileTypeError
 import numpy as np
+from ase.io.formats import UnknownFileTypeError, filetype
 
-from yt.data_objects.static_output import ParticleDataset
-from yt.data_objects.static_output import ParticleFile
+from yt.data_objects.static_output import ParticleDataset, ParticleFile
 from yt.geometry.particle_geometry_handler import ParticleIndex
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry
@@ -101,9 +99,9 @@ class QMCDataset(ParticleDataset):
         self.domain_left_edge = None
         self.domain_right_edge = None
         self.domain_dimensions = np.ones(3, "int32")
-        self.periodicity = (True, True, True)
+        self._periodicity = (True, True, True)
         self.gen_hsmls = True
-        self._unit_system=unit_system
+        self._unit_system = unit_system
         super().__init__(filename, dataset_type, unit_system=unit_system)
 
     def _create_unit_registry(self, unit_system):
@@ -117,7 +115,10 @@ class QMCDataset(ParticleDataset):
         self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
         self.unit_registry.add("code_velocity", 1.0, dimensions.velocity)
         self.unit_registry.add("code_pressure", 1.0, dimensions.pressure)
-        self.unit_registry.add("code_specific_energy", 1.0, dimensions.energy / dimensions.mass)
+        self.unit_registry.add(
+            "code_specific_energy", 1.0, dimensions.energy / dimensions.mass
+        )
+        self.unit_registry.add("h", 1.0, dimensions.dimensionless, r"h")
 
     def __repr__(self):
         return os.path.basename(self.parameter_filename).split(".")[0]
@@ -125,11 +126,11 @@ class QMCDataset(ParticleDataset):
     def _parse_parameter_file(self):
         self.unique_identifier = uuid.uuid4()
         self.parameters = {}
-        self.domain_left_edge = np.array([0., 0., 0.], np.float)
-        self.domain_right_edge = np.array([1., 1., 1.], np.float)
+        self.domain_left_edge = np.array([0.0, 0.0, 0.0], np.float)
+        self.domain_right_edge = np.array([1.0, 1.0, 1.0], np.float)
         self.dimensionality = 3
         self.domain_dimensions = np.array([1, 1, 1], np.int)
-        self.periodicity = (True, True, True)
+        self._periodicity = (True, True, True)
         self.current_time = 0.0
         self.cosmological_simulation = 0
         self.current_redshift = 0.0
@@ -149,7 +150,7 @@ class QMCDataset(ParticleDataset):
     @classmethod
     def _is_valid(cls, *args, **kwargs):
         try:
-            file_format = filetype(args[0], guess=False)
+            if filetype(args[0], guess=False):
+                return True
         except UnknownFileTypeError:
             return False
-        return True

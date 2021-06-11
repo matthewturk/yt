@@ -24,28 +24,23 @@ def pytest_addoption(parser):
     Lets options be passed to test functions.
     """
     parser.addoption(
-        "--with-answer-testing",
-        action="store_true",
+        "--with-answer-testing", action="store_true",
     )
     parser.addoption(
-        "--answer-store",
-        action="store_true",
+        "--answer-store", action="store_true",
     )
     parser.addoption(
         "--answer-raw-arrays",
         action="store_true",
     )
     parser.addoption(
-        "--raw-answer-store",
-        action="store_true",
+        "--raw-answer-store", action="store_true",
     )
     parser.addoption(
-        "--force-overwrite",
-        action="store_true",
+        "--force-overwrite", action="store_true",
     )
     parser.addoption(
-        "--no-hash",
-        action="store_true",
+        "--no-hash", action="store_true",
     )
     parser.addoption("--local-dir", default=None, help="Where answers are saved.")
     # Tell pytest about the local-dir option in the ini files. This
@@ -71,7 +66,7 @@ def pytest_configure(config):
     # Register custom marks for answer tests and big data
     config.addinivalue_line("markers", "answer_test: Run the answer tests.")
     config.addinivalue_line(
-        "markers", "big_data: Run answer tests that require" " large data files."
+        "markers", "big_data: Run answer tests that require large data files."
     )
 
 
@@ -329,3 +324,16 @@ def Npart(request):
     Needed because indirect=True is used for loading the datasets.
     """
     return request.param
+
+
+@pytest.fixture(scope="class")
+def big_data(request):
+    """
+    There isn't a way to access command-line options given to pytest from
+    an actual test, so we need a fixture that retrieves and returns its
+    value. In this case, the --answer-big-data option.
+    """
+    if request.config.getoption("--answer-big-data"):
+        return True
+    else:
+        return False

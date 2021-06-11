@@ -8,8 +8,11 @@ import numpy as np
 import yt.visualization.particle_plots as particle_plots
 import yt.visualization.plot_window as pw
 from yt.testing import assert_equal
-
-from . import utils
+from yt.utilities.answer_testing.testing_utilities import (
+    _create_phase_plot_attribute_plot,
+    _create_plot_window_attribute_plot,
+    create_obj,
+)
 
 
 def grid_hierarchy(ds):
@@ -27,9 +30,17 @@ def parentage_relationships(ds):
     for g in ds.index.grids:
         result[g.id] = {}
         if g.Parent is None:
-            result[g.id]["parents"] = np.array([-1,])
+            result[g.id]["parents"] = np.array(
+                [
+                    -1,
+                ]
+            )
         elif hasattr(g.Parent, "id"):
-            result[g.id]["parents"] = np.array([g.Parent.id,])
+            result[g.id]["parents"] = np.array(
+                [
+                    g.Parent.id,
+                ]
+            )
         else:
             result[g.id]["parents"] = np.array([pg.id for pg in g.Parent])
         result[g.id]["children"] = np.array([c.id for c in g.Children])
@@ -46,7 +57,7 @@ def grid_values(ds, field):
 
 def projection_values(ds, axis, field, weight_field=None, dobj_type=None):
     if dobj_type is not None:
-        dobj = utils.create_obj(ds, dobj_type)
+        dobj = create_obj(ds, dobj_type)
     else:
         dobj = None
     if ds.domain_dimensions[axis] == 1:
@@ -57,7 +68,7 @@ def projection_values(ds, axis, field, weight_field=None, dobj_type=None):
 
 def field_values(ds, field, obj_type=None, particle_type=False):
     # If needed build an instance of the dataset type
-    obj = utils.create_obj(ds, obj_type)
+    obj = create_obj(ds, obj_type)
     determined_field = obj._determine_fields(field)[0]
     fd = ds.field_info[determined_field]
     # Get the proper weight field depending on if we're looking at
@@ -77,14 +88,9 @@ def field_values(ds, field, obj_type=None, particle_type=False):
     return np.array([avg, minimum, maximum])
 
 
-def all_field_values(ds, field, obj_type=None):
-    obj = utils.create_obj(ds, obj_type)
-    return obj[field]
-
-
 def pixelized_projection_values(ds, axis, field, weight_field=None, dobj_type=None):
     if dobj_type is not None:
-        obj = utils.create_obj(ds, dobj_type)
+        obj = create_obj(ds, dobj_type)
     else:
         obj = None
     proj = ds.proj(field, axis, weight_field=weight_field, data_source=obj)
@@ -174,24 +180,6 @@ def sph_validation(ds, ds_str_repr, ds_nparticles):
     assert_equal(tot, ds_nparticles)
 
 
-def nbody_answer(ds, ds_str_repr, ds_nparticles, field, weight, ds_obj, axis):
-    assert str(ds) == ds_str_repr
-    results = {}
-    dd = ds.all_data()
-    assert_equal(dd["all", "particle_position"].shape, (ds_nparticles, 3))
-    tot = sum(
-        dd[ptype, "particle_position"].shape[0] for ptype in ds.particle_types_raw
-    )
-    assert_equal(tot, ds_nparticles)
-    particle_type = field[0] in ds.particle_types
-    if not particle_type:
-        pppv = pixelized_particle_projection_values(ds, axis, field, weight, ds_obj)
-        results["pixelized_particle_projection_values"] = pppv
-    fv = field_values(ds, field, ds_obj, particle_type=particle_type)
-    results["field_values"] = fv
-    return results
-
-
 def get_field_size_and_mean(ds, field, geometric):
     if geometric:
         obj = ds.all_data()
@@ -212,9 +200,7 @@ def plot_window_attribute(
 ):
     if callback_runners is None:
         callback_runners = []
-    plot = utils._create_plot_window_attribute_plot(
-        ds, plot_type, plot_field, plot_axis, {}
-    )
+    plot = _create_plot_window_attribute_plot(ds, plot_type, plot_field, plot_axis, {})
     for r in callback_runners:
         r(plot_field, plot)
     attr = getattr(plot, attr_name)
@@ -240,7 +226,7 @@ def phase_plot_attribute(
     if plot_kwargs is None:
         plot_kwargs = {}
     data_source = ds.all_data()
-    plot = utils._create_phase_plot_attribute_plot(
+    plot = _create_phase_plot_attribute_plot(
         data_source, x_field, y_field, z_field, plot_type, plot_kwargs
     )
     attr = getattr(plot, attr_name)

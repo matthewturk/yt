@@ -211,16 +211,12 @@ class TestEnzo:
             ("AccretingParticle", pf) for pf in ["AccretionRate"] + pfields
         ]
         real_acc_part_fields = sorted(
-            [f for f in ds_two_sphere_test.field_list if f[0] == "AccretingParticle"]
+            f for f in ds_two_sphere_test.field_list if f[0] == "AccretingParticle"
         )
         # Set up lists for comparison
         apcos_fields = [("CenOstriker", pf) for pf in pfields]
         real_apcos_fields = sorted(
-            [
-                f
-                for f in ds_active_particle_cosmology.field_list
-                if f[0] == "CenOstriker"
-            ]
+            f for f in ds_active_particle_cosmology.field_list if f[0] == "CenOstriker"
         )
         apcos_pcounts = {"CenOstriker": 899755, "DarkMatter": 32768}
         assert "AccretingParticle" in ds_two_sphere_test.particle_types_raw
@@ -265,7 +261,7 @@ class TestEnzo:
         c_actual = [0.49150732540021, 0.505260532936791, 0.49058055816398]
         c_actual = ds.arr(c_actual, "code_length")
         assert_allclose_units(c, c_actual)
-        assert_equal(max([g["density"].max() for g in ds.index.grids]), v)
+        assert_equal(max(g["density"].max() for g in ds.index.grids), v)
 
     @pytest.mark.parametrize("ds", [kh2d], indirect=True)
     def test_2d_grid_shape(self, ds):
@@ -277,8 +273,7 @@ class TestEnzo:
 
     @pytest.mark.parametrize("ds", [p3mini], indirect=True)
     def test_nonzero_omega_radiation(self, ds):
-        r"""Test support for non-zero omega_radiation cosmologies.
-        """
+        r"""Test support for non-zero omega_radiation cosmologies."""
         err_msg = "Simulation time not consistent with cosmology calculator."
         t_from_z = ds.cosmology.t_from_z(ds.current_redshift)
         tratio = ds.current_time / t_from_z
