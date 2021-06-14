@@ -4,7 +4,6 @@ from yt.fields.field_info_container import FieldInfoContainer
 from yt.units import amu
 from yt.utilities.lib.cykdtree import PyKDTree
 from yt.utilities.lib.particle_kdtree_tools import estimate_density
-from yt.utilities.logger import ytLogger as mylog
 
 from .definitions import elementRegister
 
@@ -43,58 +42,16 @@ class QMCFieldInfo(FieldInfoContainer):
         )
 
     def _setup_densities(self, n_neighbors=8, kernel="cubic", sph_ptype="io"):
-        """Add SPH fields for the specified particle type.
-
-        For a particle type with "particle_position" and "particle_mass" already
-        defined, this method adds the "smoothing_length" and "density" fields.
-        "smoothing_length" is computed as the distance to the nth nearest
-        neighbor. "density" is computed as the SPH (gather) smoothed mass. The
-        SPH fields are added only if they don't already exist.
-
-        Parameters
-        ----------
-        n_neighbors : int
-            The number of neighbors to use in smoothing length computation.
-        kernel : str
-            The kernel function to use in density estimation.
-        sph_ptype : str
-            The SPH particle type. Each dataset has one sph_ptype only. This
-            method will overwrite existing sph_ptype of the dataset.
-
-        """
-        mylog.info("Generating SPH fields")
-        # Unify units
-        # l_unit = "code_length"
-        # m_unit = "code_mass"
-        # d_unit = "code_mass / code_length**3"
-        # NOTE: For some reason "code_mass" doesn't show up in the unit registry,
-        # so the .to() step on mass below fails. My guess is it has something
-        # to do with the fact that mass is a derived field, but I'm not sure
-        # what's going on
         l_unit = "angstrom"
         m_unit = "amu"
         d_unit = "amu / angstrom**3"
 
-        def _exists(fname, data):
-            if ("io", fname) in data.ds.derived_field_list:
-                mylog.info(
-                    "Field ('%s','%s') already exists. Skipping", sph_ptype, fname
-                )
-                return True
-            else:
-                mylog.info("Generating field ('%s','%s')", "io", fname)
-                return False
-
         def _hsml(field, data):
-            if not _exists("smoothing_length", data):
-                # hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
-                # data[("io", "smoothing_length")] = (hsml, l_unit)
-                hsml = np.random.rand(16)
-                data[("io", "smoothing_length")] = (hsml, l_unit)
+            hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
+            data[("io", "smoothing_length")] = data.ds.arr(hsml, l_unit)
             return data[("io", "smoothing_length")]
 
         def _density(field, data):
-            # Read basic fields
             pos = data["io", "particle_position"].to(l_unit).d
             mass = data["io", "mass"].to(m_unit).d
             hsml = data[("io", "smoothing_length")].to(l_unit).d
@@ -115,16 +72,15 @@ class QMCFieldInfo(FieldInfoContainer):
             )
             order = np.argsort(kdtree.idx)
             # Add density field
-            if not _exists("density", data):
-                dens = estimate_density(
-                    pos[kdtree.idx],
-                    mass[kdtree.idx],
-                    hsml[kdtree.idx],
-                    kdtree,
-                    kernel_name=kernel,
-                )
-                dens = dens[order]
-                data[("io", "density")] = (dens, d_unit)
+            dens = estimate_density(
+                pos[kdtree.idx],
+                mass[kdtree.idx],
+                hsml[kdtree.idx],
+                kdtree,
+                kernel_name=kernel,
+            )
+            dens = dens[order]
+            data[("io", "density")] = data.ds.arr(dens, d_unit)
             return data[("io", "density")]
 
         self.add_field(
