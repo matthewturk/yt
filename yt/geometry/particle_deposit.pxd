@@ -49,6 +49,12 @@ cdef inline np.float64_t sph_kernel_cubic(np.float64_t x) nogil:
     return kernel * C
 
 ########################################################
+#          Constant radius kernel for qmc              #
+########################################################
+cdef inline np.float64_t sph_kernel_constant(np.float64_t x) nogil:
+    return 1.
+
+########################################################
 # Alternative SPH kernels for use with the Grid method #
 ########################################################
 
@@ -133,6 +139,8 @@ cdef inline kernel_func get_kernel_func(str kernel_name) nogil:
             return sph_kernel_wendland6
         elif kernel_name == 'none':
             return sph_kernel_dummy
+        elif kernel_name == 'constant':
+            return sph_kernel_constant
         else:
             raise NotImplementedError
 

@@ -41,13 +41,20 @@ class QMCFieldInfo(FieldInfoContainer):
             units="amu",
         )
 
-    def _setup_densities(self, n_neighbors=8, kernel="cubic", sph_ptype="io"):
+    def _setup_densities(self, n_neighbors=8, sph_ptype="io"):
         l_unit = "angstrom"
         m_unit = "amu"
         d_unit = "amu / angstrom**3"
 
+        # def _hsml(field, data):
+        #     hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
+        #     data[("io", "smoothing_length")] = data.ds.arr(hsml, l_unit)
+        #     return data[("io", "smoothing_length")]
         def _hsml(field, data):
-            hsml = data.ds.index.io._generate_smoothing_length(data.ds.index)
+            hsml = (
+                np.ones((data.ds.particle_type_counts[sph_ptype],), dtype=np.float64)
+                * 10.0
+            )
             data[("io", "smoothing_length")] = data.ds.arr(hsml, l_unit)
             return data[("io", "smoothing_length")]
 
@@ -77,7 +84,7 @@ class QMCFieldInfo(FieldInfoContainer):
                 mass[kdtree.idx],
                 hsml[kdtree.idx],
                 kdtree,
-                kernel_name=kernel,
+                kernel_name=data.ds.kernel_name,
             )
             dens = dens[order]
             data[("io", "density")] = data.ds.arr(dens, d_unit)

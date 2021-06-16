@@ -85,6 +85,7 @@ class QMCFile(ParticleFile):
 
 
 class QMCDataset(ParticleDataset):
+    default_kernel_name = "constant"
     _index_class = QMCIndex
     _file_class = QMCFile
     _field_info_class = QMCFieldInfo
@@ -93,7 +94,9 @@ class QMCDataset(ParticleDataset):
     _sph_ptypes = ("io",)
     _num_neighbors = 8
 
-    def __init__(self, filename, dataset_type="qmc", unit_system=qmc_unit_sys):
+    def __init__(
+        self, filename, dataset_type="qmc", kernel_name=None, unit_system=qmc_unit_sys
+    ):
         if self._instantiated:
             return
         self.domain_left_edge = None
@@ -102,6 +105,10 @@ class QMCDataset(ParticleDataset):
         self._periodicity = (True, True, True)
         self.gen_hsmls = True
         self._unit_system = unit_system
+        if kernel_name is None:
+            self.kernel_name = self.default_kernel_name
+        else:
+            self.kernel_name = kernel_name
         super().__init__(filename, dataset_type, unit_system=unit_system)
 
     def _create_unit_registry(self, unit_system):
