@@ -165,6 +165,9 @@ def process_data(data, grid_dims=None):
             field_units[field] = ""
             new_data[field] = np.asarray(val)
 
+        elif callable(val):
+            field_units[field] = ""
+            new_data[field] = val
         else:
             raise RuntimeError(
                 "The data dict appears to be invalid. "
@@ -177,7 +180,9 @@ def process_data(data, grid_dims=None):
     # At this point, we have arrays for all our fields
     new_data = {}
     for field in data:
-        n_shape = len(data[field].shape)
+        n_shape = 3
+        if not callable(data[field]):
+            n_shape = len(data[field].shape)
         if isinstance(field, tuple):
             new_field = field
         elif n_shape in (1, 2):
@@ -203,6 +208,8 @@ def process_data(data, grid_dims=None):
     g_shapes = []
     p_shapes = defaultdict(list)
     for field in data:
+        if callable(data[field]):
+            continue
         f_shape = data[field].shape
         n_shape = len(f_shape)
         if n_shape in (1, 2):
