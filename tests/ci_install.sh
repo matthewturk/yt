@@ -57,12 +57,12 @@ else
     # which means we have to install the build-time requirements first.
     # It is possible that these problems will be fixed in the future if upstream projects
     # include a pyproject.toml file or use any pip-comptatible solution to remedy this.
-    python -m pip install numpy>=1.19.4 cython>=0.29.21
+    python -m pip install numpy>=1.19.4 cython~=0.29.21
 
     # this is required for cartopy. It should normally be specified in our setup.cfg as
     # cartopy[plotting]
     # However it doesn't work on Ubuntu 18.04 (used in CI at the time of writing)
-    pip install shapely --no-binary=shapely
+    python -m pip install shapely --no-binary=shapely
     CFLAGS="$CFLAGS -DACCEPT_USE_OF_DEPRECATED_PROJ_API_H" python -m pip install -e .[test,full]
 fi
 
