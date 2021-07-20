@@ -11,8 +11,6 @@ cimport numpy as np
 from grid_visitors cimport (
     GridTreeNode,
     GridVisitor,
-    check_child_masked,
-    grid_visitor_function,
 )
 from oct_container cimport OctreeContainer
 from oct_visitors cimport Oct, OctVisitor

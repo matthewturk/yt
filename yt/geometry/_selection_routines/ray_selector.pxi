@@ -124,7 +124,6 @@ cdef class RaySelector(SelectorObject):
                         ni += 1
         if not (ni == dtr.size):
             print(ni, dtr.size)
-        free(ia)
         return dtr, tr
 
     @cython.boundscheck(False)
