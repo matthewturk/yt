@@ -50,7 +50,7 @@ class GridIndex(Index, abc.ABC):
         self._initialize_level_stats()
 
         # This is to check that at *some* point we create self.data_files
-        # assert(getattr(self, 'data_files', None) is not None)
+        assert(getattr(self, 'data_files', None) is not None)
 
     @abc.abstractmethod
     def _count_grids(self):
