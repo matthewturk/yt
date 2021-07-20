@@ -3,8 +3,7 @@ import random
 import numpy as np
 
 from yt.loaders import load_amr_grids
-from yt.testing import (
-    assert_equal, assert_raises, fake_amr_ds)
+from yt.testing import assert_equal, assert_raises, fake_amr_ds
 
 
 def setup_test_ds():
@@ -150,7 +149,7 @@ def test_grid_arrays_view():
 def test_grid_selector():
     ds = fake_amr_ds()
     tree = ds.index.grid_tree
-    sp = ds.sphere('c', 0.5)
+    sp = ds.sphere("c", 0.5)
     gsel = tree.selector()
     gcount = gsel.count(sp.selector)
     scount = sp["ones"].size

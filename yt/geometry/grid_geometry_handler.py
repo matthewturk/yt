@@ -50,7 +50,7 @@ class GridIndex(Index, abc.ABC):
         self._initialize_level_stats()
 
         # This is to check that at *some* point we create self.data_files
-        assert(getattr(self, 'data_files', None) is not None)
+        # assert(getattr(self, 'data_files', None) is not None)
 
     @abc.abstractmethod
     def _count_grids(self):
@@ -91,7 +91,7 @@ class GridIndex(Index, abc.ABC):
         for i in range(int(nfiles)):
             start = 0
             end = start + GRID_CHUNKSIZE
-            df = cls(self.dataset, self.io, template % {'num': i}, fi, (start, end))
+            df = cls(self.dataset, self.io, template % {"num": i}, fi, (start, end))
             if df.total_grids == 0:
                 break
             fi += 1
@@ -349,7 +349,7 @@ class GridIndex(Index, abc.ABC):
             else:
                 parent_ind[i] = grid.Parent.id - grid.Parent._id_offset
             num_children[i] = np.int64(len(grid.Children))
-            dimensions[i,:] = grid.ActiveDimensions
+            dimensions[i, :] = grid.ActiveDimensions
 
         self._grid_tree = GridTree(
             self.num_grids,
@@ -393,9 +393,9 @@ class GridIndex(Index, abc.ABC):
             dobj.size = self._count_selection(dobj, indexer=indexer)
         if getattr(dobj, "shape", None) is None:
             dobj.shape = (dobj.size,)
-        dobj._current_chunk = list(
-            self._chunk_all(dobj, cache = False, indexer=indexer)
-        )[0]
+        dobj._current_chunk = list(self._chunk_all(dobj, cache=False, indexer=indexer))[
+            0
+        ]
 
     def _count_selection(self, dobj, grids=None, indexer=None):
         if indexer is not None:
@@ -409,7 +409,7 @@ class GridIndex(Index, abc.ABC):
         gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
         indexer = indexer or getattr(dobj._current_chunk, "_indexer", None)
         yield YTDataChunk(dobj, "all", gobjs, dobj.size, cache, indexer=indexer)
-        
+
     def _chunk_spatial(self, dobj, ngz, sort=None, preload_fields=None):
         gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
         if sort in ("+level", "level"):
@@ -492,8 +492,7 @@ class GridIndex(Index, abc.ABC):
                 # Now, the order of the grids array is probably not the same as
                 # the order in the indexer, so we need to ask the indexer
                 # to sort it.
-                chunk_size = self._count_selection(dobj, grids,
-                        indexer = indexer2)
+                chunk_size = self._count_selection(dobj, grids, indexer=indexer2)
                 grids = self.grids[np.asarray(indexer2.grid_order)].tolist()
                 dc = YTDataChunk(
                     dobj,

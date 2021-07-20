@@ -48,7 +48,7 @@ class Index(ParallelAnalysisInterface, abc.ABC):
 
     def _setup_geometry(self):
         raise NotImplementedError
-    
+
     def _detect_output_fields(self):
         pass
 
@@ -236,7 +236,7 @@ class Index(ParallelAnalysisInterface, abc.ABC):
         r"""This is an internal function used to set up a "base"-level chunk
         that corresponds to the entirety of the data selected by *dobj*.
         """
-        raise NotImplementedError # Needs to be implemented by subclass
+        raise NotImplementedError  # Needs to be implemented by subclass
 
     def _chunk(self, dobj, chunking_style, ngz=0, **kwargs):
         # A chunk is either None or (grids, size)

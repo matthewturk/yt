@@ -289,7 +289,7 @@ class EnzoHierarchy(GridIndex):
         self.filenames = fn
         # Now we can initialize our grid filenames, but we need to make an
         # inverse mapping first
-        files_to_indices = {_:[] for _ in set(__[0] for __ in fn)}
+        files_to_indices = {_: [] for _ in set(__[0] for __ in fn)}
         for i, (filename,) in enumerate(fn):
             files_to_indices[filename].append(self.grids[i].id)
 

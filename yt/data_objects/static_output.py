@@ -1910,7 +1910,7 @@ class ParticleFile:
 
 @functools.total_ordering
 class GridDataFile(object):
-    def __init__(self, ds, io, filename, file_id, grids = None, range = None):
+    def __init__(self, ds, io, filename, file_id, grids=None, range=None):
         self.ds = ds
         self.io = weakref.proxy(io)
         self.filename = filename
@@ -1946,7 +1946,7 @@ class GridDataFile(object):
 
     def __hash__(self):
         return hash((self.filename, self.file_id, self.start, self.end))
-        
+
 
 class ParticleDataset(Dataset):
     _unit_base = None
