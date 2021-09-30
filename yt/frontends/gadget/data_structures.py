@@ -578,7 +578,7 @@ class GadgetHDF5File(ParticleFile):
         else:
             v = handle[f"/{ptype}/{field_name}"][self.start : self.end, ...]
 
-        if col:
+        if col is not None:
             # extract the column if appropriate for this field
             v = v[:, col]
 
