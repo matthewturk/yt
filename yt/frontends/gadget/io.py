@@ -46,7 +46,7 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
 
     def _read_particle_coords(self, chunks, ptf):
         for data_file in self._sorted_chunk_iterator(chunks):
-            with data_file.transaction as handle:
+            with data_file.transaction() as handle:
                 # This double-reads
                 for ptype in sorted(ptf):
                     if data_file.total_particles[ptype] == 0:
@@ -58,30 +58,25 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
                     if ptype == self.ds._sph_ptypes[0]:
                         pdtype = c.dtype
                         pshape = c.shape
-                        hsml = self._get_smoothing_length(data_file, pdtype, pshape)
+                        hsml = self._get_smoothing_length(
+                            data_file, pdtype, pshape, handle=handle
+                        )
                     else:
                         hsml = 0.0
                     yield ptype, (x, y, z), hsml
 
     def _yield_coordinates(self, data_file, needed_ptype=None):
-        si, ei = data_file.start, data_file.end
-        f = h5py.File(data_file.filename, mode="r")
-        pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int")
-        np.clip(pcount - si, 0, ei - si, out=pcount)
-        pcount = pcount.sum()
-        for key in f.keys():
-            if not key.startswith("PartType"):
-                continue
-            if "Coordinates" not in f[key]:
-                continue
-            if needed_ptype and key != needed_ptype:
-                continue
-            ds = f[key]["Coordinates"][si:ei, ...]
-            dt = ds.dtype.newbyteorder("N")  # Native
-            pos = np.empty(ds.shape, dtype=dt)
-            pos[:] = ds
-            yield key, pos
-        f.close()
+        with data_file.transaction() as f:
+            for ptype, count in data_file.total_particles.items():
+                if needed_ptype and ptype != needed_ptype:
+                    continue
+                if count == 0:
+                    continue
+                ds = data_file._read_field(ptype, self._coord_name, handle=f)
+                dt = ds.dtype.newbyteorder("N")  # Native
+                pos = np.empty(ds.shape, dtype=dt)
+                pos[:] = ds
+                yield ptype, pos
 
     def _generate_smoothing_length(self, index):
         data_files = index.data_files
@@ -171,7 +166,7 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
 
         data_return = {}
         cname = self.ds._particle_coordinates_name
-        with data_file.transaction as handle:
+        with data_file.transaction() as handle:
 
             for ptype, field_list in sorted(ptf.items()):
                 if data_file.total_particles[ptype] == 0:
@@ -335,6 +330,7 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
         self._vector_fields = dict(self._vector_fields)
         self._fields = ds._field_spec
         self._ptypes = ds._ptype_spec
+        self._coord_name = ds._particle_coordinates_name
         self.data_files = set()
         gformat, endianswap = ds._header.gadget_format
         # gadget format 1 original, 2 with block name
@@ -356,103 +352,68 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
         raise NotImplementedError
 
     def _read_particle_coords(self, chunks, ptf):
-        data_files = set()
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
-        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
-            poff = data_file.field_offsets
-            tp = data_file.total_particles
-            f = open(data_file.filename, "rb")
-            for ptype in ptf:
-                if tp[ptype] == 0:
-                    # skip if there are no particles
-                    continue
-                f.seek(poff[ptype, "Coordinates"], os.SEEK_SET)
-                pos = self._read_field_from_file(f, tp[ptype], "Coordinates")
-                if ptype == self.ds._sph_ptypes[0]:
-                    f.seek(poff[ptype, "SmoothingLength"], os.SEEK_SET)
-                    hsml = self._read_field_from_file(f, tp[ptype], "SmoothingLength")
-                else:
-                    hsml = 0.0
-                yield ptype, (pos[:, 0], pos[:, 1], pos[:, 2]), hsml
-            f.close()
+
+        for data_file in self._sorted_chunk_iterator(chunks):
+            with data_file.transaction() as handle:
+                for ptype in ptf:
+                    if data_file.total_particles[ptype] == 0:
+                        # skip if there are no particles
+                        continue
+                    pos = data_file._read_field(ptype, self._coord_name, handle=handle)
+                    if ptype == self.ds._sph_ptypes[0]:
+                        hsml = data_file._read_field(
+                            ptype, "SmoothingLength", handle=handle
+                        )
+                    else:
+                        hsml = 0.0
+                    yield ptype, (pos[:, 0], pos[:, 1], pos[:, 2]), hsml
 
     def _read_particle_data_file(self, data_file, ptf, selector=None):
         return_data = {}
-        poff = data_file.field_offsets
-        tp = data_file.total_particles
-        f = open(data_file.filename, "rb")
-        for ptype, field_list in sorted(ptf.items()):
-            if tp[ptype] == 0:
-                continue
-            if selector is None or getattr(selector, "is_all_data", False):
-                mask = slice(None, None, None)
-            else:
-                f.seek(poff[ptype, "Coordinates"], os.SEEK_SET)
-                pos = self._read_field_from_file(f, tp[ptype], "Coordinates")
-                if ptype == self.ds._sph_ptypes[0]:
-                    f.seek(poff[ptype, "SmoothingLength"], os.SEEK_SET)
-                    hsml = self._read_field_from_file(f, tp[ptype], "SmoothingLength")
-                else:
-                    hsml = 0.0
-                mask = selector.select_points(pos[:, 0], pos[:, 1], pos[:, 2], hsml)
-                del pos
-                del hsml
-            if mask is None:
-                continue
-            for field in field_list:
-                if field == "Mass" and ptype not in self.var_mass:
-                    if getattr(selector, "is_all_data", False):
-                        size = data_file.total_particles[ptype]
-                    else:
-                        size = mask.sum()
-                    data = np.empty(size, dtype="float64")
-                    m = self.ds.parameters["Massarr"][self._ptypes.index(ptype)]
-                    data[:] = m
-                    yield (ptype, field), data
-                    continue
-                f.seek(poff[ptype, field], os.SEEK_SET)
-                data = self._read_field_from_file(f, tp[ptype], field)
-                data = data[mask, ...]
-                return_data[(ptype, field)] = data
-        f.close()
-        return return_data
 
-    def _read_field_from_file(self, f, count, name):
-        if count == 0:
-            return
-        if name == "ParticleIDs":
-            dt = self._endian + self.ds._id_dtype
-        else:
-            dt = self._endian + self._float_type
-        dt = np.dtype(dt)
-        if name in self._vector_fields:
-            count *= self._vector_fields[name]
-        arr = np.fromfile(f, dtype=dt, count=count)
-        # ensure data are in native endianness to avoid errors
-        # when field data are passed to cython
-        dt = dt.newbyteorder("N")
-        arr = arr.astype(dt)
-        if name in self._vector_fields:
-            factor = self._vector_fields[name]
-            arr = arr.reshape((count // factor, factor), order="C")
-        return arr
+        with data_file.transaction() as f:
+            for ptype, field_list in sorted(ptf.items()):
+                if data_file.total_particles[ptype] == 0:
+                    continue
+                if selector is None or getattr(selector, "is_all_data", False):
+                    mask = slice(None, None, None)
+                else:
+                    pos = data_file._read_field(ptype, self._coord_name, handle=f)
+                    if ptype == self.ds._sph_ptypes[0]:
+                        hsml = data_file._read_field(ptype, "SmoothingLength", handle=f)
+                    else:
+                        hsml = 0.0
+                    mask = selector.select_points(pos[:, 0], pos[:, 1], pos[:, 2], hsml)
+                    del pos
+                    del hsml
+                if mask is None:
+                    continue
+                for field in field_list:
+                    if field == "Mass" and ptype not in self.var_mass:
+                        if getattr(selector, "is_all_data", False):
+                            size = data_file.total_particles[ptype]
+                        else:
+                            size = mask.sum()
+                        data = np.empty(size, dtype="float64")
+                        m = self.ds.parameters["Massarr"][self._ptypes.index(ptype)]
+                        data[:] = m
+                        return_data[(ptype, field)] = data
+                        continue
+                    data = data_file._read_field(ptype, field, handle=f)
+                    data = data[mask, ...]
+                    return_data[(ptype, field)] = data
+        return return_data
 
     def _yield_coordinates(self, data_file, needed_ptype=None):
         self._float_type = data_file.ds._header.float_type
         self._field_size = np.dtype(self._float_type).itemsize
-        with open(data_file.filename, "rb") as f:
-            # We add on an additionally 4 for the first record.
-            f.seek(data_file._position_offset + 4)
+        with data_file.transaction() as f:
             for ptype, count in data_file.total_particles.items():
                 if count == 0:
                     continue
                 if needed_ptype is not None and ptype != needed_ptype:
                     continue
-                # The first total_particles * 3 values are positions
-                pp = np.fromfile(f, dtype=self._float_type, count=count * 3)
-                pp.shape = (count, 3)
+                pp = data_file._read_field(ptype, self._coord_name, handle=f)
                 yield ptype, pp
 
     def _get_smoothing_length(self, data_file, position_dtype, position_shape):
@@ -466,12 +427,7 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
         return ret
 
     def _get_field(self, data_file, field, ptype):
-        poff = data_file.field_offsets
-        tp = data_file.total_particles
-        with open(data_file.filename, "rb") as f:
-            f.seek(poff[ptype, field], os.SEEK_SET)
-            pp = self._read_field_from_file(f, tp[ptype], field)
-        return pp
+        return data_file._read_field(ptype, field)
 
     def _count_particles(self, data_file):
         si, ei = data_file.start, data_file.end
