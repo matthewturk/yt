@@ -34,15 +34,13 @@ class IOHandlerAdaptaHOPBinary(BaseParticleIOHandler):
 
     def _read_particle_coords(self, chunks, ptf):
         # This will read chunks and yield the results.
-        chunks = list(chunks)
-        data_files = set()
+
         # Only support halo reading for now.
         assert len(ptf) == 1
         assert list(ptf.keys())[0] == "halos"
         ptype = "halos"
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
+
+        data_files = self._data_files_set(chunks)
         for data_file in sorted(data_files, key=attrgetter("filename")):
             pcount = (
                 data_file.ds.parameters["nhalos"] + data_file.ds.parameters["nsubs"]
@@ -54,14 +52,9 @@ class IOHandlerAdaptaHOPBinary(BaseParticleIOHandler):
 
     def _read_particle_fields(self, chunks, ptf, selector):
         # Now we have all the sizes, and we can allocate
-        chunks = list(chunks)
-        data_files = set()
         # Only support halo reading for now.
         assert len(ptf) == 1
         assert list(ptf.keys())[0] == "halos"
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
 
         def iterate_over_attributes(attr_list):
             for attr, *_ in attr_list:
@@ -70,6 +63,7 @@ class IOHandlerAdaptaHOPBinary(BaseParticleIOHandler):
                 else:
                     yield attr
 
+        data_files = self._data_files_set(chunks)
         for data_file in sorted(data_files, key=attrgetter("filename")):
             pcount = (
                 data_file.ds.parameters["nhalos"] + data_file.ds.parameters["nsubs"]

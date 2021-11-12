@@ -1,3 +1,4 @@
+import contextlib
 from uuid import uuid4
 
 import numpy as np
@@ -11,7 +12,30 @@ from yt.utilities.on_demand_imports import _h5py as h5py
 
 
 class SwiftParticleFile(ParticleFile):
-    pass
+    @contextlib.contextmanager
+    def transaction(self, handle=None):
+        if handle is None:
+            with h5py.File(self.filename, mode="r") as handle:
+                yield handle
+        else:
+            yield handle
+
+    def _read_field(self, ptype, field_name, handle=None):
+
+        field_name = self._sanitize_field(field_name)
+
+        if self.total_particles[ptype] == 0:
+            return
+
+        with self.transaction(handle) as f:
+            v = f[f"/{ptype}/{field_name}"][self.start : self.end, ...]
+
+        return v
+
+    def _sanitize_field(self, field_name):
+        if field_name in ("Mass", "Masses"):
+            field_name = self.ds._particle_mass_name
+        return field_name
 
 
 class SwiftDataset(SPHDataset):
