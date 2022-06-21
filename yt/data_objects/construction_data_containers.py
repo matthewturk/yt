@@ -11,6 +11,7 @@ import numpy as np
 from more_itertools import always_iterable
 from tqdm import tqdm
 
+from yt._maintenance.deprecation import issue_deprecation_warning
 from yt.config import ytcfg
 from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.selection_objects.data_selection_objects import (
@@ -24,8 +25,8 @@ from yt.funcs import get_memory_usage, is_sequence, iter_fields, mylog, only_on_
 from yt.geometry import particle_deposit as particle_deposit
 from yt.geometry.coordinates.cartesian_coordinates import all_data
 from yt.loaders import load_uniform_grid
-from yt.units.unit_object import Unit
-from yt.units.yt_array import YTArray, uconcatenate
+from yt.units.unit_object import Unit  # type: ignore
+from yt.units.yt_array import YTArray, uconcatenate  # type: ignore
 from yt.utilities.exceptions import (
     YTNoAPIKey,
     YTNotInsideNotebook,
@@ -51,6 +52,7 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
     parallel_objects,
     parallel_root_only,
 )
+from yt.visualization.color_maps import get_colormap_lut
 
 
 class YTStreamline(YTSelectionContainer1D):
@@ -168,25 +170,40 @@ class YTProj(YTSelectionContainer2D):
         center=None,
         ds=None,
         data_source=None,
-        style=None,
         method="integrate",
         field_parameters=None,
         max_level=None,
+        *,
+        style=None,
     ):
         super().__init__(axis, ds, field_parameters)
-        # Style is deprecated, but if it is set, then it trumps method
-        # keyword.  TODO: Remove this keyword and this check at some point in
-        # the future.
         if style is not None:
+            issue_deprecation_warning(
+                "The 'style' keyword argument is a deprecated alias for 'method'. "
+                "Please use method directly.",
+                since="3.2",
+                removal="4.2",
+                stacklevel=4,
+            )
             method = style
+        if method == "mip":
+            issue_deprecation_warning(
+                "The 'mip' method value is a deprecated alias for 'max'. "
+                "Please use max directly.",
+                since="4.1",
+                stacklevel=4,
+            )
+            method = "max"
         if method == "sum":
             self.method = "integrate"
             self._sum_only = True
         else:
             self.method = method
             self._sum_only = False
-        if self.method == "mip":
+        if self.method in ["max", "mip"]:
             self.func = np.max
+        elif self.method == "min":
+            self.func = np.min
         elif self.method == "integrate":
             self.func = np.sum  # for the future
         else:
@@ -248,9 +265,12 @@ class YTProj(YTSelectionContainer2D):
         projected_units = self.comm.mpi_bcast(self._projected_units)
         self._projected_units = projected_units
         # Note that this will briefly double RAM usage
-        if self.method == "mip":
+        if self.method in ["max", "mip"]:
             merge_style = -1
             op = "max"
+        elif self.method == "min":
+            merge_style = -2
+            op = "min"
         elif self.method == "integrate":
             merge_style = 1
             op = "sum"
@@ -342,7 +362,7 @@ class YTProj(YTSelectionContainer2D):
                 # for future field accesses.
                 finfo.units = str(chunk[field].units)
             field_unit = Unit(finfo.output_units, registry=self.ds.unit_registry)
-            if self.method == "mip" or self._sum_only:
+            if self.method in ("min", "max") or self._sum_only:
                 path_length_unit = Unit(registry=self.ds.unit_registry)
             else:
                 ax_name = self.ds.coordinates.axis_name[self.axis]
@@ -378,10 +398,11 @@ class YTParticleProj(YTProj):
         center=None,
         ds=None,
         data_source=None,
-        style=None,
         method="integrate",
         field_parameters=None,
         max_level=None,
+        *,
+        style=None,
     ):
         super().__init__(
             field,
@@ -390,10 +411,10 @@ class YTParticleProj(YTProj):
             center,
             ds,
             data_source,
-            style,
             method,
             field_parameters,
             max_level,
+            style=style,
         )
 
     def _handle_chunk(self, chunk, fields, tree):
@@ -440,7 +461,9 @@ class YTQuadTreeProj(YTProj):
     method : string, optional
         The method of projection to be performed.
         "integrate" : integration along the axis
-        "mip" : maximum intensity projection
+        "mip" : maximum intensity projection (deprecated)
+        "max" : maximum intensity projection
+        "min" : minimum intensity projection
         "sum" : same as "integrate", except that we don't multiply by the path length
         WARNING: The "sum" option should only be used for uniform resolution grid
         datasets, as other datasets may result in unphysical images.
@@ -469,10 +492,11 @@ class YTQuadTreeProj(YTProj):
         center=None,
         ds=None,
         data_source=None,
-        style=None,
         method="integrate",
         field_parameters=None,
         max_level=None,
+        *,
+        style=None,
     ):
         super().__init__(
             field,
@@ -481,10 +505,10 @@ class YTQuadTreeProj(YTProj):
             center,
             ds,
             data_source,
-            style,
             method,
             field_parameters,
             max_level,
+            style=style,
         )
 
         if not self.deserialize(field):
@@ -549,7 +573,7 @@ class YTQuadTreeProj(YTProj):
             chunk.ires.size,
             get_memory_usage() / 1024.0,
         )
-        if self.method == "mip" or self._sum_only:
+        if self.method in ("min", "max") or self._sum_only:
             dl = self.ds.quan(1.0, "")
         else:
             ax_name = self.ds.coordinates.axis_name[self.axis]
@@ -648,11 +672,18 @@ class YTCoveringGrid(YTSelectionContainer3D):
         self.right_edge = self.left_edge + self.ActiveDimensions * self.dds
         self._num_ghost_zones = num_ghost_zones
         self._use_pbar = use_pbar
-        self.global_startindex = np.rint(
-            (self.left_edge - self.ds.domain_left_edge) / self.dds
-        ).astype("int64")
+        self.global_startindex = (
+            np.rint((self.left_edge - self.ds.domain_left_edge) / self.dds).astype(
+                "int64"
+            )
+            + self.ds.domain_offset
+        )
         self._setup_data_source()
         self.get_data(fields)
+
+    def get_global_startindex(self):
+        r"""Get the global start index of the covering grid."""
+        return self.global_startindex
 
     def to_xarray(self, fields=None):
         r"""Export this fixed-resolution object to an xarray Dataset
@@ -1119,7 +1150,7 @@ class YTCoveringGrid(YTSelectionContainer3D):
         write_to_gdf(ds, gdf_path, **kwargs)
 
     def _get_grid_bounds_size(self):
-        dd = self.ds.domain_width / 2 ** self.level
+        dd = self.ds.domain_width / 2**self.level
         bounds = np.zeros(6, dtype="float64")
 
         bounds[0] = self.left_edge[0].in_base("code")
@@ -1128,7 +1159,7 @@ class YTCoveringGrid(YTSelectionContainer3D):
         bounds[3] = bounds[2] + dd[1].d * self.ActiveDimensions[1]
         bounds[4] = self.left_edge[2].in_base("code")
         bounds[5] = bounds[4] + dd[2].d * self.ActiveDimensions[2]
-        size = np.ones(3, dtype="int64") * 2 ** self.level
+        size = np.ones(3, dtype="int64") * 2**self.level
 
         return bounds, size
 
@@ -1405,8 +1436,7 @@ class YTSmoothedCoveringGrid(YTCoveringGrid):
             warnings.warn(
                 "Something went wrong during field computation. "
                 "This is likely due to missing ghost-zones support "
-                "in class %s",
-                self.ds.__class__,
+                f"in class {type(self.ds)}",
                 category=RuntimeWarning,
             )
             mylog.debug("Caught %d runtime errors.", runtime_errors_count)
@@ -1729,7 +1759,7 @@ class YTSurface(YTSelectionContainer3D):
             grid.dds,
         )
         # assumes all the fluxing fields have the same units
-        ret_units = field_x_vals.units * ff.units * grid.dds.units ** 2
+        ret_units = field_x_vals.units * ff.units * grid.dds.units**2
         ret = self.ds.arr(ret, ret_units)
         ret.convert_to_units(self.ds.unit_system[ret_units.dimensions])
         return ret
@@ -1947,9 +1977,8 @@ class YTSurface(YTSelectionContainer3D):
         else:
             cs[:] = 1.0
         # to get color indices for OBJ formatting
-        from yt.visualization._colormap_data import color_map_luts
+        lut = get_colormap_lut(color_map)
 
-        lut = color_map_luts[color_map]
         x = np.mgrid[0.0 : 1.0 : lut[0].shape[0] * 1j]
         arr["cind"][:] = (np.interp(cs, x, x) * (lut[0].shape[0] - 1)).astype("uint8")
         # now, get emission
@@ -2055,11 +2084,9 @@ class YTSurface(YTSelectionContainer3D):
             emit_field_min,
             emit_field,
         )  # map color values to color scheme
-        from yt.visualization._colormap_data import (  # import colors for mtl file
-            color_map_luts,
-        )
 
-        lut = color_map_luts[color_map]  # enumerate colors
+        lut = get_colormap_lut(color_map)
+
         # interpolate emissivity to enumerated colors
         emiss = np.interp(
             np.mgrid[0 : lut[0].shape[0]], np.mgrid[0 : len(cs)], f["emit"][:]
@@ -2288,11 +2315,9 @@ class YTSurface(YTSelectionContainer3D):
             emit_field_min,
             emit_field,
         )  # map color values to color scheme
-        from yt.visualization._colormap_data import (  # import colors for mtl file
-            color_map_luts,
-        )
 
-        lut = color_map_luts[color_map]  # enumerate colors
+        lut = get_colormap_lut(color_map)
+
         # interpolate emissivity to enumerated colors
         emiss = np.interp(
             np.mgrid[0 : lut[0].shape[0]], np.mgrid[0 : len(cs)], f["emit"][:]

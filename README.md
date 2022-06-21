@@ -10,7 +10,7 @@
 [![Sponsor our Project](https://img.shields.io/badge/donate-to%20yt-blueviolet)](https://numfocus.salsalabs.org/donate-to-yt/index.html)
 
 <!--- Tests and style --->
-![Build and Test](https://github.com/yt-project/yt/workflows/Build%20and%20Test/badge.svg?branch=main)
+[![Build and Test](https://github.com/yt-project/yt/actions/workflows/build-test.yaml/badge.svg)](https://github.com/yt-project/yt/actions/workflows/build-test.yaml)
 [![CI (bleeding edge)](https://github.com/yt-project/yt/actions/workflows/bleeding-edge.yaml/badge.svg)](https://github.com/yt-project/yt/actions/workflows/bleeding-edge.yaml)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/yt-project/yt/main.svg)](https://results.pre-commit.ci/latest/github/yt-project/yt/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -63,12 +63,12 @@ can be found on [the project's website](https://yt-project.org/docs/dev/installi
 yt is designed to provide meaningful analysis of data.  We have some Quickstart
 example notebooks in the repository:
 
- * [Introduction](doc/source/quickstart/1\)_Introduction.ipynb)
- * [Data Inspection](doc/source/quickstart/2\)_Data_Inspection.ipynb)
- * [Simple Visualization](doc/source/quickstart/3\)_Simple_Visualization.ipynb)
- * [Data Objects and Time Series](doc/source/quickstart/4\)_Data_Objects_and_Time_Series.ipynb)
- * [Derived Fields and Profiles](doc/source/quickstart/5\)_Derived_Fields_and_Profiles.ipynb)
- * [Volume Rendering](doc/source/quickstart/6\)_Volume_Rendering.ipynb)
+ * [Introduction](https://github.com/yt-project/yt/tree/main/doc/source/quickstart/1\)_Introduction.ipynb)
+ * [Data Inspection](https://github.com/yt-project/yt/tree/main/doc/source/quickstart/2\)_Data_Inspection.ipynb)
+ * [Simple Visualization](https://github.com/yt-project/yt/tree/main/doc/source/quickstart/3\)_Simple_Visualization.ipynb)
+ * [Data Objects and Time Series](https://github.com/yt-project/yt/tree/main/doc/source/quickstart/4\)_Data_Objects_and_Time_Series.ipynb)
+ * [Derived Fields and Profiles](https://github.com/yt-project/yt/tree/main/doc/source/quickstart/5\)_Derived_Fields_and_Profiles.ipynb)
+ * [Volume Rendering](https://github.com/yt-project/yt/tree/main/doc/source/quickstart/6\)_Volume_Rendering.ipynb)
 
 If you'd like to try these online, you can visit our [yt Hub](https://hub.yt/)
 and run a notebook next to some of our example data.

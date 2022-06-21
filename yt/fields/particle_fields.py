@@ -1,7 +1,7 @@
 import numpy as np
 
 from yt.fields.derived_field import ValidateParameter, ValidateSpatial
-from yt.units.yt_array import uconcatenate, ucross
+from yt.units.yt_array import uconcatenate, ucross  # type: ignore
 from yt.utilities.lib.misc_utilities import (
     obtain_position_vector,
     obtain_relative_velocity_vector,
@@ -500,12 +500,6 @@ def standard_particle_fields(
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
     )
 
-    registry.alias(
-        (ptype, "particle_spherical_position_radius"),
-        (ptype, "particle_position_spherical_radius"),
-        deprecate=("4.0.0", "4.1.0"),
-    )
-
     def _particle_position_spherical_theta(field, data):
         """The spherical theta coordinate of the particle positions.
 
@@ -524,12 +518,6 @@ def standard_particle_fields(
         validators=[ValidateParameter("center"), ValidateParameter("normal")],
     )
 
-    registry.alias(
-        (ptype, "particle_spherical_position_theta"),
-        (ptype, "particle_position_spherical_theta"),
-        deprecate=("4.0.0", "4.1.0"),
-    )
-
     def _particle_position_spherical_phi(field, data):
         """The spherical phi component of the particle positions
 
@@ -546,12 +534,6 @@ def standard_particle_fields(
         function=_particle_position_spherical_phi,
         units="",
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
-    )
-
-    registry.alias(
-        (ptype, "particle_spherical_position_phi"),
-        (ptype, "particle_position_spherical_phi"),
-        deprecate=("4.0.0", "4.1.0"),
     )
 
     def _particle_velocity_spherical_radius(field, data):
@@ -575,12 +557,6 @@ def standard_particle_fields(
         function=_particle_velocity_spherical_radius,
         units=unit_system["velocity"],
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
-    )
-
-    registry.alias(
-        (ptype, "particle_spherical_velocity_radius"),
-        (ptype, "particle_velocity_spherical_radius"),
-        deprecate=("4.0.0", "4.1.0"),
     )
 
     registry.alias(
@@ -611,12 +587,6 @@ def standard_particle_fields(
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
     )
 
-    registry.alias(
-        (ptype, "particle_spherical_velocity_theta"),
-        (ptype, "particle_velocity_spherical_theta"),
-        deprecate=("4.0.0", "4.1.0"),
-    )
-
     def _particle_velocity_spherical_phi(field, data):
         """The spherical phi component of the particle velocities
 
@@ -636,12 +606,6 @@ def standard_particle_fields(
         function=_particle_velocity_spherical_phi,
         units=unit_system["velocity"],
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
-    )
-
-    registry.alias(
-        (ptype, "particle_spherical_velocity_phi"),
-        (ptype, "particle_velocity_spherical_phi"),
-        deprecate=("4.0.0", "4.1.0"),
     )
 
     def _particle_position_cylindrical_radius(field, data):
@@ -742,12 +706,6 @@ def standard_particle_fields(
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
     )
 
-    registry.alias(
-        (ptype, "particle_cylindrical_velocity_theta"),
-        (ptype, "particle_velocity_cylindrical_theta"),
-        deprecate=("4.0.0", "4.1.0"),
-    )
-
     def _particle_velocity_cylindrical_z(field, data):
         """The cylindrical z component of the particle velocities
 
@@ -765,12 +723,6 @@ def standard_particle_fields(
         function=_particle_velocity_cylindrical_z,
         units=unit_system["velocity"],
         validators=[ValidateParameter("normal"), ValidateParameter("center")],
-    )
-
-    registry.alias(
-        (ptype, "particle_cylindrical_velocity_z"),
-        (ptype, "particle_velocity_cylindrical_z"),
-        deprecate=("4.0.0", "4.1.0"),
     )
 
 
@@ -801,33 +753,6 @@ def add_particle_average(registry, ptype, field_name, weight=None, density=True)
         units=field_units,
     )
     return fn
-
-
-def add_volume_weighted_smoothed_field(
-    ptype,
-    coord_name,
-    mass_name,
-    smoothing_length_name,
-    density_name,
-    smoothed_field,
-    registry,
-    nneighbors=64,
-    kernel_name="cubic",
-):
-    from yt._maintenance.deprecation import issue_deprecation_warning
-
-    issue_deprecation_warning(
-        "This function is deprecated. "
-        "Since yt-4.0, it's no longer necessary to add a field specifically for "
-        "smoothing, because the global octree is removed. The old behavior of "
-        "interpolating onto a grid structure can be recovered through data objects "
-        "like ds.arbitrary_grid, ds.covering_grid, and most closely ds.octree. The "
-        "visualization machinery now treats SPH fields properly by smoothing onto "
-        "pixel locations. See this page to learn more: "
-        "https://yt-project.org/doc/yt4differences.html",
-        since="4.0.0",
-        removal="4.1.0",
-    )
 
 
 def add_nearest_neighbor_field(ptype, coord_name, registry, nneighbors=64):

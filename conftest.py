@@ -4,8 +4,11 @@ import tempfile
 from importlib.util import find_spec
 from pathlib import Path
 
+import matplotlib
+import numpy
 import pytest
 import yaml
+from packaging.version import Version
 
 from yt.config import ytcfg
 from yt.utilities.answer_testing.testing_utilities import (
@@ -16,6 +19,9 @@ from yt.utilities.answer_testing.testing_utilities import (
     _streamline_for_io,
     data_dir_load,
 )
+
+MPL_VERSION = Version(matplotlib.__version__)
+NUMPY_VERSION = Version(numpy.__version__)
 
 
 def pytest_addoption(parser):
@@ -75,12 +81,6 @@ def pytest_configure(config):
     for value in (
         # treat most warnings as errors
         "error",
-        # >>> internal deprecation warnings with no obvious solution
-        # see https://github.com/yt-project/yt/issues/3381
-        (
-            r"ignore:The requested field name 'pd?[xyz]' is ambiguous and corresponds "
-            "to any one of the following field types.*:yt._maintenance.deprecation.VisibleDeprecationWarning"
-        ),
         # >>> warnings emitted by testing frameworks, or in testing contexts
         # we still have some yield-based tests, awaiting for transition into pytest
         "ignore::pytest.PytestCollectionWarning",
@@ -109,38 +109,66 @@ def pytest_configure(config):
     ):
         config.addinivalue_line("filterwarnings", value)
 
-    # at the time of writing, astropy's wheels are behind numpy's latest
-    # version but this doesn't cause actual problems in our test suite, so
-    # we allow this warning to pass.
-    # last checked with astropy 4.2.1
-    config.addinivalue_line(
-        "filterwarnings",
-        (
-            "ignore:numpy.ndarray size changed, may indicate binary incompatibility. "
-            "Expected 80 from C header, got 88 from PyObject:RuntimeWarning"
-        ),
-    )
-    if find_spec("astropy") is not None:
-        # astropy triggers this warning from itself, there's not much we can do on our side
-        # last checked with astropy 4.2.1
-        config.addinivalue_line(
-            "filterwarnings", "ignore::astropy.wcs.wcs.FITSFixedWarning"
-        )
-
-    if find_spec("cartopy") is not None:
-        # cartopy still triggers this numpy warning
-        # last checked with cartopy 0.19.0
+    if MPL_VERSION < Version("3.0.0"):
         config.addinivalue_line(
             "filterwarnings",
             (
-                "ignore:`np.float` is a deprecated alias for the builtin `float`. "
-                "To silence this warning, use `float` by itself. "
-                "Doing this will not modify any behavior and is safe. "
-                "If you specifically wanted the numpy scalar type, use `np.float64` here."
-                ":DeprecationWarning: "
+                "ignore:Using or importing the ABCs from 'collections' instead of from 'collections.abc' "
+                "is deprecated since Python 3.3,and in 3.9 it will stop working:DeprecationWarning"
             ),
         )
-        # this warning *still* shows up on cartopy 0.19 so we'll ignore it
+
+    if MPL_VERSION < Version("3.5.2"):
+        if MPL_VERSION < Version("3.3"):
+            try:
+                import PIL
+            except ImportError:
+                PILLOW_INSTALLED = False
+            else:
+                PILLOW_INSTALLED = True
+        else:
+            # pillow became a hard dependency in matplotlib 3.3
+            import PIL
+
+            PILLOW_INSTALLED = True
+        if PILLOW_INSTALLED and Version(PIL.__version__) >= Version("9.1"):
+            # see https://github.com/matplotlib/matplotlib/pull/22766
+            config.addinivalue_line(
+                "filterwarnings",
+                r"ignore:NONE is deprecated and will be removed in Pillow 10 \(2023-07-01\)\. "
+                r"Use Resampling\.NEAREST or Dither\.NONE instead\.:DeprecationWarning",
+            )
+            config.addinivalue_line(
+                "filterwarnings",
+                r"ignore:ADAPTIVE is deprecated and will be removed in Pillow 10 \(2023-07-01\)\. "
+                r"Use Palette\.ADAPTIVE instead\.:DeprecationWarning",
+            )
+
+    if NUMPY_VERSION < Version("1.19") and MPL_VERSION < Version("3.3"):
+        # This warning is triggered from matplotlib in exactly one test at the time of writing
+        # and exclusively on the minimal test env. Upgrading numpy or matplotlib resolves
+        # the issue, so we can afford to ignore it.
+        config.addinivalue_line(
+            "filterwarnings",
+            "ignore:invalid value encountered in less_equal:RuntimeWarning",
+        )
+
+    if find_spec("astropy") is not None:
+        # at the time of writing, astropy's wheels are behind numpy's latest
+        # version but this doesn't cause actual problems in our test suite
+        # last updated with astropy 5.0 + numpy 1.22 + pytest 6.2.5
+        config.addinivalue_line(
+            "filterwarnings",
+            (
+                "ignore:numpy.ndarray size changed, may indicate binary incompatibility. Expected "
+                r"(80 from C header, got 88|88 from C header, got 96|80 from C header, got 96)"
+                " from PyObject:RuntimeWarning"
+            ),
+        )
+
+    if find_spec("cartopy") is not None:
+        # This can be removed when cartopy 0.21 is released
+        # see https://github.com/SciTools/cartopy/pull/1957
         config.addinivalue_line(
             "filterwarnings",
             (
@@ -155,6 +183,17 @@ def pytest_configure(config):
             (
                 "ignore:The Stereographic projection in Proj older than 5.0.0 incorrectly "
                 "transforms points when central_latitude=0. Use this projection with caution.:UserWarning"
+            ),
+        )
+
+    if find_spec("xarray") is not None:
+        # this can be removed when the related fix is published
+        # https://github.com/pydata/xarray/issues/6514
+        config.addinivalue_line(
+            "filterwarnings",
+            (
+                "ignore: SelectableGroups dict interface is deprecated. "
+                "Use select.:DeprecationWarning"
             ),
         )
 

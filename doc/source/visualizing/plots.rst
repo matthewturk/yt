@@ -417,7 +417,7 @@ Here, ``W`` is the width of the projection in the x, y, *and* z
 directions.
 
 One can also generate annotated off axis projections using
-:class:`~yt.visualization.plot_window.OffAxisProjectionPlot`. These
+:class:`~yt.visualization.plot_window.ProjectionPlot`. These
 plots can be created in much the same way as an
 ``OffAxisSlicePlot``, requiring only an open dataset, a direction
 to project along, and a field to project.  For example:
@@ -429,14 +429,77 @@ to project along, and a field to project.  For example:
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    L = [1, 1, 0]  # vector normal to cutting plane
    north_vector = [-1, 1, 0]
-   prj = yt.OffAxisProjectionPlot(
+   prj = yt.ProjectionPlot(
        ds, L, ("gas", "density"), width=(25, "kpc"), north_vector=north_vector
    )
    prj.save()
 
-OffAxisProjectionPlots can also be created with a number of
+``OffAxisProjectionPlot`` objects can also be created with a number of
 keyword arguments, as described in
 :class:`~yt.visualization.plot_window.OffAxisProjectionPlot`
+
+
+.. _slices-and-projections-in-spherical-geometry:
+
+Slice Plots and Projection Plots in Spherical Geometry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+What to expect when plotting data in spherical geometry? Here we explain
+the notations and projections system yt uses for to render 2D images of
+spherical data.
+
+The native spherical coordinates are
+
+- the spherical radius :math:`r`
+- the colatitude :math:`\theta`, defined between :math:`0` and :math:`\pi`
+- the azimuth :math:`\varphi`, defined between :math:`0` and :math:`2\pi`
+
+:math:`\varphi`-normal slices are represented in the poloidal plane, with axes :math:`R, z`, where
+
+- :math:`R = r \sin \theta` is the cylindrical radius
+- :math:`z = r \cos \theta` is the elevation
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load_sample("KeplerianDisk", unit_system="cgs")
+   slc = yt.SlicePlot(ds, "phi", ("gas", "density"))
+   slc.save()
+
+:math:`\theta`-normal slices are represented in a
+:math:`x/\sin(\theta)` VS :math:`y/\sin(\theta)` plane, where
+
+- :math:`x = R \cos \varphi`
+- :math:`y = R \sin \varphi`
+
+are the cartesian plane coordinates
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load_sample("KeplerianDisk", unit_system="cgs")
+   slc = yt.SlicePlot(ds, "theta", ("gas", "density"))
+   slc.save()
+
+
+Finally, :math:`r`-normal slices are represented following a
+`Aitoff-Hammer projection <http://paulbourke.net/geometry/transformationprojection/>`_
+
+We denote
+
+- the latitude :math:`\bar\theta = \frac{\pi}{2} - \theta`
+- the longitude :math:`\lambda = \varphi - \pi`
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load_sample("KeplerianDisk", unit_system="cgs")
+   slc = yt.SlicePlot(ds, "r", ("gas", "density"))
+   slc.save()
+
 
 .. _unstructured-mesh-slices:
 
@@ -584,7 +647,7 @@ Note, the change in the field name from ``("deposit", "nbody_mass")`` to
 
    fn = cg.save_as_dataset(fields=[("deposit", "nbody_mass")])
    ds_grid = yt.load(fn)
-   p = yt.OffAxisProjectionPlot(ds_grid, [1, 1, 1], ("grid", "nbody_mass"))
+   p = yt.ProjectionPlot(ds_grid, [1, 1, 1], ("grid", "nbody_mass"))
    p.save()
 
 Plot Customization: Recentering, Resizing, Colormaps, and More
@@ -706,14 +769,43 @@ two element tuples.
    slc.set_center((0.5, 0.503))
    slc.save()
 
-Flipping the plot view axes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Adjusting the plot view axes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default, all :class:`~yt.visualization.plot_window.PlotWindow` objects plot
-with the assumption that the eastern direction on the plot forms a right handed
-coordinate system with the ``normal`` and ``north_vector`` for the system, whether
-explicitly or implicitly defined. This setting can be toggled or explicitly defined
-by the user at initialization:
+There are a number of ways in which the initial orientation of a :class:`~yt.visualization.plot_window.PlotWindow`
+object can be adjusted.
+
+The first two axis orientation modifications,
+:meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.flip_horizontal`
+and :meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.flip_vertical`, are
+equivalent to the ``invert_xaxis`` and ``invert_yaxis`` of matplotlib ``Axes``
+objects. ``flip_horizontal`` will invert the plot's x-axis while the :meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.flip_vertical` method
+will invert the plot's y-axis
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   # slicing with standard view (right-handed)
+   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"))
+   slc.annotate_title("Standard Horizontal (Right Handed)")
+   slc.save("Standard.png")
+
+   # flip the horizontal axis (not right handed)
+   slc.flip_horizontal()
+   slc.annotate_title("Horizontal Flipped (Not Right Handed)")
+   slc.save("NotRightHanded.png")
+
+   # flip the vertical axis
+   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"))
+   slc.flip_vertical()
+   slc.annotate_title("Flipped vertical")
+   slc.save("FlippedVertical.png")
+
+In addition to inverting the direction of each axis,
+:meth:`~yt.visualization.plot_window.AxisAlignedSlicePlot.swap_axes` will exchange
+the plot's vertical and horizontal axes:
 
 .. python-script::
 
@@ -721,14 +813,56 @@ by the user at initialization:
 
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    # slicing with non right-handed coordinates
-   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"), right_handed=False)
-   slc.annotate_title("Not Right Handed")
-   slc.save("NotRightHanded.png")
+   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"))
+   slc.swap_axes()
+   slc.annotate_title("Swapped axes")
+   slc.save("SwappedAxes.png")
 
-   # switching to right-handed coordinates
-   slc.toggle_right_handed()
-   slc.annotate_title("Right Handed")
-   slc.save("Standard.png")
+   # toggle swap_axes (return to standard view)
+   slc.swap_axes()
+   slc.annotate_title("Standard Axes")
+   slc.save("StandardAxes.png")
+
+When using the ``flip_horizontal`` and ``flip_vertical`` with ``swap_axes``, it
+is important to remember that any ``flip_horizontal`` and ``flip_vertical``
+operations are applied to the image axes (not underlying dataset coordinates)
+after any ``swap_axes`` calls, regardless of the order in which the callbacks
+are added. Also note that when using ``swap_axes``, any plot modifications
+relating to limits, image width or resolution should still be supplied in reference
+to the standard (unswapped) orientation rather than the swapped view.
+
+Finally, it's worth mentioning that these three methods can be used in combination
+to rotate the view:
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+   # initial view
+   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"))
+   slc.save("InitialOrientation.png")
+   slc.annotate_title("Initial View")
+
+   # swap + vertical flip = rotate 90 degree rotation (clockwise)
+   slc.swap_axes()
+   slc.flip_vertical()
+   slc.annotate_title("90 Degree Clockwise Rotation")
+   slc.save("SwappedAxes90CW.png")
+
+   # vertical flip + horizontal flip = rotate 180 degree rotation
+   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"))
+   slc.flip_horizontal()
+   slc.flip_vertical()
+   slc.annotate_title("180 Degree Rotation")
+   slc.save("FlipAxes180.png")
+
+   # swap + horizontal flip = rotate 90 degree rotation (counter clockwise)
+   slc = yt.SlicePlot(ds, "x", ("gas", "velocity_x"))
+   slc.swap_axes()
+   slc.flip_horizontal()
+   slc.annotate_title("90 Degree Counter Clockwise Rotation")
+   slc.save("SwappedAxes90CCW.png")
 
 .. _hiding-colorbar-and-axes:
 

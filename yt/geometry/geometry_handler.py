@@ -1,11 +1,12 @@
 import abc
 import os
 import weakref
+from typing import Tuple
 
 import numpy as np
 
 from yt.config import ytcfg
-from yt.units.yt_array import YTArray, uconcatenate
+from yt.units.yt_array import YTArray, uconcatenate  # type: ignore
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.io_handler import io_registry
 from yt.utilities.logger import ytLogger as mylog
@@ -19,11 +20,8 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 class Index(ParallelAnalysisInterface, abc.ABC):
     """The base index class"""
 
-    _unsupported_objects = ()
-    _index_properties = ()
-    directory = None
-    field_list = None
-    dataset_type = None
+    _unsupported_objects: Tuple[str, ...] = ()
+    _index_properties: Tuple[str, ...] = ()
 
     def __init__(self, ds, dataset_type):
         ParallelAnalysisInterface.__init__(self)
@@ -263,12 +261,13 @@ class Index(ParallelAnalysisInterface, abc.ABC):
         raise NotImplementedError
 
 
-def cached_property(func):
-    # TODO: remove this once minimal supported version of Python reaches 3.8
-    # and replace with functools.cached
+def cacheable_property(func):
+    # not quite equivalent to functools.cached_property
+    # this decorator allows cached to be disabled via a self._cache flag attribute
     n = f"_{func.__name__}"
 
-    def cached_func(self):
+    @property
+    def cacheable_func(self):
         if self._cache and getattr(self, n, None) is not None:
             return getattr(self, n)
         if self.data_size is None:
@@ -276,11 +275,10 @@ def cached_property(func):
         else:
             tr = func(self)
         if self._cache:
-
             setattr(self, n, tr)
         return tr
 
-    return property(cached_func)
+    return cacheable_func
 
 
 class YTDataChunk:
@@ -318,7 +316,7 @@ class YTDataChunk:
         self.data_size = arrs.shape[0]
         return arrs
 
-    @cached_property
+    @cacheable_property
     def fcoords(self):
         if self._indexer is not None:
             ci = self._indexer.select_fcoords(self.dobj.selector, self.data_size)
@@ -337,7 +335,7 @@ class YTDataChunk:
             ind += c.shape[0]
         return ci
 
-    @cached_property
+    @cacheable_property
     def icoords(self):
         if self._indexer is not None:
             ci = self._indexer.select_icoords(self.dobj.selector, self.data_size)
@@ -354,7 +352,7 @@ class YTDataChunk:
             ind += c.shape[0]
         return ci
 
-    @cached_property
+    @cacheable_property
     def fwidth(self):
         if self._indexer is not None:
             ci = self._indexer.select_fwidth(self.dobj.selector, self.data_size)
@@ -373,7 +371,7 @@ class YTDataChunk:
             ind += c.shape[0]
         return ci
 
-    @cached_property
+    @cacheable_property
     def ires(self):
         if self._indexer is not None:
             ci = self._indexer.select_ires(self.dobj.selector, self.data_size)
@@ -390,12 +388,12 @@ class YTDataChunk:
             ind += c.size
         return ci
 
-    @cached_property
+    @cacheable_property
     def tcoords(self):
         self.dtcoords
         return self._tcoords
 
-    @cached_property
+    @cacheable_property
     def dtcoords(self):
         ct = np.empty(self.data_size, dtype="float64")
         cdt = np.empty(self.data_size, dtype="float64")
@@ -413,7 +411,7 @@ class YTDataChunk:
             ind += gt.size
         return cdt
 
-    @cached_property
+    @cacheable_property
     def fcoords_vertex(self):
         nodes_per_elem = self.dobj.index.meshes[0].connectivity_indices.shape[1]
         dim = self.dobj.ds.dimensionality

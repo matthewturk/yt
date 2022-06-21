@@ -8,6 +8,7 @@ import sys
 import textwrap
 import urllib
 import urllib.request
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from more_itertools import always_iterable
@@ -44,7 +45,6 @@ except FileNotFoundError:
     pass
 
 _default_colormap = ytcfg.get("yt", "default_colormap")
-_arg_groups = {}
 
 
 def _fix_ds(arg, *args, **kwargs):
@@ -187,12 +187,12 @@ class YTCommandSubtype(type):
 
 
 class YTCommand(metaclass=YTCommandSubtype):
-    args = ()
-    name = None
-    description = ""
+    args: Tuple[Union[str, Dict[str, Any]], ...] = ()
+    name: Optional[Union[str, List[str]]] = None
+    description: str = ""
     aliases = ()
-    ndatasets = 1
-    subparser = None
+    ndatasets: int = 1
+    subparser: Optional[str] = None
 
     @classmethod
     def run(cls, args):
@@ -1330,6 +1330,7 @@ class YTConfigLocalConfigHandler:
         elif getattr(args, "global", False):
             config_file = global_config_file
         else:
+            config_file: Optional[str] = None
             if local_exists and global_exists:
                 s = (
                     "Yt detected a local and a global configuration file, refusing "
@@ -1347,34 +1348,32 @@ class YTConfigLocalConfigHandler:
                 sys.exit(s)
             elif local_exists:
                 config_file = local_config_file
-            else:
+            elif global_exists:
                 config_file = global_config_file
-            sys.stderr.write(f"INFO: using configuration file: {config_file}.\n")
 
-        if not os.path.exists(config_file):
-            with open(config_file, "w") as f:
-                f.write("[yt]\n")
-
+            if config_file is None:
+                print("WARNING: no configuration file installed.", file=sys.stderr)
+            else:
+                print(
+                    f"INFO: reading configuration file: {config_file}", file=sys.stderr
+                )
         CONFIG.read(config_file)
 
         self.config_file = config_file
 
 
-_global_local_args = [
-    (
-        "exclusive",
-        dict(
-            short="--local",
-            action="store_true",
-            help="Store the configuration in the local configuration file.",
-        ),
-        dict(
-            short="--global",
-            action="store_true",
-            help="Store the configuration in the global configuration file.",
-        ),
+_global_local_args = (
+    dict(
+        short="--local",
+        action="store_true",
+        help="Store the configuration in the local configuration file.",
     ),
-]
+    dict(
+        short="--global",
+        action="store_true",
+        help="Store the configuration in the global configuration file.",
+    ),
+)
 
 
 class YTConfigGetCmd(YTCommand, YTConfigLocalConfigHandler):
@@ -1410,7 +1409,12 @@ class YTConfigSetCmd(YTCommand, YTConfigLocalConfigHandler):
         from yt.utilities.configure import set_config
 
         self.load_config(args)
-
+        if self.config_file is None:
+            self.config_file = os.path.join(os.getcwd(), "yt.toml")
+            print(
+                f"INFO: configuration will be written to {self.config_file}",
+                file=sys.stderr,
+            )
         set_config(args.section, args.option, args.value, self.config_file)
 
 
@@ -1444,20 +1448,6 @@ class YTConfigListCmd(YTCommand, YTConfigLocalConfigHandler):
         self.load_config(args)
 
         write_config(sys.stdout)
-
-
-class YTConfigMigrateCmd(YTCommand, YTConfigLocalConfigHandler):
-    subparser = "config"
-    name = "migrate"
-    description = "migrate old config file"
-    args = ()
-
-    def __call__(self, args):
-        from yt.utilities.configure import migrate_config
-
-        self.load_config(args)
-
-        migrate_config()
 
 
 class YTConfigPrintPath(YTCommand, YTConfigLocalConfigHandler):

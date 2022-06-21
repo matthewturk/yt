@@ -15,7 +15,7 @@ import numpy as np
 cimport cython
 cimport numpy as np
 from cython cimport floating
-from libc.math cimport copysign, fabs
+from libc.math cimport copysign, fabs, log2
 from libc.stdlib cimport free, malloc
 
 from yt.utilities.lib.fp_utils cimport fclip, i64clip
@@ -40,7 +40,6 @@ cdef extern from "math.h":
     double fabs(double x) nogil
 
 cdef extern from "platform_dep.h":
-    double log2(double x) nogil
     long int lrint(double x) nogil
 
 @cython.cdivision(True)
@@ -1044,7 +1043,9 @@ def knn_direct(np.ndarray[np.float64_t, ndim=2] P, np.uint64_t k, np.uint64_t i,
         for m in range(3):
             jpos[m] = P[idx[j],m]
         dist[j] = euclidean_distance(ipos, jpos)
-    sort_fwd = np.argsort(dist, kind='mergesort')[:k]
+    # casting to uint64 for compatibility with 32 bits systems
+    # see https://github.com/yt-project/yt/issues/3656
+    sort_fwd = np.argsort(dist, kind='mergesort')[:k].astype(np.int64, copy=False)
     if return_dist:
         return np.array(idx)[sort_fwd], np.array(dist)[sort_fwd]
     elif return_rad:

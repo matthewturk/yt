@@ -17,7 +17,6 @@ import time
 import traceback
 import urllib.parse
 import urllib.request
-import warnings
 from functools import lru_cache, wraps
 from numbers import Number as numeric_type
 from typing import Any, Callable, Type
@@ -25,9 +24,11 @@ from typing import Any, Callable, Type
 import matplotlib
 import numpy as np
 from more_itertools import always_iterable, collapse, first
-from packaging.version import parse as parse_version
+from packaging.version import Version
 from tqdm import tqdm
 
+from yt._maintenance.deprecation import issue_deprecation_warning
+from yt.config import ytcfg
 from yt.units import YTArray, YTQuantity
 from yt.utilities.exceptions import YTInvalidWidthError
 from yt.utilities.logger import ytLogger as mylog
@@ -188,8 +189,6 @@ def time_execution(func):
         mylog.debug("%s took %0.3f s", func.__name__, (t2 - t1))
         return res
 
-    from yt.config import ytcfg
-
     if ytcfg.get("yt", "time_functions"):
         return wrapper
     else:
@@ -220,8 +219,7 @@ def print_tb(func):
 def rootonly(func):
     """
     This is a decorator that, when used, will only call the function on the
-    root processor and then broadcast the results of the function to all other
-    processors.
+    root processor.
 
     This can be used like so:
 
@@ -231,7 +229,6 @@ def rootonly(func):
        def some_root_only_function(*args, **kwargs):
            ...
     """
-    from yt.config import ytcfg
 
     @wraps(func)
     def check_parallel_rank(*args, **kwargs):
@@ -344,7 +341,6 @@ def get_pbar(title, maxval):
     and a *maxval*.
     """
     maxval = max(maxval, 1)
-    from yt.config import ytcfg
 
     if (
         ytcfg.get("yt", "suppress_stream_logging")
@@ -362,8 +358,6 @@ def only_on_root(func, *args, **kwargs):
     on the root processor calls the function.  All other processors get "None"
     handed back.
     """
-    from yt.config import ytcfg
-
     if kwargs.pop("global_rootonly", False):
         cfg_option = "global_parallel_rank"
     else:
@@ -380,8 +374,6 @@ def is_root():
     This function returns True if it is on the root processor of the
     topcomm and False otherwise.
     """
-    from yt.config import ytcfg
-
     if not ytcfg.get("yt", "internals", "parallel"):
         return True
     return ytcfg.get("yt", "internals", "topcomm_parallel_rank") == 0
@@ -610,7 +602,7 @@ def fancy_download_file(url, filename, requests=None):
         if total_length is None:
             fh.write(response.content)
         else:
-            blocksize = 4 * 1024 ** 2
+            blocksize = 4 * 1024**2
             iterations = int(float(total_length) / float(blocksize))
 
             pbar = get_pbar(
@@ -697,8 +689,6 @@ def parallel_profile(prefix):
     ...     plot = PhasePlot(ds.all_data(), *fields)
     """
     import cProfile
-
-    from yt.config import ytcfg
 
     fn = "%s_%04i_%04i.cprof" % (
         prefix,
@@ -885,7 +875,7 @@ def enable_plugins(plugin_filename=None):
     file is shared with it.
     """
     import yt
-    from yt.config import config_dir, old_config_dir, ytcfg
+    from yt.config import config_dir, ytcfg
     from yt.fields.my_plugin_fields import my_plugins_fields
 
     if plugin_filename is not None:
@@ -898,20 +888,12 @@ def enable_plugins(plugin_filename=None):
         # - CONFIG_DIR
         # - obsolete config dir.
         my_plugin_name = ytcfg.get("yt", "plugin_filename")
-        for base_prefix in ("", config_dir(), old_config_dir()):
+        for base_prefix in ("", config_dir()):
             if os.path.isfile(os.path.join(base_prefix, my_plugin_name)):
                 _fn = os.path.join(base_prefix, my_plugin_name)
                 break
         else:
             raise FileNotFoundError("Could not find a global system plugin file.")
-
-        if _fn.startswith(old_config_dir()):
-            mylog.warning(
-                "Your plugin file is located in a deprecated directory. "
-                "Please move it from %s to %s",
-                os.path.join(old_config_dir(), my_plugin_name),
-                os.path.join(config_dir(), my_plugin_name),
-            )
 
     mylog.info("Loading plugins from %s", _fn)
     ytdict = yt.__dict__
@@ -1009,11 +991,13 @@ def get_brewer_cmap(cmap):
     if palettable is not None:
         bmap = palettable.colorbrewer.get_map(*cmap)
     elif brewer2mpl is not None:
-        warnings.warn(
+        issue_deprecation_warning(
             "Using brewer2mpl colormaps is deprecated. "
             "Please install the successor to brewer2mpl, "
             "palettable, with `pip install palettable`. "
-            "Colormap tuple names remain unchanged."
+            "Colormap tuple names remain unchanged.",
+            since="3.3",
+            removal="4.2",
         )
         bmap = brewer2mpl.get_map(*cmap)
     else:
@@ -1039,7 +1023,7 @@ def matplotlib_style_context(style_name=None, after_reset=False):
         import matplotlib
 
         style_name = {"mathtext.fontset": "cm"}
-        if parse_version(matplotlib.__version__) >= parse_version("3.3.0"):
+        if Version(matplotlib.__version__) >= Version("3.3.0"):
             style_name["mathtext.fallback"] = "cm"
         else:
             style_name["mathtext.fallback_to_cm"] = True
@@ -1193,6 +1177,20 @@ def validate_sequence(obj):
             "Expected an iterable object,"
             " received '%s'" % str(type(obj)).split("'")[1]
         )
+
+
+def validate_field_key(key):
+    if (
+        isinstance(key, tuple)
+        and len(key) == 2
+        and all(isinstance(_, str) for _ in key)
+    ):
+        return
+    raise TypeError(
+        "Expected a 2-tuple of strings formatted as\n"
+        "(field or particle type, field name)\n"
+        f"Received invalid field key: {key}, with type {type(key)}"
+    )
 
 
 def validate_object(obj, data_type):

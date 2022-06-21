@@ -312,9 +312,6 @@ def test_add_field_unit_semantics():
         return np.ones(data[("gas", "density")].shape)
 
     ds.add_field(
-        ("gas", "density_alias_no_units"), sampling_type="cell", function=density_alias
-    )
-    ds.add_field(
         ("gas", "density_alias_auto"),
         sampling_type="cell",
         function=density_alias,
@@ -340,7 +337,6 @@ def test_add_field_unit_semantics():
         units="auto",
         dimensions="temperature",
     )
-    assert_raises(YTFieldUnitError, get_data, ds, ("gas", "density_alias_no_units"))
     assert_raises(YTFieldUnitError, get_data, ds, ("gas", "density_alias_wrong_units"))
     assert_raises(
         YTFieldUnitParseError, get_data, ds, ("gas", "density_alias_unparseable_units")
@@ -551,3 +547,13 @@ def test_ion_field_labels():
     for f in fields:
         label = getattr(fobj, f).get_latex_display_name()
         assert_equal(label, pm_labels[f])
+
+
+def test_default_fluid_type_None():
+    """
+    Check for bad behavior when default_fluid_type is None.
+    See PR #3710.
+    """
+    ds = fake_amr_ds()
+    ds.default_fluid_type = None
+    ds.field_list

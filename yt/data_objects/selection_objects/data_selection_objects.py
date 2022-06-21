@@ -1,3 +1,4 @@
+import abc
 import itertools
 import uuid
 from collections import defaultdict
@@ -14,7 +15,7 @@ from yt.data_objects.field_data import YTFieldData
 from yt.fields.field_exceptions import NeedsGridType
 from yt.funcs import fix_axis, is_sequence, iter_fields, validate_width_tuple
 from yt.geometry.selection_routines import compose_selector
-from yt.units import YTArray, dimensions as ytdims
+from yt.units import YTArray
 from yt.utilities.exceptions import (
     GenerationInProgress,
     YTBooleanObjectError,
@@ -31,13 +32,13 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 )
 
 
-class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface):
+class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
     _locked = False
     _sort_by = None
     _selector = None
     _current_chunk = None
     _data_source = None
-    _dimensionality = None
+    _dimensionality: int
     _max_level = None
     _min_level = None
     _derived_quantity_chunking = "io"
@@ -241,22 +242,29 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface):
                         # field accesses
                         units = getattr(fd, "units", "")
                         if units == "":
-                            dimensions = ytdims.dimensionless
+                            sunits = ""
+                            dimensions = 1
                         else:
-                            dimensions = units.dimensions
-                            units = str(
+                            sunits = str(
                                 units.get_base_equivalent(self.ds.unit_system.name)
                             )
-                        if fi.dimensions != dimensions:
+                            dimensions = units.dimensions
+
+                        if fi.dimensions is None:
+                            mylog.warning(
+                                "Field %s was added without specifying units or dimensions, "
+                                "auto setting units to %s",
+                                fi.name,
+                                sunits,
+                            )
+                        elif fi.dimensions != dimensions:
                             raise YTDimensionalityError(fi.dimensions, dimensions)
-                        fi.units = units
+                        fi.units = sunits
+                        fi.dimensions = dimensions
                         self.field_data[field] = self.ds.arr(fd, units)
-                        mylog.warning(
-                            "Field %s was added without specifying units, "
-                            "assuming units are %s",
-                            fi.name,
-                            units,
-                        )
+                    if fi.output_units is None:
+                        fi.output_units = fi.units
+
                     try:
                         fd.convert_to_units(fi.units)
                     except AttributeError:
@@ -265,7 +273,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface):
                         # supposed to be unitless
                         fd = self.ds.arr(fd, "")
                         if fi.units != "":
-                            raise YTFieldUnitError(fi, fd.units)
+                            raise YTFieldUnitError(fi, fd.units) from None
                     except UnitConversionError as e:
                         raise YTFieldUnitError(fi, fd.units) from e
                     except UnitParseError as e:
@@ -535,6 +543,7 @@ class YTSelectionContainer2D(YTSelectionContainer):
             origin=origin,
             frb_generator=frb,
             plot_type=plot_type,
+            geometry=self.ds.geometry,
         )
         pw._setup_plots()
         return pw

@@ -1,3 +1,4 @@
+from yt._typing import KnownFieldsT
 from yt.fields.field_info_container import FieldInfoContainer
 from yt.utilities.physical_constants import kboltz, mh
 
@@ -15,7 +16,7 @@ def velocity_field(comp):
 
 
 class AthenaFieldInfo(FieldInfoContainer):
-    known_other_fields = (
+    known_other_fields: KnownFieldsT = (
         ("density", ("code_mass/code_length**3", ["density"], None)),
         ("cell_centered_B_x", (b_units, [], None)),
         ("cell_centered_B_y", (b_units, [], None)),
@@ -140,12 +141,6 @@ class AthenaFieldInfo(FieldInfoContainer):
                 function=_specific_total_energy,
                 units=unit_system["specific_energy"],
             )
-
-        self.alias(
-            ("gas", "total_energy"),
-            ("gas", "total_energy_density"),
-            deprecate=("4.0.0", "4.1.0"),
-        )
 
         # Add temperature field
         def _temperature(field, data):

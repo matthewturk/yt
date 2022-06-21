@@ -11,6 +11,7 @@ from warnings import warn
 
 import pkg_resources
 
+from yt.config import ytcfg
 from yt.funcs import mylog
 from yt.utilities.on_demand_imports import (
     _pandas as pd,
@@ -65,8 +66,15 @@ def _parse_byte_size(s: str):
         # input is not a string (likely a np.nan)
         return pd.NA
 
-    val = float(re.search(num_exp, s).group())
-    unit = re.search(byte_unit_exp, s).group()
+    match = re.search(num_exp, s)
+    if match is None:
+        raise ValueError
+    val = float(match.group())
+
+    match = re.search(byte_unit_exp, s)
+    if match is None:
+        raise ValueError
+    unit = match.group()
     prefixes = ["B", "K", "M", "G", "T"]
     raw_res = val * 1024 ** prefixes.index(unit[0])
     return int(float(f"{raw_res:.3e}"))
@@ -130,8 +138,6 @@ def get_data_registry_table():
 
 
 def _get_test_data_dir_path():
-    from yt.config import ytcfg
-
     p = Path(ytcfg.get("yt", "test_data_dir"))
     if p.is_dir():
         return p
@@ -143,7 +149,7 @@ def _get_test_data_dir_path():
     return Path.cwd()
 
 
-def lookup_on_disk_data(fn):
+def lookup_on_disk_data(fn) -> Path:
     """
     Look for data file/dir on disk.
 
@@ -162,16 +168,17 @@ def lookup_on_disk_data(fn):
     if path.exists():
         return path
 
-    alt_path = _get_test_data_dir_path() / fn
     err_msg = f"No such file or directory: '{fn}'."
-    if not alt_path.parent.is_dir():
+    test_data_dir = _get_test_data_dir_path()
+    if not test_data_dir.is_dir():
         raise FileNotFoundError(err_msg)
 
-    if not alt_path.exists():
+    alt_path = _get_test_data_dir_path() / fn
+    if alt_path != path:
+        if alt_path.exists():
+            return alt_path
         err_msg += f"\n(Also tried '{alt_path}')."
-        raise FileNotFoundError(err_msg)
-
-    return alt_path
+    raise FileNotFoundError(err_msg)
 
 
 @lru_cache(maxsize=128)
