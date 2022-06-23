@@ -175,6 +175,10 @@ class Dataset(abc.ABC):
     domain_center = MutableAttribute(True)
     filename_template = None
 
+    @property
+    def _grid_data_file_class(self):
+        return GridDataFile
+
     def __new__(cls, filename=None, *args, **kwargs):
         if not isinstance(filename, str):
             obj = object.__new__(cls)
@@ -1970,20 +1974,14 @@ class ParticleFile(abc.ABC):
 
 @functools.total_ordering
 class GridDataFile:
-    def __init__(self, ds, io, filename, file_id, grids=None, range=None):
+    def __init__(self, ds, filename, file_id, grids=None, range=None):
         self.ds = ds
-        self.io = weakref.proxy(io)
         self.filename = filename
         self.file_id = file_id
         if range is None:
             range = (None, None)
         self.start, self.end = range
-        self.total_particles = self.io._count_particles(self)
-        # Now we adjust our start/end, in case there are fewer particles than
-        # we realized
-        if self.start is None:
-            self.start = 0
-        self.end = max(self.total_particles.values()) + self.start
+        self.total_grids = self.end - self.start
 
     def select(self, selector):
         pass
