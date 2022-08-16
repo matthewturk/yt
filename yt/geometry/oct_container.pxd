@@ -93,6 +93,9 @@ cdef class SparseOctreeContainer(OctreeContainer):
 cdef class RAMSESOctreeContainer(SparseOctreeContainer):
     pass
 
+cdef class EnzoEOctreeContainer(SparseOctreeContainer):
+    pass
+
 cdef extern from "tsearch.h" nogil:
     void *tsearch(const void *key, void **rootp,
                     int (*compar)(const void *, const void *))

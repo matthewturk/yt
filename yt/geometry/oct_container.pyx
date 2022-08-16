@@ -1084,6 +1084,57 @@ cdef class ARTOctreeContainer(OctreeContainer):
                  num_zones)
         self.fill_style = "r"
 
+cdef class EnzoEOctreeContainer(SparseOctreeContainer):
+    def add(self, int curdom, int curlevel,
+            np.ndarray[np.uint64_t, ndim=2] ipos,
+            np.ndarray[np.uint64_t, ndim=2] root_pos,
+            int skip_boundary = 1,
+            int count_boundary = 0):
+        cdef int no, p, i
+        cdef int ind[3]
+        cdef np.uint64_t cind[3]
+        cdef int nb = 0
+        cdef Oct *cur
+        no = ipos.shape[0] #number of octs
+        if curdom > self.num_domains: return 0
+        cdef OctAllocationContainer *cont = self.domains.get_cont(curdom - 1)
+        cdef int initial = cont.n_assigned
+        cdef int in_boundary = 0
+        for p in range(no):
+            in_boundary = 0
+            # I don't know what "in_boundary" will mean for enzo-e -- and it
+            # likely won't mean anything.
+            if skip_boundary == in_boundary == 1:
+                nb += count_boundary
+                continue
+            # At present we will use our root_pos to feed in the lowest level
+            # values, and we'll assume that it's correct in what it provides.
+            ind[0] = root_pos[no, 0]
+            ind[1] = root_pos[no, 1]
+            ind[2] = root_pos[no, 2]
+            # This will be our holder we then bitwise operate on to supply to
+            # next_child.
+            cind[0] = ipos[no, 0]
+            cind[1] = ipos[no, 1]
+            cind[2] = ipos[no, 2]
+            cur = self.next_root(curdom, ind)
+            if cur == NULL: raise RuntimeError
+            for _ in range(curlevel):
+                # At every level, find the cell this oct
+                # lives inside
+                ind[0] = cind[0] & 1
+                ind[1] = cind[1] & 1
+                ind[2] = cind[2] & 1
+                # Check if it has not been allocated
+                cur = self.next_child(curdom, ind, cur)
+                cind[0] = cind[0] >> 1
+                cind[1] = cind[1] >> 1
+                cind[2] = cind[2] >> 1
+            # Now we should be at the right level
+            cur.domain = curdom
+            cur.file_ind = p
+        return cont.n_assigned - initial + nb
+
 cdef OctList *OctList_subneighbor_find(OctList *olist, Oct *top,
                                        int i, int j, int k):
     if top.children == NULL: return olist
