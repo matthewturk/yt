@@ -651,7 +651,7 @@ cdef class OctreeContainer:
                 parent.children[i] = NULL
         if next != NULL: return next
         cdef OctAllocationContainer *cont = self.domains.get_cont(domain_id - 1)
-        if cont.n_assigned >= cont.n: raise RuntimeError
+        if cont.n_assigned >= cont.n: raise KeyError(cont.n_assigned, cont.n)
         next = &cont.my_objs[cont.n_assigned]
         cont.n_assigned += 1
         parent.children[cind(ind[0],ind[1],ind[2])] = next
@@ -1097,7 +1097,7 @@ cdef class EnzoEOctreeContainer(SparseOctreeContainer):
         cdef Oct *cur
         no = ipos.shape[0] #number of octs
         if curdom > self.num_domains: return 0
-        cdef OctAllocationContainer *cont = self.domains.get_cont(curdom - 1)
+        cdef OctAllocationContainer *cont = self.domains.get_cont(curdom)
         cdef int initial = cont.n_assigned
         cdef int in_boundary = 0
         for p in range(no):
@@ -1117,8 +1117,9 @@ cdef class EnzoEOctreeContainer(SparseOctreeContainer):
             cind[0] = ipos[p, 0]
             cind[1] = ipos[p, 1]
             cind[2] = ipos[p, 2]
-            cur = self.next_root(curdom, ind)
-            if cur == NULL: raise RuntimeError
+            # offsets come from ramses
+            cur = self.next_root(curdom + 1, ind)
+            if cur == NULL: raise KeyError(curdom, ind[0], ind[1], ind[2])
             for _ in range(curlevel):
                 # At every level, find the cell this oct
                 # lives inside
@@ -1126,7 +1127,7 @@ cdef class EnzoEOctreeContainer(SparseOctreeContainer):
                 ind[1] = cind[1] & 1
                 ind[2] = cind[2] & 1
                 # Check if it has not been allocated
-                cur = self.next_child(curdom, ind, cur)
+                cur = self.next_child(curdom + 1, ind, cur)
                 cind[0] = cind[0] >> 1
                 cind[1] = cind[1] >> 1
                 cind[2] = cind[2] >> 1
