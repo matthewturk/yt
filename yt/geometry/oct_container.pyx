@@ -1109,14 +1109,14 @@ cdef class EnzoEOctreeContainer(SparseOctreeContainer):
                 continue
             # At present we will use our root_pos to feed in the lowest level
             # values, and we'll assume that it's correct in what it provides.
-            ind[0] = root_pos[no, 0]
-            ind[1] = root_pos[no, 1]
-            ind[2] = root_pos[no, 2]
+            ind[0] = root_pos[p, 0]
+            ind[1] = root_pos[p, 1]
+            ind[2] = root_pos[p, 2]
             # This will be our holder we then bitwise operate on to supply to
             # next_child.
-            cind[0] = ipos[no, 0]
-            cind[1] = ipos[no, 1]
-            cind[2] = ipos[no, 2]
+            cind[0] = ipos[p, 0]
+            cind[1] = ipos[p, 1]
+            cind[2] = ipos[p, 2]
             cur = self.next_root(curdom, ind)
             if cur == NULL: raise RuntimeError
             for _ in range(curlevel):
