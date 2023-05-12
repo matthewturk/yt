@@ -9,9 +9,11 @@ Matching points on the grid to specific grids
 import numpy as np
 
 cimport cython
-cimport grid_visitors
 cimport numpy as np
-from grid_visitors cimport (
+from libc.stdlib cimport free, malloc
+
+from yt.geometry cimport grid_visitors
+from yt.geometry.grid_visitors cimport (
     GridTreeNode,
     GridTreeNodePadded,
     GridVisitor,
@@ -22,9 +24,9 @@ from grid_visitors cimport (
     FCoordsGrids,
     FWidthGrids,
 )
-from libc.stdlib cimport free, malloc
 
 from yt.geometry.selection_routines cimport SelectorObject, _ensure_code
+from yt.utilities.lib.bitarray cimport bitarray
 from yt.utilities.lib.fp_utils cimport iclip
 
 cdef class GridTree:

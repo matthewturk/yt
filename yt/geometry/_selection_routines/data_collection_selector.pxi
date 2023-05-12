@@ -12,7 +12,7 @@ cdef class DataCollectionSelector(SelectorObject):
         # do so.  This will always say we're hitting a certain bbox, but the
         # only grids that will be selected are those that match the grid index.
         return 1
-    
+
     @cython.initializedcheck(False)
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -80,7 +80,7 @@ cdef class DataCollectionSelector(SelectorObject):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def fill_mask(self, gobj):
+    def fill_mask_regular_grid(self, gobj):
         cdef np.ndarray[np.uint8_t, ndim=3] mask
         mask = np.ones(gobj.ActiveDimensions, dtype='uint8')
         return mask.astype("bool")

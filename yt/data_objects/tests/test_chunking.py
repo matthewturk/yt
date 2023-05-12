@@ -1,5 +1,7 @@
-from yt.testing import assert_equal, assert_true, fake_random_ds
-from yt.units.yt_array import uconcatenate
+from numpy.testing import assert_equal
+
+from yt.testing import assert_true, fake_random_ds
+from yt.units._numpy_wrapper_functions import uconcatenate
 
 
 def _get_dobjs(c):

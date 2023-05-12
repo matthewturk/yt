@@ -1,7 +1,7 @@
 import os
 import weakref
 from collections import defaultdict
-from functools import partial
+from functools import cached_property, partial
 
 import numpy as np
 
@@ -182,13 +182,9 @@ class GadgetFOFDataset(ParticleDataset):
     def halos_derived_field_list(self):
         return self._halos_ds.derived_field_list
 
-    _instantiated_halo_ds = None
-
-    @property
+    @cached_property
     def _halos_ds(self):
-        if self._instantiated_halo_ds is None:
-            self._instantiated_halo_ds = GadgetFOFHaloDataset(self)
-        return self._instantiated_halo_ds
+        return GadgetFOFHaloDataset(self)
 
     def _setup_classes(self):
         super()._setup_classes()

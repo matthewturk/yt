@@ -1,9 +1,10 @@
 import random
 
 import numpy as np
+from numpy.testing import assert_equal, assert_raises
 
 from yt.loaders import load_amr_grids
-from yt.testing import assert_equal, assert_raises, fake_amr_ds
+from yt.testing import fake_amr_ds
 
 
 def setup_test_ds():
@@ -103,12 +104,10 @@ def test_find_points():
     grid_inds = np.zeros((num_points), dtype="int64")
 
     for ind, ixx, iyy, izz in zip(range(num_points), randx, randy, randz):
-
         pos = np.array([ixx, iyy, izz])
         pt_level = -1
 
         for grid in test_ds.index.grids:
-
             if (
                 np.all(pos >= grid.LeftEdge)
                 and np.all(pos <= grid.RightEdge)

@@ -1,18 +1,15 @@
 import argparse
 import base64
-import getpass
 import json
 import os
 import pprint
 import sys
 import textwrap
 import urllib
-import urllib.request
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from more_itertools import always_iterable
-from tqdm import tqdm
 
 from yt.config import ytcfg
 from yt.funcs import (
@@ -28,6 +25,11 @@ from yt.loaders import load
 from yt.utilities.exceptions import YTFieldNotParseable, YTUnidentifiedDataType
 from yt.utilities.metadata import get_metadata
 from yt.visualization.plot_window import ProjectionPlot, SlicePlot
+
+if sys.version_info >= (3, 9):
+    import importlib.resources as importlib_resources
+else:
+    import importlib_resources
 
 # isort: off
 # This needs to be set before importing startup_tasks
@@ -144,6 +146,8 @@ class FileStreamer:
         self.f = f
 
     def __iter__(self):
+        from tqdm import tqdm
+
         with tqdm(
             total=self.final_size, desc="Uploading file", unit="B", unit_scale=True
         ) as pbar:
@@ -630,22 +634,6 @@ _common_options = dict(
     ),
 )
 
-# This code snippet is modified from Georg Brandl
-def bb_apicall(endpoint, data, use_pass=True):
-    uri = f"https://api.bitbucket.org/1.0/{endpoint}/"
-    # since bitbucket doesn't return the required WWW-Authenticate header when
-    # making a request without Authorization, we cannot use the standard urllib2
-    # auth handlers; we have to add the requisite header from the start
-    if data is not None:
-        data = urllib.parse.urlencode(data)
-    req = urllib.request.Request(uri, data)
-    if use_pass:
-        username = input("Bitbucket Username? ")
-        password = getpass.getpass()
-        upw = f"{username}:{password}"
-        req.add_header("Authorization", f"Basic {base64.b64encode(upw).strip()}")
-    return urllib.request.urlopen(req).read()
-
 
 class YTInstInfoCmd(YTCommand):
     name = ["instinfo", "version"]
@@ -672,10 +660,7 @@ class YTInstInfoCmd(YTCommand):
         """
 
     def __call__(self, opts):
-        import pkg_resources
-
-        yt_provider = pkg_resources.get_provider("yt")
-        path = os.path.dirname(yt_provider.module_path)
+        path = os.path.dirname(importlib_resources.files("yt"))
         vstring = _print_installation_information(path)
         if vstring is not None:
             print("This installation CAN be automatically updated.")
@@ -703,9 +688,8 @@ class YTLoadCmd(YTCommand):
         import IPython
 
         import yt
-        import yt.mods
 
-        local_ns = yt.mods.__dict__.copy()
+        local_ns = {}
         local_ns["ds"] = args.ds
         local_ns["pf"] = args.ds
         local_ns["yt"] = yt
@@ -1122,8 +1106,8 @@ class YTNotebookCmd(YTCommand):
         print("where the first number is the port on your local machine. ")
         print()
         print(
-            "If you are using %s on your machine already, try "
-            "-L8889:localhost:%s" % (app.port, app.port)
+            f"If you are using {app.port} on your machine already, "
+            f"try -L8889:localhost:{app.port}"
         )
         print()
         print("***************************************************************")
@@ -1179,13 +1163,11 @@ class YTStatsCmd(YTCommand):
                 f.write(f"{ds} ({t:0.5e})\n")
                 if "min" in vals:
                     f.write(
-                        "Minimum %s is %0.5e at %s\n"
-                        % (field.name, vals["min"][0], vals["min"][1])
+                        f"Minimum {field.name} is {vals['min'][0]:0.5e} at {vals['min'][1]}\n"
                     )
                 if "max" in vals:
                     f.write(
-                        "Maximum %s is %0.5e at %s\n"
-                        % (field.name, vals["max"][0], vals["max"][1])
+                        f"Maximum {field.name} is {vals['max'][0]:0.5e} at {vals['max'][1]}\n"
                     )
 
 
@@ -1198,10 +1180,7 @@ class YTUpdateCmd(YTCommand):
         """
 
     def __call__(self, opts):
-        import pkg_resources
-
-        yt_provider = pkg_resources.get_provider("yt")
-        path = os.path.dirname(yt_provider.module_path)
+        path = os.path.dirname(importlib_resources.files("yt"))
         vstring = _print_installation_information(path)
         if vstring is not None:
             print()
@@ -1310,7 +1289,7 @@ class YTUploadFileCmd(YTCommand):
 
 
 class YTConfigLocalConfigHandler:
-    def load_config(self, args):
+    def load_config(self, args) -> None:
         import os
 
         from yt.config import YTConfig
@@ -1325,12 +1304,12 @@ class YTConfigLocalConfigHandler:
         local_arg_exists = hasattr(args, "local")
         global_arg_exists = hasattr(args, "global")
 
+        config_file: Optional[str] = None
         if getattr(args, "local", False):
             config_file = local_config_file
         elif getattr(args, "global", False):
             config_file = global_config_file
         else:
-            config_file: Optional[str] = None
             if local_exists and global_exists:
                 s = (
                     "Yt detected a local and a global configuration file, refusing "
@@ -1526,7 +1505,6 @@ class YTSearchCmd(YTCommand):
 
 
 class YTDownloadData(YTCommand):
-
     args = (
         dict(
             short="filename",

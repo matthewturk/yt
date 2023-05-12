@@ -1,6 +1,7 @@
 import abc
 import weakref
 from collections import defaultdict
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -31,7 +32,6 @@ class GridIndex(Index, abc.ABC):
     )
 
     def _setup_geometry(self):
-
         mylog.debug("Counting grids.")
         self._count_grids()
 
@@ -252,8 +252,7 @@ class GridIndex(Index, abc.ABC):
         except Exception:
             pass
         print(
-            "t = %0.8e = %0.8e s = %0.8e years"
-            % (
+            "t = {:0.8e} = {:0.8e} s = {:0.8e} years".format(
                 self.ds.current_time.in_units("code_time"),
                 self.ds.current_time.in_units("s"),
                 self.ds.current_time.in_units("yr"),
@@ -323,7 +322,6 @@ class GridIndex(Index, abc.ABC):
     def _get_grid_tree(self):
         if self._grid_tree is not None:
             return self._grid_tree
-
         left_edge = self.ds.arr(np.zeros((self.num_grids, 3)), "code_length")
         right_edge = self.ds.arr(np.zeros((self.num_grids, 3)), "code_length")
         level = np.zeros((self.num_grids), dtype="int64")
@@ -332,7 +330,6 @@ class GridIndex(Index, abc.ABC):
         dimensions = np.zeros((self.num_grids, 3), dtype="int32")
 
         for i, grid in enumerate(self.grids):
-
             left_edge[i, :] = grid.LeftEdge
             right_edge[i, :] = grid.RightEdge
             level[i] = grid.Level
@@ -498,6 +495,23 @@ class GridIndex(Index, abc.ABC):
                 # We allow four full chunks to be included.
                 with self.io.preload(dc, preload_fields, 4.0 * size):
                     yield dc
+
+    def _icoords_to_fcoords(
+        self,
+        icoords: np.ndarray,
+        ires: np.ndarray,
+        axes: Optional[Tuple[int, ...]] = None,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Accepts icoords and ires and returns appropriate fcoords and fwidth.
+        Mostly useful for cases where we have irregularly spaced or structured
+        grids.
+        """
+        dds = self.ds.domain_width[(axes,)] / (
+            self.ds.domain_dimensions[axes,] * self.ds.refine_by ** ires[:, None]
+        )
+        pos = (0.5 + icoords) * dds + self.ds.domain_left_edge[axes,]
+        return pos, dds
 
     def _add_mesh_sampling_particle_field(self, deposit_field, ftype, ptype):
         units = self.ds.field_info[ftype, deposit_field].units

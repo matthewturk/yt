@@ -14,7 +14,6 @@ cimport numpy as np
 from libc.stdlib cimport free, malloc
 
 from yt.utilities.lib.fp_utils cimport iclip
-from yt.geometry.grid_container cimport GridTree
 
 cdef class GridVisitor:
     def __cinit__(self):

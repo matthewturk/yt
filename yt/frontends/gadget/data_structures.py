@@ -1,5 +1,4 @@
 import os
-import stat
 import struct
 from typing import Type
 
@@ -103,9 +102,9 @@ class GadgetBinaryHeader:
         else:
             raise RuntimeError(
                 "Gadget snapshot file is likely corrupted! "
-                "The first 4 bytes represent %s (as little endian int32). "
-                "But we are looking for %s (for format 1) or 8 (for format 2)."
-                % (rhead, first_header_size)
+                f"The first 4 bytes represent {rhead} (as little endian int32). "
+                f"But we are looking for {first_header_size} (for format 1) "
+                "or 8 (for format 2)."
             )
 
     @property
@@ -349,7 +348,6 @@ class GadgetDataset(SPHDataset):
         return self._header.value
 
     def _parse_parameter_file(self):
-
         hvals = self._get_hvals()
 
         self.dimensionality = 3
@@ -641,11 +639,9 @@ class GadgetHDF5Dataset(GadgetDataset):
         return uvals
 
     def _set_owls_eagle(self):
-
         self.dimensionality = 3
         self.refine_by = 2
         self.parameters["HydroMethod"] = "sph"
-        self.unique_identifier = int(os.stat(self.parameter_filename)[stat.ST_CTIME])
 
         self._unit_base = self._get_uvals()
         self._unit_base["cmcm"] = 1.0 / self._unit_base["UnitLength_in_cm"]
@@ -680,7 +676,6 @@ class GadgetHDF5Dataset(GadgetDataset):
         self.file_count = self.parameters["NumFilesPerSnapshot"]
 
     def _set_owls_eagle_units(self):
-
         # note the contents of the HDF5 Units group are in _unit_base
         # note the velocity stored on disk is sqrt(a) dx/dt
         # physical velocity [cm/s] = a dx/dt

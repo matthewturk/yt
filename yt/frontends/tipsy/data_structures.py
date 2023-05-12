@@ -71,8 +71,7 @@ class TipsyDataset(SPHDataset):
         if not success:
             print("SOMETHING HAS GONE WRONG.  NBODIES != SUM PARTICLES.")
             print(
-                "%s != (sum == %s + %s + %s)"
-                % (
+                "{} != (sum == {} + {} + {})".format(
                     self.parameters["nbodies"],
                     self.parameters["nsph"],
                     self.parameters["ndark"],
@@ -115,7 +114,6 @@ class TipsyDataset(SPHDataset):
         return os.path.basename(self.parameter_filename)
 
     def _parse_parameter_file(self):
-
         # Parsing the header of the tipsy file, from this we obtain
         # the snapshot time and particle counts.
 

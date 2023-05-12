@@ -3,7 +3,6 @@ import os
 import struct
 
 import numpy as np
-from numpy.lib.recfunctions import append_fields
 
 from yt.frontends.sph.io import IOHandlerSPH
 from yt.frontends.tipsy.definitions import npart_mapping
@@ -95,7 +94,7 @@ class IOHandlerTipsyBinary(IOHandlerSPH):
             poff = data_file.field_offsets
             tp = data_file.total_particles
             f = open(data_file.filename, "rb")
-            for ptype in sorted(ptf, key=lambda a: poff.get(a, -1)):
+            for ptype in sorted(ptf, key=lambda a, poff=poff: poff.get(a, -1)):
                 if data_file.total_particles[ptype] == 0:
                     continue
                 f.seek(poff[ptype])
@@ -152,6 +151,7 @@ class IOHandlerTipsyBinary(IOHandlerSPH):
         return self._read_smoothing_length(data_file, shape[0])
 
     def _read_particle_data_file(self, data_file, ptf, selector=None):
+        from numpy.lib.recfunctions import append_fields
 
         return_data = {}
 

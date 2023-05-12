@@ -1,3 +1,4 @@
+from functools import cached_property
 from itertools import groupby
 
 import numpy as np
@@ -140,7 +141,7 @@ class IOHandlerFLASH(BaseIOHandler):
                 if _xyz[0].size > 0:
                     bxyz.append(_xyz)
                 mask = selector.select_points(x, y, z, 0.0)
-                blockless = _xyz[0] > 0
+                blockless = (_xyz[0] > 0).any()
                 # This checks if none of the particles within these blocks are
                 # included in the mask We need to also allow for blockless
                 # particles to be selected.
@@ -284,11 +285,11 @@ class IOHandlerFLASHParticle(BaseIOHandler):
         assert len(ptf) == 1
         yield from super()._read_particle_fields(chunks, ptf, selector)
 
-    _pcount = None
+    @cached_property
+    def _pcount(self):
+        return self._handle["/localnp"][:].sum()
 
     def _count_particles(self, data_file):
-        if self._pcount is None:
-            self._pcount = self._handle["/localnp"][:].sum()
         si, ei = data_file.start, data_file.end
         pcount = self._pcount
         if None not in (si, ei):

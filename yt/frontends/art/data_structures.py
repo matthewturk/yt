@@ -8,8 +8,8 @@ import numpy as np
 
 import yt.utilities.fortran_utils as fpu
 from yt.data_objects.index_subobjects.octree_subset import OctreeSubset
-from yt.data_objects.particle_unions import ParticleUnion
 from yt.data_objects.static_output import Dataset, ParticleFile
+from yt.data_objects.unions import ParticleUnion
 from yt.frontends.art.definitions import (
     amr_header_struct,
     constants,
@@ -440,7 +440,7 @@ class DarkMatterARTDataset(ARTDataset):
         units_override=None,
         unit_system="cgs",
     ):
-        self.over_refine_factor = 1
+        self.num_zones = 2
         self.n_ref = 64
         self.particle_types += ("all",)
         if fields is None:

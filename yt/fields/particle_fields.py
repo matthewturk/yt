@@ -1,7 +1,7 @@
 import numpy as np
 
 from yt.fields.derived_field import ValidateParameter, ValidateSpatial
-from yt.units.yt_array import uconcatenate, ucross  # type: ignore
+from yt.units._numpy_wrapper_functions import uconcatenate, ucross
 from yt.utilities.lib.misc_utilities import (
     obtain_position_vector,
     obtain_relative_velocity_vector,
@@ -41,6 +41,10 @@ sph_whitelist_fields = (
     "Mg_fraction",
     "Si_fraction",
     "Fe_fraction",
+    "Na_fraction",
+    "Al_fraction",
+    "Ar_fraction",
+    "Ni_fraction",
     "H_density",
     "He_density",
     "C_density",
@@ -52,6 +56,10 @@ sph_whitelist_fields = (
     "Mg_density",
     "Si_density",
     "Fe_density",
+    "Na_density",
+    "Al_density",
+    "Ar_density",
+    "Ni_density",
 )
 
 
@@ -59,7 +67,6 @@ def _field_concat(fname):
     def _AllFields(field, data):
         v = []
         for ptype in data.ds.particle_types:
-            data.ds._last_freq = (ptype, None)
             if ptype == "all" or ptype in data.ds.known_filters:
                 continue
             v.append(data[ptype, fname].copy())
@@ -73,7 +80,6 @@ def _field_concat_slice(fname, axi):
     def _AllFields(field, data):
         v = []
         for ptype in data.ds.particle_types:
-            data.ds._last_freq = (ptype, None)
             if ptype == "all" or ptype in data.ds.known_filters:
                 continue
             v.append(data[ptype, fname][:, axi])
@@ -232,7 +238,6 @@ def particle_deposition_functions(ptype, coord_name, mass_name, registry):
 
 
 def particle_scalar_functions(ptype, coord_name, vel_name, registry):
-
     # Now we have to set up the various velocity and coordinate things.  In the
     # future, we'll actually invert this and use the 3-component items
     # elsewhere, and stop using these.
@@ -265,7 +270,6 @@ def particle_scalar_functions(ptype, coord_name, vel_name, registry):
 
 
 def particle_vector_functions(ptype, coord_names, vel_names, registry):
-
     unit_system = registry.ds.unit_system
 
     # This will column_stack a set of scalars to create vector fields.

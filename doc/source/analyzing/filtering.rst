@@ -274,7 +274,7 @@ accessible to this new particle type and it will add them.
 
 .. code-block:: python
 
-   from yt.data_objects.particle_unions import ParticleUnion
+   from yt.data_objects.unions import ParticleUnion
 
    u = ParticleUnion("star", ["halo", "disk"])
    ds.add_particle_union(u)
@@ -313,7 +313,7 @@ distributed throughout the dataset.
     )
 
     # Mark the center with a big X
-    prj.annotate_marker(center, "x", plot_args={"s": 100})
+    prj.annotate_marker(center, "x", s=100)
 
     prj.show()
 
