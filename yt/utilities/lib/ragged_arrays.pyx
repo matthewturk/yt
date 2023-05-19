@@ -90,3 +90,38 @@ def index_unop(np.ndarray[numpy_dt, ndim=1] values,
             ind_ind += 1
         out_values[i] = val
     return out_values
+
+def face_barycenters(np.ndarray[np.int64_t, ndim=1] sizes,
+                    np.ndarray[np.int64_t, ndim=1] indices,
+                    np.ndarray[numpy_dt, ndim=2] coords,
+                    int index_offset = 0):
+    # Here, sizes is the number of nodes per face, indices is the node index
+    # values (should be equal in size to the sum of sizes) and coords are what
+    # we are looking up into.  index_offset is what we subtract.
+    cdef int i, j, k
+    cdef int current_index = 0
+    cdef np.ndarray[np.float64_t, ndim=2] barycenters = np.zeros((sizes.shape[0], 3), dtype='f8')
+    for i in range(sizes.shape[0]):
+        for j in range(sizes[i]):
+            for k in range(3):
+                barycenters[i, k] += coords[indices[current_index] - index_offset, k]
+            current_index += 1
+        for k in range(3):
+            barycenters[i, k] /= sizes[i]
+    return barycenters
+
+def cell_barycenters(np.ndarray[np.int64_t, ndim=1] face_c0,
+                     np.ndarray[numpy_dt, ndim=2] face_centers,
+                     int index_offset = 0):
+    # This accepts the c0 array, which is the 'internal to the face' cell IDs, and the face_centers.
+    # We track two arrays on the way out -- to get the number of faces and the center.
+    # We make an assumption that our cells are indexed such that face_c0.max() is the number of cells.
+    cdef np.uint64_t ncells = face_c0.max() - index_offset + 1 # usually indexed by one
+    cdef np.ndarray[np.float64_t, ndim=2] barycenters = np.zeros((ncells, 3), dtype="f8")
+    cdef np.ndarray[np.uint16_t, ndim=1] nfaces = np.zeros(ncells, dtype="u2")
+    cdef int i, j
+    for i in range(face_c0.shape[0]):
+        nfaces[face_c0[i] - index_offset] += 1
+        for j in range(3):
+            barycenters[face_c0[i] - index_offset, j] += face_centers[i, j]
+    return barycenters / nfaces[:,None], nfaces
