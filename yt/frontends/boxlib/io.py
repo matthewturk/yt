@@ -17,7 +17,6 @@ def _remove_raw(all_fields, raw_fields):
 
 
 class IOHandlerBoxlib(BaseIOHandler):
-
     _dataset_type = "boxlib_native"
 
     def __init__(self, ds, *args, **kwargs):
@@ -79,7 +78,7 @@ class IOHandlerBoxlib(BaseIOHandler):
         with open(filename, "rb") as f:
             f.seek(offset)
             f.readline()  # always skip the first line
-            arr = np.fromfile(f, "float64", np.product(shape))
+            arr = np.fromfile(f, "float64", np.prod(shape))
             arr = arr.reshape(shape, order="F")
         return arr[
             tuple(
@@ -145,15 +144,24 @@ class IOHandlerBoxlib(BaseIOHandler):
                         rdata = np.fromfile(
                             f, pheader.real_type, pheader.num_real * npart
                         )
-                        x = np.asarray(rdata[0 :: pheader.num_real], dtype=np.float64)
-                        y = np.asarray(rdata[1 :: pheader.num_real], dtype=np.float64)
-                        if g.ds.dimensionality == 2:
-                            z = np.ones_like(y)
-                            z *= 0.5 * (g.LeftEdge[2] + g.RightEdge[2])
-                        else:
-                            z = np.asarray(
-                                rdata[2 :: pheader.num_real], dtype=np.float64
-                            )
+
+                        # Allow reading particles in 1, 2, and 3 dimensions,
+                        # setting the appropriate default for unused dimensions.
+                        pos = []
+                        for idim in [1, 2, 3]:
+                            if g.ds.dimensionality >= idim:
+                                pos.append(
+                                    np.asarray(
+                                        rdata[idim - 1 :: pheader.num_real],
+                                        dtype=np.float64,
+                                    )
+                                )
+                            else:
+                                center = 0.5 * (
+                                    g.LeftEdge[idim - 1] + g.RightEdge[idim - 1]
+                                )
+                                pos.append(np.full(npart, center, dtype=np.float64))
+                        x, y, z = pos
 
                         if selector is None:
                             # This only ever happens if the call is made from
@@ -208,7 +216,6 @@ class IOHandlerOrion(IOHandlerBoxlib):
 
     @property
     def particle_field_index(self):
-
         index = parse_orion_sinks(self.particle_filename)
 
         self._particle_field_index = index
@@ -219,7 +226,6 @@ class IOHandlerOrion(IOHandlerBoxlib):
         chunks = list(chunks)
 
         if isinstance(selector, GridSelector):
-
             if not (len(chunks) == len(chunks[0].objs) == 1):
                 raise RuntimeError
 

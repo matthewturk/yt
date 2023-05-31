@@ -109,7 +109,7 @@ class CFRadialDataset(Dataset):
             storage_filename will be over-written if it exists. Default is False.
         grid_shape : Optional[Tuple[int, int, int]]
             when gridding to cartesian, grid_shape is the number of cells in the
-            z, y, x coordinatess. If not provided, yt attempts to calculate a
+            z, y, x coordinates. If not provided, yt attempts to calculate a
             reasonable shape based on the resolution of the original cfradial grid
         grid_limit_x : Optional[Tuple[float, float]]
             The x range of the cartesian-gridded data in the form (xmin, xmax) with
@@ -293,6 +293,9 @@ class CFRadialDataset(Dataset):
     def _is_valid(cls, filename, *args, **kwargs):
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
+
+        if not xr.__is_available__:
+            return False
 
         warn_netcdf(filename)
         is_cfrad = False

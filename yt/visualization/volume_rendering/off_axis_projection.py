@@ -175,7 +175,7 @@ def off_axis_projection(
         if raise_error:
             raise RuntimeError(
                 "Can only perform off-axis projections for SPH fields, "
-                "Received '%s'" % (item,)
+                f"Received {item!r}"
             )
 
         normal = np.array(normal_vector)
@@ -325,7 +325,10 @@ def off_axis_projection(
             return temp_weightfield
 
         data_source.ds.field_info.add_field(
-            weightfield, sampling_type="cell", function=_make_wf(item, weight)
+            weightfield,
+            sampling_type="cell",
+            function=_make_wf(item, weight),
+            units="",
         )
         # Now we have to tell the dataset to add it and to calculate
         # its dependencies..
@@ -374,7 +377,7 @@ def off_axis_projection(
 
     mylog.debug("Casting rays")
 
-    for (grid, mask) in data_source.blocks:
+    for grid, mask in data_source.blocks:
         data = []
         for f in fields:
             # strip units before multiplying by mask for speed
