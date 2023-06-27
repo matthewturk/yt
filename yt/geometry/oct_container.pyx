@@ -1215,3 +1215,65 @@ cdef class OctObjectPool(ObjectPool):
                 <OctPadded*> obj.my_objs)
         rv = np.asarray(mm)
         return rv
+
+cdef class BasiliskOctContainer(OctreeContainer):
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    def __init__(self, np.uint8_t[:] flags_array, int max_level):
+        super().__init__([1, 1, 1], [0.0, 0.0, 0.0], [1.0, 1.0, 1.0], 0, 1)
+        # OK, now let's initialize our octs!
+        self.allocate_domains([flags_array.size])
+        cdef np.uint64_t ind = 0
+        cdef Oct **parents = <Oct**> malloc(sizeof(Oct**) * max_level)
+        cdef int *iter_count = <int*> malloc(sizeof(int) * max_level)
+        for i in range(max_level):
+            parents[i] = NULL
+        cdef np.uint64_t level = 0
+        # Bootstrap this
+        cdef int root_ind[3]
+        root_ind[0] = root_ind[1] = root_ind[2] = 0
+        parents[0] = self.next_root(1, root_ind)
+        parents[0].domain_ind = parents[0].file_ind = 0
+        ind += 1
+        level += 1
+        iter_count[0] = 0
+        while ind < flags_array.size:
+            parents[level] = self.next_child(1, root_ind, parents[level - 1])
+            iter_count[level - 1] += 1
+            parents[level].domain = 1
+            parents[level].domain_ind = ind
+            parents[level].file_ind = ind
+            # initialize a new oct
+            if flags_array[ind] > 0:
+                while iter_count[level - 1] == 8 and level > 0:
+                    level -= 1
+            elif flags_array[ind] == 0:
+                iter_count[level] = 0
+                level += 1
+            ind += 1
+        free(parents)
+        free(iter_count)
+
+    cdef Oct* next_child(self, int domain_id, int ind[3], Oct *parent) except? NULL:
+        # This subclass doesn't use ind[3] but we want to override the method
+        cdef int i
+        cdef Oct *next
+        if parent.children == NULL:
+            # This *8 does NOT need to be made generic.
+            parent.children = <Oct **> malloc(sizeof(Oct *) * 8)
+            for i in range(8):
+                parent.children[i] = NULL
+        cdef OctAllocationContainer *cont = self.domains.get_cont(domain_id - 1)
+        if cont.n_assigned >= cont.n: raise RuntimeError
+        next = &cont.my_objs[cont.n_assigned]
+        cont.n_assigned += 1
+        i = 0
+        while i < 8 and parent.children[i] != NULL:
+            i += 1
+        if i == 8:
+            raise RuntimeError
+        parent.children[i] = next
+        self.nocts += 1
+        return next
