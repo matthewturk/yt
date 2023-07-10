@@ -116,12 +116,12 @@ cdef class AssignDomainInd(OctVisitor):
 cdef class FillFileIndicesO(OctVisitor):
     cdef np.uint8_t[:] levels
     cdef np.int64_t[:] file_inds
-    cdef np.uint8_t[:] cell_inds
+    cdef np.uint32_t[:] cell_inds
 
 cdef class FillFileIndicesR(OctVisitor):
     cdef np.uint8_t[:] levels
     cdef np.int64_t[:] file_inds
-    cdef np.uint8_t[:] cell_inds
+    cdef np.uint32_t[:] cell_inds
 
 cdef class CountByDomain(OctVisitor):
     cdef np.int64_t[:] domain_counts
@@ -167,11 +167,11 @@ cdef class BaseNeighbourVisitor(OctVisitor):
         return (((self.neigh_ind[2]*d)+self.neigh_ind[1])*d+self.neigh_ind[0])
 
 cdef class NeighbourCellIndexVisitor(BaseNeighbourVisitor):
-    cdef np.uint8_t[::1] cell_inds
+    cdef np.uint32_t[::1] cell_inds
     cdef np.int64_t[::1] domain_inds
 
 cdef class NeighbourCellVisitor(BaseNeighbourVisitor):
     cdef np.uint8_t[::1] levels
     cdef np.int64_t[::1] file_inds
-    cdef np.uint8_t[::1] cell_inds
+    cdef np.uint32_t[::1] cell_inds
     cdef np.int32_t[::1] domains
