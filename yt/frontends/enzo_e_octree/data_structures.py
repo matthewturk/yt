@@ -92,7 +92,6 @@ class EnzoEDomainFile:
         for i, lvl_end in enumerate(self.level_inds):
             # blocks = self.levels[lvl_start:lvl_end]
             blocks = self.levels[i]
-            breakpoint()
             self.oct_handler.add(
                 1,
                 i,
