@@ -20,6 +20,7 @@ _frontends = [
     "chombo",
     "cholla",
     "eagle",
+    "enzo_e_octree",
     "enzo_e",
     "enzo",
     "exodus_ii",
