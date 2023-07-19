@@ -36,15 +36,11 @@ else:
 # TODO: Do I need to support blocks with non cubic non divisible nzs? (ie: commit
 #       commit my nzone array patch?). All the test datasets work with it.
 
-
 class EnzoEDomainFile:
     # equivalent to a block list file
-    oct_handler: EnzoEOctreeContainer
     ds: EnzoEOctreeDataset
+    index: EnzoEOctreeHierarchy
     nocts: int
-    # The domain_id for the domain file is always 1
-    # because there is one domain file per oct_handler
-    domain_id: int
     h5fname: str
     max_level: int
     min_level: int
@@ -52,23 +48,21 @@ class EnzoEDomainFile:
     levels: np.ndarray
     level_counts: list[int]
     level_inds: list[int]
+    oct_handler: EnzoEOctreeContainer
 
     def __init__(
         self,
         ds: EnzoEOctreeDataset,
+        oct_handler: EnzoEOctreeContainer,
         bnames: Collection[str],
-        domain_id: int,
         h5fname: str,
         levels: np.ndarray,
         level_counts: list[int],
+        domain_id: int,
     ) -> None:
         self.ds = ds
-        self.oct_handler = EnzoEOctreeContainer(
-            self.ds.domain_dimensions,
-            self.ds.domain_left_edge,
-            self.ds.domain_right_edge,
-            self.ds.nz,
-        )
+        self.oct_handler = oct_handler
+
         self.levels = levels
         self.nocts = sum(len(levels) for levels in levels)
         self.cell_count = self.ds.cells_per_oct * self.nocts
@@ -76,38 +70,23 @@ class EnzoEDomainFile:
         self.level_counts = level_counts
         self.level_inds = list(accumulate(level_counts))
         self.levels = levels
-
-        self.domain_id = 1
-        self.h5fname = h5fname
         self.max_level = min(len(self.levels) - 1, self.ds.max_level)
 
-        self._init_octs()
+        self.h5fname = h5fname
+        self.domain_id = domain_id
 
-    def _init_octs(self):
+    def init_octs(self):
         # The order of the blocks in the levels array doesn't matter
         # but it has to stay consistent between the levels array
         # and when it is added
-        self.oct_handler.allocate_domains([self.nocts], self.level_inds[0])
-        # lvl_start = 0
-        for i, lvl_end in enumerate(self.level_inds):
-            # blocks = self.levels[lvl_start:lvl_end]
+        for i in range(self.max_level + 1):
             blocks = self.levels[i]
-            self.oct_handler.add(
-                1,
-                i,
-                blocks[:, 3:],
-                blocks[:, :3],
-                # file_ind_offset=lvl_start,
-            )
-            # lvl_start += lvl_end
+            self.oct_handler.add(self.domain_id, i, blocks[:, 3:], blocks[:, :3])
 
     def included(self, selector) -> bool:
         if getattr(selector, "domain_ind", None) is not None:
             raise NotImplementedError
             # return selector.domain_ind == self.domain_id
-        # Note to Myself: In the orszag-tang bug, only two domains are selected
-        # That is fine! In the old frontend, all were but that was due to
-        # different implementation defined chunking
         domain_ids = self.oct_handler.domain_identify(selector)
         return bool(domain_ids)
 
@@ -117,6 +96,7 @@ class EnzoEOctreeHierarchy(OctreeIndex):
     min_level: int
     domains: list[EnzoEDomainFile]
     comm: Any
+    oct_handler: EnzoEOctreeContainer
 
     def __init__(self, ds, dataset_type="enzo_e_octree"):
         self.dataset_type = dataset_type
@@ -146,18 +126,20 @@ class EnzoEOctreeHierarchy(OctreeIndex):
         self.max_level = self.ds.max_level
         self.min_level = self.ds.min_level
 
-        # domain, level, 2d pos array, first 3 values for root_pos & second 3 for ipos
+        self.oct_handler = EnzoEOctreeContainer(
+            self.ds.domain_dimensions,
+            self.ds.domain_left_edge,
+            self.ds.domain_right_edge,
+            self.ds.nz,
+        )
+
         domains: list[EnzoEDomainFile] = []
         self.domains = domains
         # Numpy str methods might be able to be used to speed this up
-        for i, dom in enumerate(self.ds.domain_blocks):
+        for i, dom in enumerate(self.ds.domain_blocks, 1):
             levels: list[list[np.ndarray]] = [[] for _ in range(self.max_level + 1)]
-            bpos = sorted(
-                (block_pos(bstr) for bstr in dom.bnames),
-                key=self.ds._bpos_sort_key,
-            )
-            bpos = [block_pos(bstr) for bstr in dom.bnames]
-            for pos, level in bpos:
+            for bname in dom.bnames:
+                pos, level = block_pos(bname)
                 if self.max_level >= level >= 0:
                     levels[level].append(pos)
             np_levels = [np.asarray(lvl) for lvl in levels]
@@ -165,11 +147,21 @@ class EnzoEOctreeHierarchy(OctreeIndex):
 
             domains.append(
                 EnzoEDomainFile(
-                    self.ds, dom.bnames, i, dom.h5fname, np_levels, level_inds
+                    self.ds,
+                    self.oct_handler,
+                    dom.bnames,
+                    dom.h5fname,
+                    np_levels,
+                    level_inds,
+                    i,
                 )
             )
 
-        self.num_grids = sum(dom.nocts for dom in domains)
+        nocts = [dom.nocts for dom in domains]
+        self.num_grids = sum(nocts)
+        self.oct_handler.allocate_domains(nocts, self.ds.domain_dimensions.prod())
+        for dom in domains:
+            dom.init_octs()
 
     def _identify_base_chunk(self, dobj) -> None:
         if getattr(dobj, "_chunk_info", None) is None:
@@ -305,8 +297,6 @@ class EnzoESubset(OctreeSubset):
             )
         self.particle_count = None
 
-    # Fill does not  fill the oct subsets, it just returns the data
-    # Oct subsets are just the indexes, perhaps?
     def fill(
         self, f: h5py.File, fields: Collection[str], selector
     ) -> dict[str, np.float64]:
@@ -314,6 +304,10 @@ class EnzoESubset(OctreeSubset):
         # TODO: Rewrite transpose here, accounting for partial selection (non all selectors)
         return self._fill_no_ghostzones(f, fields, selector)
 
+    # From my understanding, the Enzo-E block names are in xyz order,
+    # and are sorted in the block list according to c ordering.
+    # But the data actually expects to be loaded in fortran order.
+    # This leads to axis_order being ('z', 'y', 'x'), the reverses, and the transposes
     def _fill_no_ghostzones(
         self, f: h5py.File, fields: Collection[str], selector
     ) -> dict[str, np.ndarray]:
@@ -350,13 +344,7 @@ class EnzoESubset(OctreeSubset):
         for oii in oct_inds_i:
             lvl = levels[oii]
             fi = file_inds[oii]
-            bname = bname_from_pos(
-                self.domain.levels[lvl][fi],
-                lvl,
-                self.ds.min_level,
-                self.ds.domain_dimensions,
-                dim=self.ds.dimensionality,
-            )
+            bname = self.ds.bname_from_pos(self.domain.levels[lvl][fi], lvl)
             for field in fields:
                 # TODO: Implement nodal fields
                 if hasattr(field, "nodal_flag"):
@@ -397,7 +385,6 @@ class EnzoESubset(OctreeSubset):
                     rshape[ir] = 1
                     for ic in range(ir, len(cshape), 3):
                         cshape[ic] = 1
-
             ldata = {
                 f: ld.reshape(*rshape, *cshape, self.ds.cells_per_oct)
                 .transpose(*t_axes, (lvl + 1) * 3)
@@ -466,9 +453,11 @@ class EnzoEOctreeDataset(Dataset):
     min_level: int
     max_level: int
     nz: int
+    num_domains: int
     cells_per_oct: int
     dimensionality: int
     base_slice: tuple[slice, ...]
+    index: EnzoEOctreeHierarchy
 
     def __init__(
         self,
@@ -531,7 +520,7 @@ class EnzoEOctreeDataset(Dataset):
         b0 = self.domain_blocks[0].bnames[0]
         # get dimension from first block name
         level0, left0, right0 = get_block_info(b0, min_dim=0)
-        self.domain_dimensions = get_root_blocks(b0)
+        self.domain_dimensions = get_root_blocks(b0)[::-1]
         self.dimensionality = left0.size
         axis_order = ("y", "x", "z") if self.dimensionality == 2 else ("z", "y", "x")
 
@@ -742,6 +731,15 @@ class EnzoEOctreeDataset(Dataset):
         #     return (
         #         opos[0] * self.domain_dimensions[1] + opos[1]
         #     ) * self.domain_dimensions[2] + opos[2]
+
+    def bname_from_pos(self, pos: np.ndarray, lvl: int) -> str:
+        return bname_from_pos(
+            pos,
+            lvl,
+            self.min_level,
+            self.domain_dimensions,
+            self.dimensionality,
+        )
 
     def __str__(self):
         return remove_ext(self.basename)

@@ -157,16 +157,17 @@ def block_pos(bstr: str) -> tuple[np.ndarray, int]:
     try:
         xs, ys, zs = bstr[1:].split("_")
     except ValueError:
-        xs, ys = bstr[1:].split("_")
-        zs = ""
+        zs, ys = bstr[1:].split("_")
+        xs = ""
     rxpos, _, xpos = xs.partition(":")
     rypos, _, ypos = ys.partition(":")
     rzpos, _, zpos = zs.partition(":")
     level = len(xpos)
+    print("pos", rzpos, rypos)
 
     return (
         np.fromiter(
-            (int(v, 2) if v else 0 for v in (rxpos, rypos, rzpos, xpos, ypos, zpos)),
+            (int(v, 2) if v else 0 for v in (rzpos, rypos, rxpos, zpos, ypos, xpos)),
             dtype="uint64",
         ),
         level,
@@ -180,8 +181,8 @@ def bname_from_pos(
     npos = pos.copy()
     sentinel = 0xFFFFFFFF
     npos[:3][domain_shape == 1] = sentinel
-    root_pos = npos[:dim]
-    child_pos = npos[3 : 3 + dim]
+    root_pos = npos[:dim][::-1]
+    child_pos = npos[3 : 3 + dim][::-1]
     if l <= 0:
         bstr = "_".join(f"{rp:0{rl}b}" if rp != sentinel else "" for rp in root_pos)
     else:
@@ -224,5 +225,3 @@ def get_min_level(bnames: Sequence[str]) -> int:
 def get_bf_path(bfn: str, ext: str):
     bfn = remove_ext(bfn.strip())
     return f"{bfn}.{ext}"
-
-
