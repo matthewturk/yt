@@ -157,13 +157,12 @@ def block_pos(bstr: str) -> tuple[np.ndarray, int]:
     try:
         xs, ys, zs = bstr[1:].split("_")
     except ValueError:
-        zs, ys = bstr[1:].split("_")
+        ys, zs = bstr[1:].split("_")
         xs = ""
     rxpos, _, xpos = xs.partition(":")
     rypos, _, ypos = ys.partition(":")
     rzpos, _, zpos = zs.partition(":")
-    level = len(xpos)
-    print("pos", rzpos, rypos)
+    level = len(zpos)
 
     return (
         np.fromiter(

@@ -36,13 +36,13 @@ else:
 # TODO: Do I need to support blocks with non cubic non divisible nzs? (ie: commit
 #       commit my nzone array patch?). All the test datasets work with it.
 
+
 class EnzoEDomainFile:
     # equivalent to a block list file
     ds: EnzoEOctreeDataset
     index: EnzoEOctreeHierarchy
     nocts: int
     h5fname: str
-    max_level: int
     min_level: int
     cell_count: int
     levels: np.ndarray
@@ -70,7 +70,6 @@ class EnzoEDomainFile:
         self.level_counts = level_counts
         self.level_inds = list(accumulate(level_counts))
         self.levels = levels
-        self.max_level = min(len(self.levels) - 1, self.ds.max_level)
 
         self.h5fname = h5fname
         self.domain_id = domain_id
@@ -79,9 +78,15 @@ class EnzoEDomainFile:
         # The order of the blocks in the levels array doesn't matter
         # but it has to stay consistent between the levels array
         # and when it is added
-        for i in range(self.max_level + 1):
-            blocks = self.levels[i]
-            self.oct_handler.add(self.domain_id, i, blocks[:, 3:], blocks[:, :3])
+        offset = 0
+        for i, level in enumerate(self.levels):
+            # This domain does not contain further refined levels
+            if level.size == 0:
+                break
+            self.oct_handler.add(
+                self.domain_id, i, level[:, 3:], level[:, :3], file_ind_offset=offset
+            )
+            offset += len(level)
 
     def included(self, selector) -> bool:
         if getattr(selector, "domain_ind", None) is not None:
@@ -143,6 +148,7 @@ class EnzoEOctreeHierarchy(OctreeIndex):
                 if self.max_level >= level >= 0:
                     levels[level].append(pos)
             np_levels = [np.asarray(lvl) for lvl in levels]
+
             level_inds = [len(lvl) for lvl in levels]
 
             domains.append(
@@ -210,9 +216,7 @@ class EnzoEOctreeHierarchy(OctreeIndex):
         self.level_stats["num_blocks"] = [0 for i in range(max_level)]
         self.level_stats["num_cells"] = [0 for i in range(max_level)]
         for level in range(max_level):
-            num_blocks = sum(
-                len(dom.get_blocks(level, default=())) for dom in self.domains
-            )
+            num_blocks = sum(len(dom.levels[level]) for dom in self.domains)
             self.level_stats[level]["num_blocks"] = num_blocks
             self.level_stats[level]["num_cells"] = num_blocks * self.ds.cells_per_oct
 
@@ -313,8 +317,8 @@ class EnzoESubset(OctreeSubset):
     ) -> dict[str, np.ndarray]:
         # TODO: Rewrite tight loop in cython
 
-        # file_inds: for each CELL, the oct they're associated with within that file
-        # cell_inds: the index of the cell it actually is in the oct??
+        # file_inds: for each cell, the oct they're associated with within that file
+        # cell_inds: the index of the cell it actually is in the oct
         # levels: the levels of the cells
         levels, cell_inds, file_inds = self.oct_handler.file_index_octs(
             selector, self.domain_id
@@ -325,35 +329,32 @@ class EnzoESubset(OctreeSubset):
 
         _, oct_inds_i = np.unique(file_inds, return_index=True)
 
-        src: list[dict[str, np.ndarray]] = [
-            {
-                f: np.full(
-                    (self.domain.levels[lvl].shape[0], self.ds.cells_per_oct),
-                    np.nan,
-                    dtype=np.float64,
-                    order="C",
-                )
-                for f in fields
-            }
-            for lvl in range(0, levels.max() + 1)
-        ]
-
-        dest: dict[str, np.ndarray] = {
-            f: np.zeros(levels.shape[0], dtype=np.float64, order="C") for f in fields
+        src: dict[str, np.ndarray] = {
+            f: np.zeros((file_inds.max() + 1, self.ds.cells_per_oct), dtype=np.float64)
+            for f in fields
         }
+        dest: dict[str, np.ndarray] = {
+            f: np.zeros(levels.shape[0], dtype=np.float64) for f in fields
+        }
+
+        # TODO: Implement nodal fields
+        fields = [f for f in fields if not hasattr(f, "nodal_flag")]
+
         for oii in oct_inds_i:
             lvl = levels[oii]
             fi = file_inds[oii]
-            bname = self.ds.bname_from_pos(self.domain.levels[lvl][fi], lvl)
+            fi_offset = self.domain.level_inds[lvl - 1] if lvl > 0 else 0
+
+            bname = self.ds.bname_from_pos(self.domain.levels[lvl][fi - fi_offset], lvl)
+            field_data = f[bname]
+
             for field in fields:
-                # TODO: Implement nodal fields
-                if hasattr(field, "nodal_flag"):
-                    continue
                 fname = f"field_{field[1]}"
-                raw_data = f[bname][fname]
+                raw_data = field_data[fname]
                 data = np.empty(raw_data.shape, dtype="float64")
                 raw_data.read_direct(data)
                 data = data[self.ds.base_slice]
+
                 if self.ds.dimensionality == 2:
                     data.shape += (1,)
                 for ic, nzd in enumerate(data.shape):
@@ -363,36 +364,12 @@ class EnzoESubset(OctreeSubset):
                     # larger axis
                     if nzd != self.nz:
                         data = np.repeat(data, self.nz // nzd, axis=ic)
-                src[lvl][field][fi, cell_inds[file_inds == fi]] = data.T.ravel()[
-                    cell_inds[file_inds == fi]
-                ]  # fi
 
-        for lvl in range(0, self.ds.max_level + 1):
-            # lstart = self.domain.level_inds[lvl - 1] if lvl > 0 else 0
-            # lend = self.domain.level_inds[lvl]
-            dims = [
-                np.unique(self.domain.levels[lvl][:, [i, i + 3]], axis=0).shape[0]
-                for i in range(3)
-            ]
-            rshape = [
-                dim >> lvl for dim in dims
-            ]  # number of level 0 blocks in each dimension
-            cshape = [2 for l in range(lvl * 3)]  # 2 for each subdivision of the block
-            t_axes = [d + (l * 3) for l in range(lvl + 1) for d in range(2, -1, -1)]
+                oct_cell_inds = cell_inds[file_inds == fi]
+                src[field][fi, oct_cell_inds] = data.T.ravel()[oct_cell_inds]
 
-            for ir, v in enumerate(rshape):
-                if v == 0:
-                    rshape[ir] = 1
-                    for ic in range(ir, len(cshape), 3):
-                        cshape[ic] = 1
-            ldata = {
-                f: ld.reshape(*rshape, *cshape, self.ds.cells_per_oct)
-                .transpose(*t_axes, (lvl + 1) * 3)
-                .reshape(dims[0] * dims[1] * dims[2], self.ds.cells_per_oct, order="C")
-                for f, ld in src[lvl].items()
-            }
-
-            self.oct_handler.fill_level(lvl, levels, cell_inds, file_inds, dest, ldata)
+        for lvl in range(self.ds.max_level + 1):
+            self.oct_handler.fill_level(lvl, levels, cell_inds, file_inds, dest, src)
         return dest
 
     # @property
@@ -520,9 +497,13 @@ class EnzoEOctreeDataset(Dataset):
         b0 = self.domain_blocks[0].bnames[0]
         # get dimension from first block name
         level0, left0, right0 = get_block_info(b0, min_dim=0)
-        self.domain_dimensions = get_root_blocks(b0)[::-1]
         self.dimensionality = left0.size
-        axis_order = ("y", "x", "z") if self.dimensionality == 2 else ("z", "y", "x")
+        self.domain_dimensions = get_root_blocks(b0, min_dim=self.dimensionality)[::-1]
+        if self.dimensionality == 2:
+            self.domain_dimensions = np.append(self.domain_dimensions, 1)
+            axis_order = ("y", "x", "z")
+        else:
+            axis_order = ("z", "y", "x")
 
         Dataset.__init__(
             self,
@@ -708,29 +689,6 @@ class EnzoEOctreeDataset(Dataset):
         )
         magnetic_unit = np.float64(magnetic_unit.in_cgs())
         setdefaultattr(self, "magnetic_unit", self.quan(magnetic_unit, "gauss"))
-
-    def _bpos_sort_key(self, pos_level):
-        pos, lvl = pos_level
-        rpos = pos[self.dimensionality - 1 :: -1] << lvl
-        rpos = rpos.copy() // 2
-        if rpos[0] == 0 and rpos[1] == 0:
-            return 0
-        elif rpos[0] == 1 and rpos[1] == 0:
-            return 1
-        elif rpos[0] == 0 and rpos[1] == 1:
-            return 2
-        elif rpos[0] == 1 and rpos[1] == 1:
-            return 3
-        else:
-            return 4
-        # cpos = pos[3 + self.dimensionality - 1 : 3 : -1]
-        # opos = rpos + cpos
-        # if self.dimensionality == 2:
-        #     return opos[0] * self.domain_dimensions[1] + opos[1]
-        # else:
-        #     return (
-        #         opos[0] * self.domain_dimensions[1] + opos[1]
-        #     ) * self.domain_dimensions[2] + opos[2]
 
     def bname_from_pos(self, pos: np.ndarray, lvl: int) -> str:
         return bname_from_pos(
