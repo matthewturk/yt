@@ -144,8 +144,8 @@ class EnzoEOctreeHierarchy(OctreeIndex):
         for i, dom in enumerate(self.ds.domain_blocks, 1):
             levels: list[list[np.ndarray]] = [[] for _ in range(self.max_level + 1)]
             for bname in dom.bnames:
-                pos, level = block_pos(bname)
-                if self.max_level >= level >= 0:
+                pos, level = block_pos(bname, -self.ds.min_level)
+                if pos is not None and self.max_level >= level >= 0:
                     levels[level].append(pos)
             np_levels = [np.asarray(lvl) for lvl in levels]
 

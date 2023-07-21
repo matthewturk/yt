@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 from more_itertools import always_iterable
@@ -150,19 +151,24 @@ def get_particle_mass_correction(ds):
     return (ds.domain_width / ds.domain_dimensions).prod() / ds.length_unit**3
 
 
-def block_pos(bstr: str) -> tuple[np.ndarray, int]:
+def block_pos(
+    bstr: str, root_level: int = 0
+) -> Union[tuple[np.ndarray, int], tuple[None, None]]:
     """
     Get the position and level of a block from its block string.
     """
     try:
         xs, ys, zs = bstr[1:].split("_")
     except ValueError:
+        # actually x and y coords
         ys, zs = bstr[1:].split("_")
         xs = ""
     rxpos, _, xpos = xs.partition(":")
     rypos, _, ypos = ys.partition(":")
     rzpos, _, zpos = zs.partition(":")
     level = len(zpos)
+    if len(rzpos) < root_level:
+        return (None, None)
 
     return (
         np.fromiter(
@@ -176,6 +182,7 @@ def block_pos(bstr: str) -> tuple[np.ndarray, int]:
 def bname_from_pos(
     pos: np.ndarray, l: int, min_l: int, domain_shape: np.ndarray, dim: int = 3
 ) -> str:
+    """Get the block name from the pos, level, and dataset metadata"""
     rl = min(l, 0) - min_l  # enzo-e root level
     npos = pos.copy()
     sentinel = 0xFFFFFFFF
