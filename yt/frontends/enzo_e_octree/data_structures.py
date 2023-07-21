@@ -132,7 +132,7 @@ class EnzoEOctreeHierarchy(OctreeIndex):
         self.min_level = self.ds.min_level
 
         self.oct_handler = EnzoEOctreeContainer(
-            self.ds.domain_dimensions,
+            self.ds.domain_dimensions // self.ds.nz,
             self.ds.domain_left_edge,
             self.ds.domain_right_edge,
             self.ds.nz,
@@ -165,7 +165,9 @@ class EnzoEOctreeHierarchy(OctreeIndex):
 
         nocts = [dom.nocts for dom in domains]
         self.num_grids = sum(nocts)
-        self.oct_handler.allocate_domains(nocts, self.ds.domain_dimensions.prod())
+        self.oct_handler.allocate_domains(
+            nocts, self.ds.domain_dimensions.prod() // self.ds.cells_per_oct
+        )
         for dom in domains:
             dom.init_octs()
 
@@ -498,9 +500,7 @@ class EnzoEOctreeDataset(Dataset):
         # get dimension from first block name
         level0, left0, right0 = get_block_info(b0, min_dim=0)
         self.dimensionality = left0.size
-        self.domain_dimensions = get_root_blocks(b0, min_dim=self.dimensionality)[::-1]
         if self.dimensionality == 2:
-            self.domain_dimensions = np.append(self.domain_dimensions, 1)
             axis_order = ("y", "x", "z")
         else:
             axis_order = ("z", "y", "x")
@@ -581,7 +581,7 @@ class EnzoEOctreeDataset(Dataset):
             version = None  # earliest recorded version is '0.9.0'
         self.parameters["version"] = version
 
-        ablock = next(iter(fh.values()))
+        ablock = fh[self.domain_blocks[0].bnames[0]]
         self.current_time = ablock.attrs["time"][0]
         self.parameters["current_cycle"] = ablock.attrs["cycle"][0]
         gsi = ablock.attrs["enzo_GridStartIndex"]
@@ -603,8 +603,17 @@ class EnzoEOctreeDataset(Dataset):
             )
         self.nz = max_dim
         self.cells_per_oct = self.nz**3
-
         fh.close()
+
+        # the block should be a root level block
+        self.domain_dimensions = (
+            get_root_blocks(
+                self.domain_blocks[0].bnames[0], min_dim=self.dimensionality
+            )
+            * self.nz
+        )
+        if self.dimensionality == 2:
+            self.domain_dimensions = np.append(self.domain_dimensions, self.nz)
 
         if self.cosmological_simulation:
             self.current_redshift = co.z_from_t(self.current_time * self.time_unit)
@@ -695,7 +704,7 @@ class EnzoEOctreeDataset(Dataset):
             pos,
             lvl,
             self.min_level,
-            self.domain_dimensions,
+            self.domain_dimensions // self.nz,
             self.dimensionality,
         )
 
