@@ -727,12 +727,12 @@ cdef class OctreeContainer:
         self.visit_all_octs(selector, visitor)
         return levels, morton_inds
 
-    def domain_count(self, SelectorObject selector):
+    def domain_count(self, SelectorObject selector, oct_only = False):
         # We create oct arrays of the correct size
         cdef np.ndarray[np.int64_t, ndim=1] domain_counts
         domain_counts = np.zeros(self.num_domains, dtype="int64")
         cdef oct_visitors.CountByDomain visitor
-        visitor = oct_visitors.CountByDomain(self, -1)
+        visitor = oct_visitors.CountByDomain(self, -1, oct_only)
         visitor.domain_counts = domain_counts
         self.visit_all_octs(selector, visitor)
         return domain_counts
@@ -1113,14 +1113,14 @@ cdef class EnzoEOctreeContainer(SparseOctreeContainer):
             int skip_boundary = 1,
             int count_boundary = 0,
             int file_ind_offset = 0):
-        cdef int no, p, i
+        cdef int no, p
         cdef int ind[3]
         cdef np.uint64_t cind[3]
         cdef int nb = 0
         cdef Oct *cur
         no = ipos.shape[0] #number of octs
         if curdom > self.num_domains: return 0
-       
+
         cdef OctAllocationContainer *cont = self.domains.get_cont(curdom - 1)
         cdef int initial = cont.n_assigned
         cdef int in_boundary = 0

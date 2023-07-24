@@ -125,6 +125,7 @@ cdef class FillFileIndicesR(OctVisitor):
 
 cdef class CountByDomain(OctVisitor):
     cdef np.int64_t[:] domain_counts
+    cdef np.uint8_t oct_only
 
 cdef class StoreOctree(OctVisitor):
     cdef np.uint8_t[:] ref_mask

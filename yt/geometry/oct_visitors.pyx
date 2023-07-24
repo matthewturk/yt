@@ -267,12 +267,20 @@ cdef class FillFileIndicesR(OctVisitor):
 
 # Count octs by domain
 cdef class CountByDomain(OctVisitor):
+    def __init__(self, OctreeContainer octree, int domain_id = -1, oct_only = False):
+        super(CountByDomain, self).__init__(octree, domain_id)
+        self.oct_only = int(oct_only)
+
     @cython.boundscheck(False)
     @cython.initializedcheck(False)
     cdef void visit(self, Oct* o, np.uint8_t selected):
         if selected == 0: return
-        # NOTE: We do this for every *cell*.
+        if self.oct_only == 1 and self.last == o.domain_ind:
+            return
+        # NOTE: self.oct_only governs whether this is by cell or by
+        # oct.
         self.domain_counts[o.domain - 1] += 1
+        self.last = o.domain_ind
 
 # Store the refinement mapping of the octree to be loaded later
 cdef class StoreOctree(OctVisitor):

@@ -12,11 +12,17 @@ from yt.data_objects.index_subobjects.octree_subset import OctreeSubset
 from yt.data_objects.static_output import Dataset
 from yt.frontends.enzo.misc import cosmology_get_units
 from yt.frontends.enzo_e_octree.fields import EnzoEFieldInfo
-from yt.frontends.enzo_e_octree.misc import (block_pos, bname_from_pos,
-                                             get_bf_path, get_block_info,
-                                             get_listed_subparam,
-                                             get_min_level, get_root_blocks,
-                                             nested_dict_get, remove_ext)
+from yt.frontends.enzo_e_octree.misc import (
+    block_pos,
+    bname_from_pos,
+    get_bf_path,
+    get_block_info,
+    get_listed_subparam,
+    get_min_level,
+    get_root_blocks,
+    nested_dict_get,
+    remove_ext,
+)
 from yt.funcs import setdefaultattr
 from yt.geometry.geometry_handler import YTDataChunk
 from yt.geometry.oct_container import EnzoEOctreeContainer
@@ -322,11 +328,16 @@ class EnzoESubset(OctreeSubset):
         # file_inds: for each cell, the oct they're associated with within that file
         # cell_inds: the index of the cell it actually is in the oct
         # levels: the levels of the cells
+        # We do not assume that this result would be the same across
+        # all subsets.  This may or may not be a safe assumption, but
+        # to keep future compatibility with a potential distributed
+        # octree we will do this.
+        domain_count = self.oct_handler.domain_count(selector, True)
         levels, cell_inds, file_inds = self.oct_handler.file_index_octs(
             selector, self.domain_id
         )
 
-        if levels.size == 0:
+        if domain_count.max() == 0 or levels.size == 0:
             return {f: np.empty(0, dtype=np.float64) for f in fields}
 
         _, oct_inds_i = np.unique(file_inds, return_index=True)
