@@ -13,6 +13,7 @@ from yt.funcs import ensure_numpy_array, iter_fields
 from yt.geometry.geometry_handler import ChunkDataCache, Index, YTDataChunk
 from yt.utilities.definitions import MAXLEVEL
 from yt.utilities.logger import ytLogger as mylog
+from yt.utilities.parallel_tools.parallel_analysis_interface import parallel_objects
 
 from .grid_container import GridTree, MatchPointsToGrids
 
@@ -357,7 +358,11 @@ class GridIndex(Index, abc.ABC):
             return fast_index.count(dobj.selector)
         if grids is None:
             grids = dobj._chunk_info
-        count = sum(g.count(dobj.selector) for g in grids)
+
+        count = 0
+        for g in parallel_objects(grids):
+            count += g.count(dobj.selector)
+        count = self.comm.mpi_allreduce(count, op="sum")
         return count
 
     def _chunk_all(self, dobj, cache=True, fast_index=None):
