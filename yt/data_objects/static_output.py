@@ -131,14 +131,20 @@ class MutableAttribute:
 
     def __init__(self, display_array=False):
         self.data = weakref.WeakKeyDictionary()
-        self.display_array = display_array
+        # We can assume that ipywidgets will not be *added* to the system
+        # during the course of execution, and if it is, we will not wrap the
+        # array.
+        if display_array and find_spec("ipywidgets") is not None:
+            self.display_array = True
+        else:
+            self.display_array = False
 
     def __get__(self, instance, owner):
         ret = self.data.get(instance, None)
         return ret
 
     def __set__(self, instance, value):
-        if self.display_array and find_spec("ipywidgets") is not None:
+        if self.display_array:
             try:
                 value._ipython_display_ = functools.partial(
                     _wrap_display_ytarray, value
