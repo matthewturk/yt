@@ -359,10 +359,10 @@ class GridIndex(Index, abc.ABC):
         if grids is None:
             grids = dobj._chunk_info
 
-        count = 0
-        for g in parallel_objects(grids):
-            count += g.count(dobj.selector)
-        count = self.comm.mpi_allreduce(count, op="sum")
+        storage = {}
+        for sto, g in parallel_objects(grids, storage=storage):
+            sto.result = g.count(dobj.selector)
+        count = sum(storage.values())
         return count
 
     def _chunk_all(self, dobj, cache=True, fast_index=None):
