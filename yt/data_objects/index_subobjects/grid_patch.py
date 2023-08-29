@@ -156,6 +156,9 @@ class AMRGridPatch(YTSelectionContainer):
         """
         super().clear_data()
         self._setup_dx()
+        self._last_mask = None
+        self._last_count = -1
+        self._last_selector_id = None
 
     def _prepare_grid(self):
         """Copies all the appropriate attributes from the index."""
