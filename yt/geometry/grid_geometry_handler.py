@@ -106,6 +106,27 @@ class GridIndex(Index, abc.ABC):
             g.clear_data()
         self.io.queue.clear()
 
+    def _set_grid_cache_mask(self, cache_grid_masks, clear_all_data=True):
+        """
+        This routine turns on/off the cache for grid masks for each grid,
+        optionally clearing all data first.
+
+        Parameters
+        ----------
+        cache_grid_masks: bool
+            If True, selection masks will be cached by each grid object. If
+            False, selection masks will be rebuilt as needed.
+        clear_all_data: bool
+            If True (the default), will call clear_all_data()
+
+        """
+        if clear_all_data:
+            self.clear_all_data()
+
+        mylog.info(f"Setting _cache_mask for all grids to {cache_grid_masks}")
+        for g in self.grids:
+            g._cache_mask = cache_grid_masks
+
     def get_smallest_dx(self):
         """
         Returns (in code units) the smallest cell size in the simulation.

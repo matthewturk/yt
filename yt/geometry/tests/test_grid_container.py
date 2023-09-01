@@ -142,3 +142,17 @@ def test_grid_arrays_view():
     assert_equal(grid_arr["right_edge"], ds.index.grid_right_edge)
     assert_equal(grid_arr["dims"], ds.index.grid_dimensions)
     assert_equal(grid_arr["level"], ds.index.grid_levels[:, 0])
+
+
+def test_grid_cache_toggle():
+    ds = setup_test_ds()
+    _ = ds.find_max("density")
+    assert ds.index.grids[0]._last_mask is not None
+
+    ds.index._set_grid_cache_mask(False, clear_all_data=False)
+    assert ds.index.grids[0]._last_mask is not None
+
+    ds.index._set_grid_cache_mask(False, clear_all_data=True)
+    assert ds.index.grids[0]._last_mask is None
+    _ = ds.find_max("density")
+    assert ds.index.grids[0]._last_mask is None
