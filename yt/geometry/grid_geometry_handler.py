@@ -106,7 +106,7 @@ class GridIndex(Index, abc.ABC):
             g.clear_data()
         self.io.queue.clear()
 
-    def set_grid_cache_mask(self, cache_grid_masks, clear_all_data=True):
+    def _set_grid_cache_mask(self, cache_grid_masks, clear_all_data=True):
         """
         This routine turns on/off the cache for grid masks for each grid,
         optionally clearing all data first.

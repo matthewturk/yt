@@ -149,10 +149,10 @@ def test_grid_cache_toggle():
     _ = ds.find_max("density")
     assert ds.index.grids[0]._last_mask is not None
 
-    ds.index.set_grid_cache_mask(False, clear_all_data=False)
+    ds.index._set_grid_cache_mask(False, clear_all_data=False)
     assert ds.index.grids[0]._last_mask is not None
 
-    ds.index.set_grid_cache_mask(False, clear_all_data=True)
+    ds.index._set_grid_cache_mask(False, clear_all_data=True)
     assert ds.index.grids[0]._last_mask is None
     _ = ds.find_max("density")
     assert ds.index.grids[0]._last_mask is None
