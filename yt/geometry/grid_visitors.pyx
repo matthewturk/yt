@@ -17,7 +17,7 @@ from yt.utilities.lib.bitarray cimport ba_set_value
 from yt.utilities.lib.fp_utils cimport iclip
 
 
-cdef void free_tuples(GridVisitorData *data) noexcept nogil:
+cdef void free_child_mask(GridVisitorData *data) noexcept nogil:
     # This wipes out the tuples, which is necessary since they are
     # heap-allocated
     cdef int i
@@ -31,7 +31,7 @@ cdef void free_tuples(GridVisitorData *data) noexcept nogil:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef void setup_tuples(GridVisitorData *data) noexcept nogil:
+cdef void setup_child_mask(GridVisitorData *data) noexcept nogil:
     # This sets up child-mask tuples.  Rather than a single mask that covers
     # everything, we instead allocate pairs of integers that are start/stop
     # positions for child masks.  This may not be considerably more efficient
@@ -41,7 +41,7 @@ cdef void setup_tuples(GridVisitorData *data) noexcept nogil:
     cdef np.int64_t si, ei
     cdef GridTreeNode *g
     cdef GridTreeNode *c
-    free_tuples(data)
+    free_child_mask(data)
     g = data.grid
     data.child_tuples = <int**> malloc(sizeof(int*) * g.num_children)
     for i in range(g.num_children):

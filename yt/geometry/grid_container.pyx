@@ -184,7 +184,7 @@ cdef class GridTree:
         for i in range(self.num_root_grids):
             grid = &self.root_grids[i]
             self.recursively_visit_grid(data, func, selector, grid, visited_mask)
-        grid_visitors.free_tuples(data)
+        grid_visitors.free_child_mask(data)
 
     cdef void recursively_visit_grid(self, GridVisitorData *data,
                                      grid_visitor_function *func,
@@ -200,7 +200,7 @@ cdef class GridTree:
         if selector.select_bbox(grid.left_edge, grid.right_edge) == 0:
             # Note that this does not increment the global_index.
             return
-        grid_visitors.setup_tuples(data)
+        grid_visitors.setup_child_mask(data)
         selector.visit_grid_cells(data, func)
         for i in range(grid.num_children):
             self.recursively_visit_grid(data, func, selector, grid.children[i], visited_mask)

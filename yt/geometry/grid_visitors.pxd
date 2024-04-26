@@ -54,8 +54,8 @@ cdef struct GridVisitorData:
                       # It is the number of cells a child grid has per dimension
                       # in a cell of this grid.
 
-cdef void free_tuples(GridVisitorData *data) noexcept nogil
-cdef void setup_tuples(GridVisitorData *data) noexcept nogil
+cdef void free_child_mask(GridVisitorData *data) noexcept nogil
+cdef void setup_child_mask(GridVisitorData *data) noexcept nogil
 cdef np.uint8_t check_child_masked(GridVisitorData *data) noexcept nogil
 
 ctypedef void grid_visitor_function(GridVisitorData *data,
