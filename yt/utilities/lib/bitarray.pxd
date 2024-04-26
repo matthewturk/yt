@@ -85,6 +85,17 @@ cdef inline np.uint8_t _num_set_bits( np.uint8_t b ):
     b = (b & 0x33) + ((b >> 2) & 0x33)
     return (((b + (b >> 4)) & 0x0F) * 0x01)
 
+cdef inline void _compute_size ( np.uint64_t size, np.uint8_t *final_bitmask, np.uint64_t *buf_size) noexcept nogil:
+    buf_size[0] = (size >> 3)
+    final_bitmask[0] = 255
+    cdef int i
+    if (size & 7) != 0:
+        # We need an extra one if we've got any lingering bits
+        buf_size[0] += 1
+        final_bitmask[0] = 0
+        for i in range(size & 7):
+            final_bitmask[0] |= (1<<i)
+
 cdef class bitarray:
     cdef np.uint8_t *buf
     cdef np.uint64_t size

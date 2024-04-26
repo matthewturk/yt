@@ -13,7 +13,7 @@ cimport cython
 cimport numpy as np
 from libc.stdlib cimport free, malloc
 
-from yt.utilities.lib.bitarray cimport ba_set_value
+from yt.utilities.lib.bitarray cimport ba_set_value, _compute_size
 from yt.utilities.lib.fp_utils cimport iclip
 
 
@@ -37,6 +37,10 @@ cdef void setup_child_mask(GridVisitorData *data) noexcept nogil:
     # positions for child masks.  This may not be considerably more efficient
     # memory-wise, but it is easier to keep and save when going through
     # multiple grids and selectors.
+    cdef np.uint64_t size = data.grid.dims[0] * data.grid.dims[1] * data.grid.dims[2]
+    cdef np.uint8_t final_bitmask
+    cdef np.uint64_t buf_size
+    _compute_size(size, &final_bitmask, &buf_size)
     cdef int i, j
     cdef np.int64_t si, ei
     cdef GridTreeNode *g

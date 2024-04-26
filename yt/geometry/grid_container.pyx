@@ -200,6 +200,7 @@ cdef class GridTree:
         if selector.select_bbox(grid.left_edge, grid.right_edge) == 0:
             # Note that this does not increment the global_index.
             return
+        # We will utilize the bitarray routines here.
         grid_visitors.setup_child_mask(data)
         selector.visit_grid_cells(data, func)
         for i in range(grid.num_children):

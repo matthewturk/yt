@@ -53,15 +53,7 @@ cdef class bitarray:
         elif size != -1 and arr is not None:
             if size != arr.size:
                 raise RuntimeError
-        self.buf_size = (size >> 3)
-        cdef np.uint8_t bitmask = 255
-        if (size & 7) != 0:
-            # We need an extra one if we've got any lingering bits
-            self.buf_size += 1
-            bitmask = 0
-            for i in range(size & 7):
-                bitmask |= (1<<i)
-        self.final_bitmask = bitmask
+        _compute_size(size, &self.final_bitmask, &self.buf_size)
         cdef np.ndarray[np.uint8_t] ibuf_t
         ibuf_t = self.ibuf = np.zeros(self.buf_size, "uint8")
         self.buf = <np.uint8_t *> ibuf_t.data
