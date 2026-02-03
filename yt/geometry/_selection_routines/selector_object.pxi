@@ -536,15 +536,15 @@ cdef class SelectorObject:
                              itemsize=sizeof(np.uint8_t))
         visitor.expand_mask(child_mask)
         with nogil:
-            pos[0] = left_edge[0] + dds[0] * 0.5
             visitor.pos[0] = 0
             for i in range(dim[0]):
-                pos[1] = left_edge[1] + dds[1] * 0.5
+                pos[0] = left_edge[0] + (visitor.pos[0] + 0.5) * dds[0]
                 visitor.pos[1] = 0
                 for j in range(dim[1]):
-                    pos[2] = left_edge[2] + dds[2] * 0.5
+                    pos[1] = left_edge[1] + (visitor.pos[1] + 0.5) * dds[1]
                     visitor.pos[2] = 0
                     for k in range(dim[2]):
+                        pos[2] = left_edge[2] + (visitor.pos[2] + 0.5) * dds[2]
                         # We short-circuit if we have a cache; if we don't, we
                         # only set selected to true if it's *not* masked by a
                         # child and it *is* selected.
@@ -563,11 +563,8 @@ cdef class SelectorObject:
                                 cached_mask[visitor.global_index] = selected
                         visitor.visit(grid, selected)
                         visitor.global_index += 1
-                        pos[2] += dds[2]
                         visitor.pos[2] += 1
-                    pos[1] += dds[1]
                     visitor.pos[1] += 1
-                pos[0] += dds[0]
                 visitor.pos[0] += 1
 
     @cython.boundscheck(False)

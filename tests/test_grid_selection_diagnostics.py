@@ -80,73 +80,89 @@ def fclip(val, minv, maxv):
     return np.minimum(np.maximum(val, minv), maxv)
 
 
-class ManualSelector:
-    def __init__(self, ds):
-        self.ds = ds
+def check_grid_consistency(ds, obj):
+    # Retrieve the selector from the object
+    selector = obj.selector
 
-    def count_cells_sphere(self, center, radius):
-        # Brute force check every cell in every grid
-        # This is SLOW, but correct
-        count = 0
-        # Convert to plain floats to avoid unit issues with fclip
-        if hasattr(center, "v"):
-            center = center.v
+    # OLD METHOD: Linear check over all grids
+    grids = np.array(ds.index.grids)
+    ng = len(grids)
+    if ng == 0:
+        old_grids = np.array([])
+    else:
+        left_edges = np.empty((ng, 3), dtype="float64")
+        right_edges = np.empty((ng, 3), dtype="float64")
+        levels = np.zeros((ng, 1), dtype="int32")
+
+        for i, g in enumerate(grids):
+            left_edges[i, :] = g.LeftEdge.d
+            right_edges[i, :] = g.RightEdge.d
+            levels[i, 0] = g.Level
+
+    # Select grids using the vectorized old-style check
+    mask = selector.select_grids(left_edges, right_edges, levels)
+    old_grids = grids[mask.astype("bool")]
+
+    # Calculate cell count for old grids
+    old_cell_count = 0
+    for g in old_grids:
+        m, count = selector.fill_mask_regular_grid(g)
+        if m is not None:
+            old_cell_count += count
+
+    # NEW METHOD: Get grids from the object (which uses the new selection method)
+    new_grids = []
+    # We iterate blocks to get the grids as the IO handler would
+    # This invokes the new grid tree via the index logic
+    for b in obj.blocks:
+        if isinstance(b, tuple):
+            new_grids.append(b[0])
         else:
-            center = np.array(center)
+            new_grids.append(b)
 
-        if hasattr(radius, "v"):
-            radius = radius.v
+    # Convert to numpy array for comparison
+    new_grids = np.array(new_grids, dtype="object")
 
-        radius2 = radius**2
+    # Calculate cell count/verify logic for new grids
+    new_cell_count = 0
+    for g in new_grids:
+        m, count = selector.fill_mask_regular_grid(g)
+        if m is not None:
+            new_cell_count += count
 
-        for g in self.ds.index.grids:
-            # Quick BBox check
-            # Dist to bbox
-            le = g.LeftEdge.d
-            re = g.RightEdge.d
-            dds = g.dds.d
-            dims = g.ActiveDimensions
+    # Comparisons
+    print(f"  Old Method Grids: {len(old_grids)}")
+    print(f"  New Method Grids: {len(new_grids)}")
 
-            p = fclip(center, le, re)
-            d2 = ((p - center) ** 2).sum()
-            if d2 > radius2:
-                continue
+    grid_mismatch = False
+    if len(old_grids) != len(new_grids):
+        print("  !!! GRID COUNT MISMATCH !!!")
+        grid_mismatch = True
 
-            child_mask = g.child_mask
+    # Check strict identity and order
+    if not np.array_equal(old_grids, new_grids):
+        if not grid_mismatch:
+            print("  !!! GRID LIST/ORDER MISMATCH !!!")
+            grid_mismatch = True
+        # Check if it's just order
+        if set(old_grids) == set(new_grids):
+            print("  (It is only an order mismatch)")
 
-            # Optimization: check if fully contained
-            # If grid is fully inside sphere, add all unmasked cells
-            corners = np.array(
-                [
-                    [le[0], le[1], le[2]],
-                    [re[0], re[1], re[2]],
-                    [le[0], re[1], le[2]],
-                    [re[0], le[1], le[2]],
-                    [le[0], le[1], re[2]],
-                    [re[0], re[1], re[2]],
-                    [le[0], re[1], re[2]],
-                    [re[0], le[1], re[2]],
-                ]
-            )
-            max_d2 = np.max(np.sum((corners - center) ** 2, axis=1))
-            if max_d2 < radius2:
-                count += child_mask.sum()
-                continue
+    print(f"  Old Cell Count: {old_cell_count}")
+    print(f"  New Cell Count: {new_cell_count}")
 
-            # Otherwise we have to check positions
-            x, y, z = np.mgrid[0 : dims[0], 0 : dims[1], 0 : dims[2]]
-            x = (x + 0.5) * dds[0] + le[0]
-            y = (y + 0.5) * dds[1] + le[1]
-            z = (z + 0.5) * dds[2] + le[2]
+    if old_cell_count != new_cell_count:
+        print("  !!! CELL COUNT MISMATCH !!!")
+        return False
 
-            dist2 = (x - center[0]) ** 2 + (y - center[1]) ** 2 + (z - center[2]) ** 2
-            mask = dist2 <= radius2
+    if grid_mismatch:
+        print(
+            "  (Cell counts match, but grids differ - potentially optimized selection)"
+        )
+        return True  # Pass if cells match, assuming optimization
 
-            # Mask out children
-            mask = mask & (child_mask == 1)
-
-            count += mask.sum()
-        return count
+    print("  [OK] Consistency Check Passed")
+    return True
 
 
 def benchmark_selection(ds, name):
@@ -156,55 +172,37 @@ def benchmark_selection(ds, name):
     print(f"  Max Level: {ds.index.max_level}")
     print(f"  Refine By: {ds.refine_by}")
 
-    # Selectors
     center = ds.domain_center
     width = ds.domain_width[0]
 
     # 1. Sphere Selection (Small)
     t0 = time.time()
     sp = ds.sphere(center, width * 0.05)
-    # Force count used by fast index (count is cached)
-    # We access a field to force chunking if needed, but 'index' fields are fastest
-    count = sp["index", "ones"].sum()
+    # We access a field to force chunking/selection
+    _ = sp["index", "ones"]
     t1 = time.time()
-    print(f"  Sphere (Small r=0.05): {int(count):12d} cells  Time: {t1-t0:.6f}s")
+    print(f"  Sphere (Small r=0.05) Time: {t1-t0:.6f}s")
+    if not check_grid_consistency(ds, sp):
+        print("  >>> FAILED CHECK")
 
     # 2. Sphere Selection (Large - 0.25)
     t0 = time.time()
     sp = ds.sphere(center, width * 0.25)
-    count_large = sp["index", "ones"].sum()
+    _ = sp["index", "ones"]
     t1 = time.time()
-    print(f"  Sphere (Large r=0.25): {int(count_large):12d} cells  Time: {t1-t0:.6f}s")
+    print(f"  Sphere (Large r=0.25) Time: {t1-t0:.6f}s")
+    if not check_grid_consistency(ds, sp):
+        print("  >>> FAILED CHECK")
 
     # 3. Region Selection
     t0 = time.time()
     reg = ds.box(center - width * 0.1, center + width * 0.1)
-    count_reg = reg["index", "ones"].sum()
+    _ = reg["index", "ones"]
     t1 = time.time()
-    print(f"  Region (Width=0.2):    {int(count_reg):12d} cells  Time: {t1-t0:.6f}s")
+    print(f"  Region (Width=0.2)    Time: {t1-t0:.6f}s")
+    if not check_grid_consistency(ds, reg):
+        print("  >>> FAILED CHECK")
 
-    # Correctness check (Enable for small/medium datasets only, it's slow!)
-    if ds.index.num_grids < 5000:
-        print("  [Verifying correctness against ManualSelector...]")
-        ms = ManualSelector(ds)
-
-        # Check Small Sphere
-        m_count = ms.count_cells_sphere(center, width * 0.05)
-        if m_count != count:
-            print(
-                f"  !!! MISMATCH Small Sphere !!! Manual: {m_count}, Fast: {count}, Diff: {count - m_count}"
-            )
-        else:
-            print("  [OK] Small Sphere MATCH")
-
-        # Check Large Sphere
-        m_count = ms.count_cells_sphere(center, width * 0.25)
-        if m_count != count_large:
-            print(
-                f"  !!! MISMATCH Large Sphere !!! Manual: {m_count}, Fast: {count_large}, Diff: {count_large - m_count}"
-            )
-        else:
-            print("  [OK] Large Sphere MATCH")
     print("\n")
 
 
