@@ -348,6 +348,21 @@ cdef class GridTreeSelector:
         visitor.fwidth = np.empty((size, 3), dtype="float64")
         self.visit_grids(visitor, selector)
         return np.asarray(visitor.fwidth)
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    def select_grids(self, SelectorObject selector):
+        cdef int i
+        cdef np.ndarray[np.uint8_t, ndim=1] mask
+        mask = np.zeros(self.tree.num_grids, dtype='uint8')
+        cdef GridTreeNode *grid
+        
+        for i in range(self.tree.num_grids):
+            grid = &self.tree.grids[i]
+            if selector.select_bbox(grid.left_edge, grid.right_edge) == 1:
+                mask[i] = 1
+        return mask.view("bool")
     
 cdef class MatchPointsToGrids:
 

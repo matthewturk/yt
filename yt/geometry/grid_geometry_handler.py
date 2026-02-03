@@ -379,6 +379,9 @@ class GridIndex(Index, abc.ABC):
             dobj.size = self._count_selection(dobj, indexer=indexer)
         if getattr(dobj, "shape", None) is None:
             dobj.shape = (dobj.size,)
+        if getattr(dobj, "_chunk_info", None) is None:
+            mask = indexer.select_grids(dobj.selector)
+            dobj._chunk_info = self.grids[mask]
         dobj._current_chunk = list(self._chunk_all(dobj, cache=False, indexer=indexer))[
             0
         ]
