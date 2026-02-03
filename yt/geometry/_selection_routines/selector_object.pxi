@@ -507,7 +507,7 @@ cdef class SelectorObject:
     @cython.cdivision(True)
     cdef void visit_grid_cells(self, GridVisitor visitor,
                               GridTreeNode *grid, int use_cache,
-                              np.uint8_t[:] cached_mask):
+                              np.uint8_t *cached_mask):
         # This function accepts a grid visitor function, the data that
         # corresponds to the current grid being examined (the most important
         # aspect of which is the .grid attribute, along with index values and
@@ -550,12 +550,17 @@ cdef class SelectorObject:
                         # child and it *is* selected.
                         if use_cache == 1:
                             selected = cached_mask[visitor.global_index]
+                        elif use_cache == 3:
+                            selected = ba_get_value(cached_mask, visitor.global_index)
                         else:
                             if this_level == 1 or child_mask[i,j,k] == 1:
                                 selected = self.select_cell(pos, dds)
                             else:
                                 selected = 0
-                            cached_mask[visitor.global_index] = selected
+                            if use_cache == 2:
+                                ba_set_value(cached_mask, visitor.global_index, selected)
+                            else:
+                                cached_mask[visitor.global_index] = selected
                         visitor.visit(grid, selected)
                         visitor.global_index += 1
                         pos[2] += dds[2]

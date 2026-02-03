@@ -22,6 +22,7 @@ from yt.utilities.lib.fnv_hash cimport c_fnv_hash as fnv_hash
 from yt.utilities.lib.fp_utils cimport fclip, fmax, fmin, iclip
 from yt.utilities.lib.grid_traversal cimport walk_volume
 from yt.utilities.lib.volume_container cimport VolumeContainer
+from yt.utilities.lib.bitarray cimport ba_get_value
 
 from .oct_container cimport Oct, OctreeContainer
 from .oct_visitors cimport cind

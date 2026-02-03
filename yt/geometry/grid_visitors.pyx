@@ -14,6 +14,7 @@ cimport numpy as np
 from libc.stdlib cimport free, malloc
 
 from yt.utilities.lib.fp_utils cimport iclip
+from yt.utilities.lib.bitarray cimport ba_set_value
 
 cdef class GridVisitor:
     def __cinit__(self):
@@ -125,6 +126,16 @@ cdef class MaskGridCells(GridVisitor):
         self.mask[self.global_index] = selected
         self.count += selected
         # No need to increment anything.
+
+cdef class BitMaskGridCells(GridVisitor):
+    @cython.initializedcheck(False)
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+        # Set our bitarray -- we're creating a mask -- if we are selected.
+        ba_set_value(self.mask, self.global_index, selected)
+        self.count += selected
 
 cdef class ICoordsGrids(GridVisitor):
     @cython.initializedcheck(False)

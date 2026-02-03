@@ -417,12 +417,14 @@ class GridIndex(Index, abc.ABC):
                 g = og.retrieve_ghost_zones(ngz, [], smoothed=True)
             else:
                 g = og
-            size = self._count_selection(dobj, [og])
+            grid_indices = np.array([g.id - g._id_offset], dtype="int64")
+            indexer = self.grid_tree.selector(grid_indices)
+            size = self._count_selection(dobj, indexer=indexer)
             if size == 0:
                 continue
             # We don't want to cache any of the masks or icoords or fcoords for
             # individual grids.
-            yield YTDataChunk(dobj, "spatial", [g], size, cache=False)
+            yield YTDataChunk(dobj, "spatial", [g], size, cache=False, indexer=indexer)
 
     _grid_chunksize = 1000
 
@@ -441,8 +443,6 @@ class GridIndex(Index, abc.ABC):
         preload_fields, _ = self._split_fields(preload_fields)
         gfiles = defaultdict(list)
         gobjs = getattr(dobj._current_chunk, "objs", dobj._chunk_info)
-        # We will need to uncomment this to use it
-        # indexer = dobj._current_chunk._indexer
         file_order = []
         for g in gobjs:
             # Force to be a string because sometimes g.filename is None.
@@ -475,15 +475,15 @@ class GridIndex(Index, abc.ABC):
         for fn in file_order:
             gs = gfiles[fn]
             for grids in (gs[pos : pos + size] for pos in range(0, len(gs), size)):
-                this_loop = np.zeros(self.grids.size, "uint8")
-                for g in grids:
-                    this_loop[g.id - g._id_offset] = 1
-                indexer2 = self.grid_tree.selector(this_loop)
+                grid_indices = np.array(
+                    [g.id - g._id_offset for g in grids], dtype="int64"
+                )
+                indexer2 = self.grid_tree.selector(grid_indices)
                 # Now, the order of the grids array is probably not the same as
                 # the order in the indexer, so we need to ask the indexer
                 # to sort it.
                 chunk_size = self._count_selection(dobj, grids, indexer=indexer2)
-                grids = self.grids[np.asarray(indexer2.grid_order)].tolist()
+                # grids = self.grids[np.asarray(indexer2.grid_order)].tolist()
                 dc = YTDataChunk(
                     dobj,
                     "io",

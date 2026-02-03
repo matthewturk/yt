@@ -65,7 +65,7 @@ cdef class SelectorObject:
                                 np.ndarray[np.uint8_t, ndim=3] mask,
                                 int level)
     cdef void visit_grid_cells(self, GridVisitor visitor, GridTreeNode *grid,
-                    int use_cache, np.uint8_t[:] cached_mask)
+                    int use_cache, np.uint8_t *cached_mask)
 
     # compute periodic distance (if periodicity set)
     # assuming 0->domain_width[d] coordinates

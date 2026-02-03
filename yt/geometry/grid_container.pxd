@@ -35,12 +35,14 @@ cdef class GridTree:
     cdef int num_grids
     cdef int num_root_grids
     cdef int num_leaf_grids
+    cdef int refine_by
     cdef np.uint64_t _visit_grid(self, GridTreeNode* grid, np.uint64_t[:] order,
                           np.uint64_t index)
 
 cdef class GridTreeSelector:
     cdef GridTree tree
     cdef np.uint8_t[:] mask
+    cdef bitarray bit_mask
     cdef np.uint8_t[:] grid_mask
     cdef public np.int64_t[:] grid_order
     cdef np.uint64_t size
@@ -49,6 +51,8 @@ cdef class GridTreeSelector:
     cdef np.uint64_t _counter
 
     cdef void visit_grids(self, GridVisitor visitor, SelectorObject selector)
+    cdef void visit_one_grid(self, GridVisitor visitor, SelectorObject selector,
+                             GridTreeNode *grid)
     cdef void recursively_visit_grid(self,
                           GridVisitor visitor,
                           SelectorObject selector,
