@@ -24,7 +24,7 @@ cdef class GridVisitor:
         self.child_tuples = NULL
         self.ref_factor = 2 #### FIX THIS
 
-    cdef void free_tuples(self) nogil:
+    cdef void free_tuples(self) noexcept nogil:
         # This wipes out the tuples, which is necessary since they are
         # heap-allocated
         cdef int i
@@ -102,16 +102,15 @@ cdef class GridVisitor:
             if k == 1: return 1 # Return 1 for child masked
         return 0 # Only return 0 if it doesn't match any of the children
 
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
-        with gil:
-            raise NotImplementedError
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
+        return
 
 cdef class CountGridCells(GridVisitor):
     @cython.initializedcheck(False)
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Simply increment for each one, if we've selected it.
         if selected == 0: return
         self.count += 1
@@ -121,7 +120,7 @@ cdef class MaskGridCells(GridVisitor):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Set our bitarray -- we're creating a mask -- if we are selected.
         self.mask[self.global_index] = selected
         self.count += selected
@@ -132,7 +131,7 @@ cdef class BitMaskGridCells(GridVisitor):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Set our bitarray -- we're creating a mask -- if we are selected.
         ba_set_value(self.mask, self.global_index, selected)
         self.count += selected
@@ -142,7 +141,7 @@ cdef class ICoordsGrids(GridVisitor):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Nice and easy icoord setter.
         if selected == 0: return
         cdef int i
@@ -155,7 +154,7 @@ cdef class IResGrids(GridVisitor):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Fill with the level value.
         if selected == 0: return
         self.ires[self.index] = grid.level
@@ -166,7 +165,7 @@ cdef class FWidthGrids(GridVisitor):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Fill with our dds.
         if selected == 0: return
         cdef int i
@@ -179,7 +178,7 @@ cdef class FCoordsGrids(GridVisitor):
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil:
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil:
         # Simple cell-centered position filling.
         if selected == 0: return
         cdef int i

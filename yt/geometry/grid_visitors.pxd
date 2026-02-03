@@ -71,9 +71,9 @@ cdef class GridVisitor:
                         # dimension in a cell of this grid.
 
     
-    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) nogil
+    cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil
 
-    cdef void free_tuples(self) nogil
+    cdef void free_tuples(self) noexcept nogil
     cdef void setup_tuples(self, GridTreeNode *grid) nogil
     cdef np.uint8_t check_child_masked(self) nogil
     cdef void expand_mask(self, np.uint8_t[:,:,:]) nogil
