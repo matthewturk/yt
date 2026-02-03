@@ -3,7 +3,6 @@ AMRVAC-specific fields
 
 """
 
-
 import functools
 
 import numpy as np
@@ -27,14 +26,14 @@ direction_aliases = {
 def _velocity(field, data, idir, prefix=None):
     """Velocity = linear momentum / density"""
     # This is meant to be used with functools.partial to produce
-    # functions with only 2 arguments (field, data)
+    # functions with only 2 arguments (data)
     # idir : int
     #    the direction index (1, 2 or 3)
     # prefix : str
     #    used to generalize to dust fields
     if prefix is None:
         prefix = ""
-    moment = data["gas", "%smoment_%d" % (prefix, idir)]
+    moment = data["gas", f"{prefix}moment_{idir}"]
     rho = data["gas", f"{prefix}density"]
 
     mask1 = rho == 0
@@ -60,12 +59,12 @@ class AMRVACFieldInfo(FieldInfoContainer):
     # for now, define a finite family of dust fields (up to 100 species)
     MAXN_DUST_SPECIES = 100
     known_dust_fields = [
-        ("rhod%d" % idust, (code_density, ["dust%d_density" % idust], None))
+        (f"rhod{idust}", (code_density, [f"dust{idust}_density"], None))
         for idust in range(1, MAXN_DUST_SPECIES + 1)
     ] + [
         (
-            "m%dd%d" % (idir, idust),
-            (code_moment, ["dust%d_moment_%d" % (idust, idir)], None),
+            f"m{idir}d{idust}",
+            (code_moment, [f"dust{idust}_moment_{idir}"], None),
         )
         for idust in range(1, MAXN_DUST_SPECIES + 1)
         for idir in (1, 2, 3)
@@ -92,12 +91,12 @@ class AMRVACFieldInfo(FieldInfoContainer):
         if idust is None:
             dust_flag = dust_label = ""
         else:
-            dust_flag = "d%d" % idust
-            dust_label = "dust%d_" % idust
+            dust_flag = f"d{idust}"
+            dust_label = f"dust{idust}_"
 
         us = self.ds.unit_system
         for idir, alias in enumerate(direction_aliases[self.ds.geometry], start=1):
-            if ("amrvac", "m%d%s" % (idir, dust_flag)) not in self.field_list:
+            if ("amrvac", f"m{idir}{dust_flag}") not in self.field_list:
                 break
             velocity_fn = functools.partial(_velocity, idir=idir, prefix=dust_label)
             self.add_field(
@@ -108,20 +107,20 @@ class AMRVACFieldInfo(FieldInfoContainer):
                 sampling_type="cell",
             )
             self.alias(
-                ("gas", "%svelocity_%d" % (dust_label, idir)),
+                ("gas", f"{dust_label}velocity_{idir}"),
                 ("gas", f"{dust_label}velocity_{alias}"),
                 units=us["velocity"],
             )
             self.alias(
                 ("gas", f"{dust_label}moment_{alias}"),
-                ("gas", "%smoment_%d" % (dust_label, idir)),
+                ("gas", f"{dust_label}moment_{idir}"),
                 units=us["density"] * us["velocity"],
             )
 
     def _setup_dust_fields(self):
         idust = 1
         imax = self.__class__.MAXN_DUST_SPECIES
-        while ("amrvac", "rhod%d" % idust) in self.field_list:
+        while ("amrvac", f"rhod{idust}") in self.field_list:
             if idust > imax:
                 mylog.error(
                     "Only the first %d dust species are currently read by yt. "
@@ -136,10 +135,10 @@ class AMRVACFieldInfo(FieldInfoContainer):
         us = self.ds.unit_system
         if n_dust_found > 0:
 
-            def _total_dust_density(field, data):
-                tot = np.zeros_like(data[("gas", "density")])
+            def _total_dust_density(data):
+                tot = np.zeros_like(data["gas", "density"])
                 for idust in range(1, n_dust_found + 1):
-                    tot += data["dust%d_density" % idust]
+                    tot += data[f"dust{idust}_density"]
                 return tot
 
             self.add_field(
@@ -150,8 +149,8 @@ class AMRVACFieldInfo(FieldInfoContainer):
                 sampling_type="cell",
             )
 
-            def dust_to_gas_ratio(field, data):
-                return data[("gas", "total_dust_density")] / data[("gas", "density")]
+            def dust_to_gas_ratio(data):
+                return data["gas", "total_dust_density"] / data["gas", "density"]
 
             self.add_field(
                 ("gas", "dust_to_gas_ratio"),
@@ -171,7 +170,7 @@ class AMRVACFieldInfo(FieldInfoContainer):
         # by increasing level of complexity
         us = self.ds.unit_system
 
-        def _kinetic_energy_density(field, data):
+        def _kinetic_energy_density(data):
             # devnote : have a look at issue 1301
             return 0.5 * data["gas", "density"] * data["gas", "velocity_magnitude"] ** 2
 
@@ -186,7 +185,7 @@ class AMRVACFieldInfo(FieldInfoContainer):
         # magnetic energy density
         if ("amrvac", "b1") in self.field_list:
 
-            def _magnetic_energy_density(field, data):
+            def _magnetic_energy_density(data):
                 emag = 0.5 * data["gas", "magnetic_1"] ** 2
                 for idim in "23":
                     if ("amrvac", f"b{idim}") not in self.field_list:
@@ -219,24 +218,24 @@ class AMRVACFieldInfo(FieldInfoContainer):
         # - if HD/MHD but solve_internal_e is true in parfile, P = (gamma-1)*e for both
         # - if (m)hd_energy is false in parfile (isothermal), P = c_adiab * rho**gamma
 
-        def _full_thermal_pressure_HD(field, data):
+        def _full_thermal_pressure_HD(data):
             # energy density and pressure are actually expressed in the same unit
             pthermal = (data.ds.gamma - 1) * (
                 data["gas", "energy_density"] - data["gas", "kinetic_energy_density"]
             )
             return pthermal
 
-        def _full_thermal_pressure_MHD(field, data):
+        def _full_thermal_pressure_MHD(data):
             pthermal = (
-                _full_thermal_pressure_HD(field, data)
+                _full_thermal_pressure_HD(data)
                 - (data.ds.gamma - 1) * data["gas", "magnetic_energy_density"]
             )
             return pthermal
 
-        def _polytropic_thermal_pressure(field, data):
+        def _polytropic_thermal_pressure(data):
             return (data.ds.gamma - 1) * data["gas", "energy_density"]
 
-        def _adiabatic_thermal_pressure(field, data):
+        def _adiabatic_thermal_pressure(data):
             return data.ds._c_adiab * data["gas", "density"] ** data.ds.gamma
 
         pressure_recipe = None
@@ -268,7 +267,7 @@ class AMRVACFieldInfo(FieldInfoContainer):
             )
 
             # sound speed and temperature depend on thermal pressure
-            def _sound_speed(field, data):
+            def _sound_speed(data):
                 return np.sqrt(
                     data.ds.gamma
                     * data["gas", "thermal_pressure"]

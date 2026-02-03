@@ -19,7 +19,6 @@ from yt.testing import (
     assert_allclose_units,
     assert_fname,
     assert_rel_equal,
-    assert_true,
     fake_amr_ds,
     fake_random_ds,
     requires_file,
@@ -45,7 +44,7 @@ from yt.visualization.plot_window import (
 )
 
 
-def setup():
+def setup_module():
     """Test specific setup."""
     from yt.config import ytcfg
 
@@ -275,7 +274,7 @@ class TestSetWidth(unittest.TestCase):
             [self.slc.xlim, self.slc.ylim, self.slc.width],
             [(0.0, 1.0), (0.0, 1.0), (1.0, 1.0)],
         )
-        assert_true(self.slc._axes_unit_names is None)
+        assert self.slc._axes_unit_names is None
 
     def test_set_width_nonequal(self):
         self.slc.set_width((0.5, 0.8))
@@ -284,22 +283,22 @@ class TestSetWidth(unittest.TestCase):
             [(0.25, 0.75), (0.1, 0.9), (0.5, 0.8)],
             15,
         )
-        assert_true(self.slc._axes_unit_names is None)
+        assert self.slc._axes_unit_names is None
 
     def test_twoargs_eq(self):
         self.slc.set_width(0.5, "cm")
         self._assert_05cm()
-        assert_true(self.slc._axes_unit_names == ("cm", "cm"))
+        assert self.slc._axes_unit_names == ("cm", "cm")
 
     def test_tuple_eq(self):
         self.slc.set_width((0.5, "cm"))
         self._assert_05cm()
-        assert_true(self.slc._axes_unit_names == ("cm", "cm"))
+        assert self.slc._axes_unit_names == ("cm", "cm")
 
     def test_tuple_of_tuples_neq(self):
         self.slc.set_width(((0.5, "cm"), (0.75, "cm")))
         self._assert_05_075cm()
-        assert_true(self.slc._axes_unit_names == ("cm", "cm"))
+        assert self.slc._axes_unit_names == ("cm", "cm")
 
 
 class TestPlotWindowSave(unittest.TestCase):
@@ -387,10 +386,14 @@ class TestPlotWindowSave(unittest.TestCase):
             ylim = [plot.ds.quan(el[0], el[1]) for el in ylim]
             pwidth = [plot.ds.quan(el[0], el[1]) for el in pwidth]
 
-            [assert_array_almost_equal(px, x, 14) for px, x in zip(plot.xlim, xlim)]
-            [assert_array_almost_equal(py, y, 14) for py, y in zip(plot.ylim, ylim)]
-            [assert_array_almost_equal(pw, w, 14) for pw, w in zip(plot.width, pwidth)]
-            assert_true(aun == plot._axes_unit_names)
+            for px, x in zip(plot.xlim, xlim, strict=True):
+                assert_array_almost_equal(px, x, 14)
+            for py, y in zip(plot.ylim, ylim, strict=True):
+                assert_array_almost_equal(py, y, 14)
+            for pw, w in zip(plot.width, pwidth, strict=True):
+                assert_array_almost_equal(pw, w, 14)
+
+            assert aun == plot._axes_unit_names
 
 
 class TestPerFieldConfig(unittest.TestCase):
@@ -482,7 +485,7 @@ def test_on_off_compare():
     den = np.arange(32**3) / 32**2 + 1
     den = den.reshape(32, 32, 32)
     den = np.array(den, dtype=np.float64)
-    data = dict(density=(den, "g/cm**3"))
+    data = {"density": (den, "g/cm**3")}
     bbox = np.array([[-1.5, 1.5], [-1.5, 1.5], [-1.5, 1.5]])
     ds = load_uniform_grid(data, den.shape, length_unit="Mpc", bbox=bbox, nprocs=64)
 
@@ -494,18 +497,14 @@ def test_on_off_compare():
         ds, L, ("gas", "density"), center=[0, 0, 0], north_vector=north_vector
     )
 
-    assert_array_almost_equal(
-        sl_on.frb[("gas", "density")], sl_off.frb[("gas", "density")]
-    )
+    assert_array_almost_equal(sl_on.frb["gas", "density"], sl_off.frb["gas", "density"])
 
     sl_on.set_buff_size((800, 400))
     sl_on._recreate_frb()
     sl_off.set_buff_size((800, 400))
     sl_off._recreate_frb()
 
-    assert_array_almost_equal(
-        sl_on.frb[("gas", "density")], sl_off.frb[("gas", "density")]
-    )
+    assert_array_almost_equal(sl_on.frb["gas", "density"], sl_off.frb["gas", "density"])
 
 
 def test_plot_particle_field_error():
@@ -593,7 +592,7 @@ def test_setup_origin():
     ]
     for o in origin_inputs:
         slc = SlicePlot(ds, 2, ("gas", "density"), width=w, origin=o)
-        ax = slc.plots[("gas", "density")].axes
+        ax = slc.plots["gas", "density"].axes
         xlims = ax.get_xlim()
         ylims = ax.get_ylim()
         lims = [xlims[0], xlims[1], ylims[0], ylims[1]]
@@ -606,9 +605,9 @@ def test_frb_regen():
     ds = fake_random_ds(32)
     slc = SlicePlot(ds, 2, ("gas", "density"))
     slc.set_buff_size(1200)
-    assert_equal(slc.frb[("gas", "density")].shape, (1200, 1200))
+    assert_equal(slc.frb["gas", "density"].shape, (1200, 1200))
     slc.set_buff_size((400.0, 200.7))
-    assert_equal(slc.frb[("gas", "density")].shape, (200, 400))
+    assert_equal(slc.frb["gas", "density"].shape, (200, 400))
 
 
 def test_set_background_color():
@@ -616,7 +615,7 @@ def test_set_background_color():
     plot = SlicePlot(ds, 2, ("gas", "density"))
     plot.set_background_color(("gas", "density"), "red")
     plot.render()
-    ax = plot.plots[("gas", "density")].axes
+    ax = plot.plots["gas", "density"].axes
     assert_equal(ax.get_facecolor(), (1.0, 0.0, 0.0, 1.0))
 
 
@@ -690,36 +689,32 @@ def test_plot_2d():
         width=(0.2, "unitary"),
         center=ds.arr([0.4, 0.3], "cm"),
     )
-    assert_array_equal(
-        slc.frb[("gas", "temperature")], slc2.frb[("gas", "temperature")]
-    )
-    assert_array_equal(
-        slc.frb[("gas", "temperature")], slc3.frb[("gas", "temperature")]
-    )
+    assert_array_equal(slc.frb["gas", "temperature"], slc2.frb["gas", "temperature"])
+    assert_array_equal(slc.frb["gas", "temperature"], slc3.frb["gas", "temperature"])
     # Cylindrical
     ds = data_dir_load(WD)
     slc = SlicePlot(ds, "theta", [("gas", "density")], width=(30000.0, "km"))
     slc2 = plot_2d(ds, ("gas", "density"), width=(30000.0, "km"))
-    assert_array_equal(slc.frb[("gas", "density")], slc2.frb[("gas", "density")])
+    assert_array_equal(slc.frb["gas", "density"], slc2.frb["gas", "density"])
 
     # Spherical
     ds = data_dir_load(blast_wave)
     slc = SlicePlot(ds, "phi", [("gas", "density")], width=(1, "unitary"))
     slc2 = plot_2d(ds, ("gas", "density"), width=(1, "unitary"))
-    assert_array_equal(slc.frb[("gas", "density")], slc2.frb[("gas", "density")])
+    assert_array_equal(slc.frb["gas", "density"], slc2.frb["gas", "density"])
 
 
 def test_symlog_colorbar():
     ds = fake_random_ds(16)
 
-    def _thresh_density(field, data):
-        wh = data[("gas", "density")] < 0.5
-        ret = data[("gas", "density")]
+    def _thresh_density(data):
+        wh = data["gas", "density"] < 0.5
+        ret = data["gas", "density"]
         ret[wh] = 0
         return ret
 
-    def _neg_density(field, data):
-        return -data[("gas", "threshold_density")]
+    def _neg_density(data):
+        return -data["gas", "threshold_density"]
 
     ds.add_field(
         ("gas", "threshold_density"),

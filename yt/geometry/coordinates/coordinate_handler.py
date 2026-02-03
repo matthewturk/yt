@@ -2,7 +2,7 @@ import abc
 import weakref
 from functools import cached_property
 from numbers import Number
-from typing import Optional, Tuple
+from typing import Any, Literal, overload
 
 import numpy as np
 
@@ -12,16 +12,16 @@ from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTCoordinateNotImplemented, YTInvalidWidthError
 
 
-def _unknown_coord(field, data):
+def _unknown_coord(data):
     raise YTCoordinateNotImplemented
 
 
 def _get_coord_fields(axi, units="code_length"):
-    def _dds(field, data):
+    def _dds(data):
         rv = data.ds.arr(data.fwidth[..., axi].copy(), units)
         return data._reshape_vals(rv)
 
-    def _coords(field, data):
+    def _coords(data):
         rv = data.ds.arr(data.fcoords[..., axi].copy(), units)
         return data._reshape_vals(rv)
 
@@ -29,14 +29,14 @@ def _get_coord_fields(axi, units="code_length"):
 
 
 def _get_vert_fields(axi, units="code_length"):
-    def _vert(field, data):
+    def _vert(data):
         rv = data.ds.arr(data.fcoords_vertex[..., axi].copy(), units)
         return rv
 
     return _vert
 
 
-def _setup_dummy_cartesian_coords_and_widths(registry, axes: Tuple[str]):
+def _setup_dummy_cartesian_coords_and_widths(registry, axes: tuple[str]):
     for ax in axes:
         registry.add_field(
             ("index", f"d{ax}"), sampling_type="cell", function=_unknown_coord
@@ -79,7 +79,7 @@ def _setup_polar_coordinates(registry, axis_id):
         units="dimensionless",
     )
 
-    def _path_r(field, data):
+    def _path_r(data):
         return data["index", "dr"]
 
     registry.add_field(
@@ -89,7 +89,7 @@ def _setup_polar_coordinates(registry, axis_id):
         units="code_length",
     )
 
-    def _path_theta(field, data):
+    def _path_theta(data):
         # Note: this already assumes cell-centered
         return data["index", "r"] * data["index", "dtheta"]
 
@@ -134,7 +134,7 @@ class CoordinateHandler(abc.ABC):
     name: str
     _default_axis_order: AxisOrder
 
-    def __init__(self, ds, ordering: Optional[AxisOrder] = None):
+    def __init__(self, ds, ordering: AxisOrder | None = None):
         self.ds = weakref.proxy(ds)
         if ordering is not None:
             self.axis_order = ordering
@@ -146,8 +146,49 @@ class CoordinateHandler(abc.ABC):
         # This should return field definitions for x, y, z, r, theta, phi
         pass
 
+    @overload
+    def pixelize(
+        self,
+        dimension,
+        data_source,
+        field,
+        bounds,
+        size,
+        antialias=True,
+        periodic=True,
+        *,
+        return_mask: Literal[False],
+    ) -> "np.ndarray[Any, np.dtype[np.float64]]": ...
+
+    @overload
+    def pixelize(
+        self,
+        dimension,
+        data_source,
+        field,
+        bounds,
+        size,
+        antialias=True,
+        periodic=True,
+        *,
+        return_mask: Literal[True],
+    ) -> tuple[
+        "np.ndarray[Any, np.dtype[np.float64]]", "np.ndarray[Any, np.dtype[np.bool_]]"
+    ]: ...
+
     @abc.abstractmethod
-    def pixelize(self, dimension, data_source, field, bounds, size, antialias=True):
+    def pixelize(
+        self,
+        dimension,
+        data_source,
+        field,
+        bounds,
+        size,
+        antialias=True,
+        periodic=True,
+        *,
+        return_mask=False,
+    ):
         # This should *actually* be a pixelize call, not just returning the
         # pixelizer
         pass
@@ -187,11 +228,11 @@ class CoordinateHandler(abc.ABC):
 
     @cached_property
     def data_projection(self):
-        return {ax: None for ax in self.axis_order}
+        return dict.fromkeys(self.axis_order)
 
     @cached_property
     def data_transform(self):
-        return {ax: None for ax in self.axis_order}
+        return dict.fromkeys(self.axis_order)
 
     @cached_property
     def axis_name(self):
@@ -313,7 +354,7 @@ def cylindrical_to_cartesian(coord, center=(0, 0, 0)):
     return c2
 
 
-def _get_polar_bounds(self: CoordinateHandler, axes: Tuple[str, str]):
+def _get_polar_bounds(self: CoordinateHandler, axes: tuple[str, str]):
     # a small helper function that is needed by two unrelated classes
     ri = self.axis_id[axes[0]]
     pi = self.axis_id[axes[1]]

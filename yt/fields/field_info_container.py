@@ -1,7 +1,6 @@
 import sys
 from collections import UserDict
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple
 
 from unyt.exceptions import UnitConversionError
 
@@ -48,17 +47,17 @@ class FieldInfoContainer(UserDict):
     fallback = None
     known_other_fields: KnownFieldsT = ()
     known_particle_fields: KnownFieldsT = ()
-    extra_union_fields: Tuple[FieldKey, ...] = ()
+    extra_union_fields: tuple[FieldKey, ...] = ()
 
-    def __init__(self, ds, field_list: List[FieldKey], slice_info=None):
+    def __init__(self, ds, field_list: list[FieldKey], slice_info=None):
         super().__init__()
-        self._show_field_errors: List[Exception] = []
+        self._show_field_errors: list[Exception] = []
         self.ds = ds
         # Now we start setting things up.
         self.field_list = field_list
         self.slice_info = slice_info
-        self.field_aliases: Dict[FieldKey, FieldKey] = {}
-        self.species_names: List[FieldName] = []
+        self.field_aliases: dict[FieldKey, FieldKey] = {}
+        self.species_names: list[FieldName] = []
         self.setup_fluid_aliases()
 
     @property
@@ -66,6 +65,7 @@ class FieldInfoContainer(UserDict):
         issue_deprecation_warning(
             "FieldInfoContainer.curvilinear attribute is deprecated. "
             "Please compare the internal dataset geometry directly to known Geometry enum members instead. ",
+            stacklevel=3,
             since="4.2",
         )
         geometry = self.ds.geometry
@@ -215,36 +215,33 @@ class FieldInfoContainer(UserDict):
         self.alias((ftype, "particle_mass"), (ptype, "particle_mass"))
 
     # Collect the names for all aliases if geometry is curvilinear
-    def get_aliases_gallery(self) -> List[FieldName]:
-        aliases_gallery: List[FieldName] = []
+    def get_aliases_gallery(self) -> list[FieldName]:
+        aliases_gallery: list[FieldName] = []
         known_other_fields = dict(self.known_other_fields)
 
         if self.ds is None:
             return aliases_gallery
 
-        geometry: Geometry = self.ds.geometry
-        if (
-            geometry is Geometry.POLAR
-            or geometry is Geometry.CYLINDRICAL
-            or geometry is Geometry.SPHERICAL
-        ):
-            aliases: List[FieldName]
-            for field in sorted(self.field_list):
-                if field[0] in self.ds.particle_types:
-                    continue
-                args = known_other_fields.get(field[1], ("", [], None))
-                units, aliases, display_name = args
-                aliases_gallery.extend(aliases)
-        elif (
-            geometry is Geometry.CARTESIAN
-            or geometry is Geometry.GEOGRAPHIC
-            or geometry is Geometry.INTERNAL_GEOGRAPHIC
-            or geometry is Geometry.SPECTRAL_CUBE
-        ):
-            # nothing to do
-            pass
-        else:
-            assert_never(geometry)
+        match self.ds.geometry:
+            case Geometry.POLAR | Geometry.CYLINDRICAL | Geometry.SPHERICAL:
+                aliases: list[FieldName]
+                for field in sorted(self.field_list):
+                    if field[0] in self.ds.particle_types:
+                        continue
+                    args = known_other_fields.get(field[1], ("", [], None))
+                    units, aliases, display_name = args
+                    aliases_gallery.extend(aliases)
+            case (
+                Geometry.CARTESIAN
+                | Geometry.GEOGRAPHIC
+                | Geometry.INTERNAL_GEOGRAPHIC
+                | Geometry.SPECTRAL_CUBE
+            ):
+                # nothing to do
+                pass
+            case _:
+                assert_never(self.ds.geometry)
+
         return aliases_gallery
 
     def setup_fluid_aliases(self, ftype: FieldType = "gas") -> None:
@@ -266,7 +263,7 @@ class FieldInfoContainer(UserDict):
                 try:
                     node = ytcfg.get("fields", *field).as_dict()
                 except KeyError:
-                    node = dict()
+                    node = {}
 
                 units = node.get("units", "")
                 aliases = node.get("aliases", [])
@@ -280,38 +277,26 @@ class FieldInfoContainer(UserDict):
                 field, sampling_type="cell", units=units, display_name=display_name
             )
             axis_names = self.ds.coordinates.axis_order
-            geometry: Geometry = self.ds.geometry
             for alias in aliases:
-                if (
-                    geometry is Geometry.POLAR
-                    or geometry is Geometry.CYLINDRICAL
-                    or geometry is Geometry.SPHERICAL
-                ):
-                    if alias[-2:] not in ["_x", "_y", "_z"]:
-                        to_convert = False
-                    else:
-                        for suffix in ["x", "y", "z"]:
-                            if f"{alias[:-2]}_{suffix}" not in aliases_gallery:
-                                to_convert = False
-                                break
-                        to_convert = True
-                    if to_convert:
-                        if alias[-2:] == "_x":
-                            alias = f"{alias[:-2]}_{axis_names[0]}"
-                        elif alias[-2:] == "_y":
-                            alias = f"{alias[:-2]}_{axis_names[1]}"
-                        elif alias[-2:] == "_z":
-                            alias = f"{alias[:-2]}_{axis_names[2]}"
-                elif (
-                    geometry is Geometry.CARTESIAN
-                    or geometry is Geometry.GEOGRAPHIC
-                    or geometry is Geometry.INTERNAL_GEOGRAPHIC
-                    or geometry is Geometry.SPECTRAL_CUBE
-                ):
-                    # nothing to do
-                    pass
-                else:
-                    assert_never(geometry)
+                match self.ds.geometry:
+                    case Geometry.POLAR | Geometry.CYLINDRICAL | Geometry.SPHERICAL:
+                        KNOWN_SUFFIXES = ("x", "y", "z")
+                        stem, _, suffix = alias.rpartition("_")
+                        if suffix in KNOWN_SUFFIXES and all(
+                            f"{stem}_{s}" in aliases_gallery for s in KNOWN_SUFFIXES
+                        ):
+                            new_suffix = axis_names[KNOWN_SUFFIXES.index(suffix)]
+                            alias = f"{stem}_{new_suffix}"
+                    case (
+                        Geometry.CARTESIAN
+                        | Geometry.GEOGRAPHIC
+                        | Geometry.INTERNAL_GEOGRAPHIC
+                        | Geometry.SPECTRAL_CUBE
+                    ):
+                        # nothing to do
+                        pass
+                    case _:
+                        assert_never(self.ds.geometry)
                 self.alias((ftype, alias), field)
 
     @staticmethod
@@ -349,7 +334,7 @@ class FieldInfoContainer(UserDict):
         function: Callable,
         sampling_type: str,
         *,
-        alias: Optional[DerivedField] = None,
+        alias: DerivedField | None = None,
         force_override: bool = False,
         **kwargs,
     ) -> None:
@@ -366,7 +351,7 @@ class FieldInfoContainer(UserDict):
            field (or particle) type, field name
         function : callable
            A function handle that defines the field.  Should accept
-           arguments (field, data)
+           arguments (data)
         sampling_type: str
            "cell" or "particle" or "local"
         force_override: bool
@@ -406,7 +391,7 @@ class FieldInfoContainer(UserDict):
         else:
             raise ValueError(f"Expected name to be a tuple[str, str], got {name}")
 
-    def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
+    def load_all_plugins(self, ftype: str | None = "gas") -> None:
         if ftype is None:
             return
         mylog.debug("Loading field plugins for field type: %s.", ftype)
@@ -450,8 +435,8 @@ class FieldInfoContainer(UserDict):
         self,
         alias_name: FieldKey,
         original_name: FieldKey,
-        units: Optional[str] = None,
-        deprecate: Optional[Tuple[str, Optional[str]]] = None,
+        units: str | None = None,
+        deprecate: tuple[str, str | None] | None = None,
     ):
         """
         Alias one field to another field.
@@ -535,7 +520,7 @@ class FieldInfoContainer(UserDict):
            is the name of the field.
         function : callable
            A function handle that defines the field.  Should accept
-           arguments (field, data)
+           arguments (data)
         sampling_type : str
            "cell" or "particle" or "local"
         since : str

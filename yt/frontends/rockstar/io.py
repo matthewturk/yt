@@ -1,10 +1,31 @@
 import os
+from collections.abc import Sequence
 
 import numpy as np
 
+from yt.utilities import fortran_utils as fpu
 from yt.utilities.io_handler import BaseParticleIOHandler
 
-from .definitions import halo_dts
+from .definitions import halo_dts, header_dt
+
+
+def _can_load_with_format(
+    filename: str, header_fmt: Sequence[tuple[str, int, str]], halo_format: np.dtype
+) -> bool:
+    with open(filename, "rb") as f:
+        header = fpu.read_cattrs(f, header_fmt, "=")
+        Nhalos = header["num_halos"]
+        Nparttot = header["num_particles"]
+        halos = np.fromfile(f, dtype=halo_format, count=Nhalos)
+
+        # Make sure all masses are > 0
+        if np.any(halos["particle_mass"] <= 0):
+            return False
+        # Make sure number of particles sums to expected value
+        if halos["num_p"].sum() != Nparttot:
+            return False
+
+    return True
 
 
 class IOHandlerRockstarBinary(BaseParticleIOHandler):
@@ -12,23 +33,36 @@ class IOHandlerRockstarBinary(BaseParticleIOHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._halo_dt = halo_dts[self.ds.parameters["format_revision"]]
+        self._halo_dt = self.detect_rockstar_format(
+            self.ds.filename,
+            self.ds.parameters["format_revision"],
+        )
+
+    @staticmethod
+    def detect_rockstar_format(
+        filename: str,
+        guess: int,
+    ) -> np.dtype:
+        revisions: list[int] = list(halo_dts.keys())
+        if guess in revisions:
+            revisions.pop(revisions.index(guess))
+        revisions = [guess] + revisions
+        for revision in revisions:
+            if _can_load_with_format(filename, header_dt, halo_dts[revision]):
+                return halo_dts[revision]
+        raise RuntimeError(f"Could not detect Rockstar format for file {filename}")
 
     def _read_fluid_selection(self, chunks, selector, fields, size):
         raise NotImplementedError
 
     def _read_particle_coords(self, chunks, ptf):
         # This will read chunks and yield the results.
-        chunks = list(chunks)
-        data_files = set()
+
         # Only support halo reading for now.
         assert len(ptf) == 1
         assert list(ptf.keys())[0] == "halos"
         ptype = "halos"
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
-        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+        for data_file in self._sorted_chunk_iterator(chunks):
             pcount = data_file.header["num_halos"]
             if pcount == 0:
                 continue
@@ -37,16 +71,10 @@ class IOHandlerRockstarBinary(BaseParticleIOHandler):
                 yield "halos", (pos[:, i] for i in range(3)), 0.0
 
     def _read_particle_fields(self, chunks, ptf, selector):
-        # Now we have all the sizes, and we can allocate
-        chunks = list(chunks)
-        data_files = set()
         # Only support halo reading for now.
         assert len(ptf) == 1
         assert list(ptf.keys())[0] == "halos"
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
-        for data_file in sorted(data_files, key=lambda x: (x.filename, x.start)):
+        for data_file in self._sorted_chunk_iterator(chunks):
             si, ei = data_file.start, data_file.end
             pcount = data_file.header["num_halos"]
             if pcount == 0:

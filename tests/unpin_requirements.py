@@ -1,6 +1,12 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "tomli ; python_full_version < '3.11'",
+#     "tomli-w",
+# ]
+# ///
 import re
 import sys
-from typing import List
 
 import tomli_w
 
@@ -12,7 +18,7 @@ else:
 PINNED_VERSION_REGEXP = re.compile(r",?(<|<=|==)([0-9a-z]+\.?)+")
 
 
-def unpin_requirements(requirements: List[str]) -> List[str]:
+def unpin_requirements(requirements: list[str]) -> list[str]:
     return [re.sub(PINNED_VERSION_REGEXP, "", _) for _ in requirements]
 
 

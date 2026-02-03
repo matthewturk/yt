@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Tuple, Union
 
 import numpy as np
 
@@ -63,7 +62,7 @@ class FieldDetector(defaultdict):
             ds.domain_left_edge = np.zeros(3, "float64")
             ds.domain_right_edge = np.ones(3, "float64")
             ds.dimensionality = 3
-            ds.force_periodicity()
+            ds.periodicity = (True, True, True)
         self.ds = ds
 
         class fake_index:
@@ -81,17 +80,18 @@ class FieldDetector(defaultdict):
         self.index = fake_index()
         self.requested = []
         self.requested_parameters = []
+        rng = np.random.default_rng()
         if not self.flat:
             defaultdict.__init__(
                 self,
                 lambda: np.ones((nd, nd, nd), dtype="float64")
-                + 1e-4 * np.random.random((nd, nd, nd)),
+                + 1e-4 * rng.random((nd, nd, nd)),
             )
         else:
             defaultdict.__init__(
                 self,
                 lambda: np.ones((nd * nd * nd), dtype="float64")
-                + 1e-4 * np.random.random(nd * nd * nd),
+                + 1e-4 * rng.random(nd * nd * nd),
             )
 
     def _reshape_vals(self, arr):
@@ -101,7 +101,7 @@ class FieldDetector(defaultdict):
             return arr
         return arr.reshape(self.ActiveDimensions, order="C")
 
-    def __missing__(self, item: Union[Tuple[str, str], str]):
+    def __missing__(self, item: tuple[str, str] | str):
         from yt.fields.derived_field import NullFunc
 
         if not isinstance(item, tuple):
@@ -117,7 +117,7 @@ class FieldDetector(defaultdict):
         # types not getting correctly identified.
         # Note that the *only* way this works is if we also fix our field
         # dependencies during checking.  Bug #627 talks about this.
-        _item: Tuple[str, str] = finfo.name
+        _item: tuple[str, str] = finfo.name
         if finfo is not None and finfo._function is not NullFunc:
             try:
                 for param, param_v in permute_params.items():
@@ -194,15 +194,18 @@ class FieldDetector(defaultdict):
         if kwargs["method"] == "mesh_id":
             if isinstance(self.ds, (StreamParticlesDataset, ParticleDataset)):
                 raise ValueError
-        return np.random.random((self.nd, self.nd, self.nd))
+        rng = np.random.default_rng()
+        return rng.random((self.nd, self.nd, self.nd))
 
     def mesh_sampling_particle_field(self, *args, **kwargs):
         pos = args[0]
         npart = len(pos)
-        return np.random.rand(npart)
+        rng = np.random.default_rng()
+        return rng.random(npart)
 
     def smooth(self, *args, **kwargs):
-        tr = np.random.random((self.nd, self.nd, self.nd))
+        rng = np.random.default_rng()
+        tr = rng.random((self.nd, self.nd, self.nd))
         if kwargs["method"] == "volume_weighted":
             return [tr]
 
@@ -235,7 +238,8 @@ class FieldDetector(defaultdict):
                     unit = "G"
             else:
                 unit = fp_units[param]
-            return self.ds.arr(np.random.random(3) * 1e-2, unit)
+            rng = np.random.default_rng()
+            return self.ds.arr(rng.random(3) * 1e-2, unit)
         elif param in ["surface_height"]:
             return self.ds.quan(0.0, "code_length")
         elif param in ["axis"]:
@@ -272,17 +276,19 @@ class FieldDetector(defaultdict):
             np.mgrid[0 : 1 : self.nd * 1j, 0 : 1 : self.nd * 1j, 0 : 1 : self.nd * 1j]
         )
         if self.flat:
-            fc.shape = (self.nd * self.nd * self.nd, 3)
+            fc = fc.reshape(self.nd * self.nd * self.nd, 3)
         else:
             fc = fc.transpose()
         return self.ds.arr(fc, units="code_length")
 
     @property
     def fcoords_vertex(self):
-        fc = np.random.random((self.nd, self.nd, self.nd, 8, 3))
         if self.flat:
-            fc.shape = (self.nd * self.nd * self.nd, 8, 3)
-        return self.ds.arr(fc, units="code_length")
+            shape = (self.nd * self.nd * self.nd, 8, 3)
+        else:
+            shape = (self.nd, self.nd, self.nd, 8, 3)
+        rng = np.random.default_rng()
+        return self.ds.arr(rng.random(shape), units="code_length")
 
     @property
     def icoords(self):
@@ -292,21 +298,23 @@ class FieldDetector(defaultdict):
             0 : self.nd - 1 : self.nd * 1j,
         ]
         if self.flat:
-            ic.shape = (self.nd * self.nd * self.nd, 3)
+            return ic.reshape(self.nd * self.nd * self.nd, 3)
         else:
-            ic = ic.transpose()
-        return ic
+            return ic.transpose()
 
     @property
     def ires(self):
-        ir = np.ones(self.nd**3, dtype="int64")
-        if not self.flat:
-            ir.shape = (self.nd, self.nd, self.nd)
-        return ir
+        if self.flat:
+            shape = (self.nd**3,)
+        else:
+            shape = (self.nd, self.nd, self.nd)
+        return np.ones(shape, dtype="int64")
 
     @property
     def fwidth(self):
-        fw = np.ones((self.nd**3, 3), dtype="float64") / self.nd
-        if not self.flat:
-            fw.shape = (self.nd, self.nd, self.nd, 3)
+        if self.flat:
+            shape = (self.nd**3, 3)
+        else:
+            shape = (self.nd, self.nd, self.nd, 3)
+        fw = np.full(shape, 1 / self.nd, dtype="float64")
         return self.ds.arr(fw, units="code_length")

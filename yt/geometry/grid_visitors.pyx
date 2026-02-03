@@ -55,9 +55,9 @@ cdef class GridVisitor:
             # Now we fill them in
             for j in range(3):
                 si = (c.start_index[j] / self.ref_factor) - grid.start_index[j]
-                ei = si + c.dims[j]/self.ref_factor
-                self.child_tuples[i][j*2+0] = iclip(si, 0, grid.dims[j])
-                self.child_tuples[i][j*2+1] = iclip(ei, 0, grid.dims[j])
+                ei = si + c.dims[j]/self.ref_factor - 1
+                self.child_tuples[i][j*2+0] = iclip(si, 0, grid.dims[j] - 1)
+                self.child_tuples[i][j*2+1] = iclip(ei, 0, grid.dims[j] - 1)
         self.n_tuples = grid.num_children
 
     @cython.boundscheck(False)
@@ -75,9 +75,9 @@ cdef class GridVisitor:
             # k is if we're inside a given child tuple.  We check each one
             # individually, and invalidate if we're outside.
             tup = self.child_tuples[ti]
-            for i in range(tup[0], tup[1]):
-                for j in range(tup[2], tup[3]):
-                    for k in range(tup[4], tup[5]):
+            for i in range(tup[0], tup[1] + 1):
+                for j in range(tup[2], tup[3] + 1):
+                    for k in range(tup[4], tup[5] + 1):
                         child_mask[i,j,k] = 0
 
     @cython.boundscheck(False)

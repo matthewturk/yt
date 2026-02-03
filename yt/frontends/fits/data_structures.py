@@ -5,10 +5,8 @@ import warnings
 import weakref
 from collections import defaultdict
 from functools import cached_property
-from typing import Type
 
 import numpy as np
-import numpy.core.defchararray as np_char
 from more_itertools import always_iterable
 
 from yt.config import ytcfg
@@ -102,7 +100,7 @@ class FITSHierarchy(GridIndex):
         ds = self.dataset
         conditions = [hdu.header["naxis"] != ds.primary_header["naxis"]]
         for i in range(ds.naxis):
-            nax = "naxis%d" % (i + 1)
+            nax = f"naxis{i + 1}"
             conditions.append(hdu.header[nax] != ds.primary_header[nax])
         if np.any(conditions):
             return False
@@ -145,9 +143,9 @@ class FITSHierarchy(GridIndex):
                         fname = self._guess_name_from_units(units)
                         # When all else fails
                         if fname is None:
-                            fname = "image_%d" % (j)
+                            fname = f"image_{j}"
                     if self.ds.num_files > 1 and fname.startswith("image"):
-                        fname += "_file_%d" % (i)
+                        fname += f"_file_{i}"
                     if ("fits", fname) in self.field_list:
                         if fname in dup_field_index:
                             dup_field_index[fname] += 1
@@ -161,10 +159,10 @@ class FITSHierarchy(GridIndex):
                             fname,
                             dup_field_index[fname],
                         )
-                        fname += "_%d" % (dup_field_index[fname])
+                        fname += f"_{dup_field_index[fname]}"
                     for k in range(naxis4):
                         if naxis4 > 1:
-                            fname += "_%s_%d" % (hdu.header["CTYPE4"], k + 1)
+                            fname += f"_{hdu.header['CTYPE4']}_{k + 1}"
                         self._axis_map[fname] = k
                         self._file_map[fname] = fits_file
                         self._ext_map[fname] = j
@@ -214,7 +212,7 @@ class FITSHierarchy(GridIndex):
         ).transpose()
         dims = self.ds.domain_dimensions
         psize = get_psize(dims, self.num_grids)
-        gle, gre, shapes, slices = decompose_array(dims, psize, bbox)
+        gle, gre, shapes, slices, _ = decompose_array(dims, psize, bbox)
         self.grid_left_edge = self.ds.arr(gle, "code_length")
         self.grid_right_edge = self.ds.arr(gre, "code_length")
         self.grid_dimensions = np.array(shapes, dtype="int32")
@@ -302,7 +300,7 @@ def check_sky_coords(filename, ndim):
                 if header["naxis"] < ndim:
                     return False
                 axis_names = [
-                    header.get("ctype%d" % (i + 1), "") for i in range(header["naxis"])
+                    header.get(f"ctype{i + 1}", "") for i in range(header["naxis"])
                 ]
                 if len(axis_names) == 3 and axis_names.count("LINEAR") == 2:
                     return any(a[0] in spec_prefixes for a in axis_names)
@@ -315,8 +313,9 @@ def check_sky_coords(filename, ndim):
 
 
 class FITSDataset(Dataset):
+    _load_requirements = ["astropy"]
     _index_class = FITSHierarchy
-    _field_info_class: Type[FieldInfoContainer] = FITSFieldInfo
+    _field_info_class: type[FieldInfoContainer] = FITSFieldInfo
     _dataset_type = "fits"
     _handle = None
 
@@ -426,9 +425,16 @@ class FITSDataset(Dataset):
         self.magnetic_unit.convert_to_units("gauss")
         self.velocity_unit = self.length_unit / self.time_unit
 
+    @property
+    def filename(self) -> str:
+        if self._input_filename.startswith("InMemory"):
+            return self._input_filename
+        else:
+            return super().filename
+
     @cached_property
     def unique_identifier(self) -> str:
-        if self.parameter_filename.startswith("InMemory"):
+        if self.filename.startswith("InMemory"):
             return str(time.time())
         else:
             return super().unique_identifier
@@ -453,7 +459,7 @@ class FITSDataset(Dataset):
 
         self.domain_dimensions = np.array(self.dims)[: self.dimensionality]
         if self.dimensionality == 2:
-            self.domain_dimensions = np.append(self.domain_dimensions, [int(1)])
+            self.domain_dimensions = np.append(self.domain_dimensions, [1])
         self._determine_bbox()
 
         # Get the simulation time
@@ -485,7 +491,7 @@ class FITSDataset(Dataset):
         if self.specified_parameters["nprocs"] is None:
             nprocs = np.around(
                 np.prod(self.domain_dimensions) / 32**self.dimensionality
-            ).astype("int")
+            ).astype("int64")
             self.parameters["nprocs"] = max(min(nprocs, 512), 1)
         else:
             self.parameters["nprocs"] = self.specified_parameters["nprocs"]
@@ -494,12 +500,10 @@ class FITSDataset(Dataset):
         self.primary_header, self.first_image = find_primary_header(self._handle)
         self.naxis = self.primary_header["naxis"]
         self.axis_names = [
-            self.primary_header.get("ctype%d" % (i + 1), "LINEAR")
+            self.primary_header.get(f"ctype{i + 1}", "LINEAR")
             for i in range(self.naxis)
         ]
-        self.dims = [
-            self.primary_header["naxis%d" % (i + 1)] for i in range(self.naxis)
-        ]
+        self.dims = [self.primary_header[f"naxis{i + 1}"] for i in range(self.naxis)]
 
     def _determine_wcs(self):
         wcs = _astropy.pywcs.WCS(header=self.primary_header)
@@ -509,7 +513,7 @@ class FITSDataset(Dataset):
             self.wcs.wcs.cdelt = wcs.wcs.cdelt[:3]
             self.wcs.wcs.crval = wcs.wcs.crval[:3]
             self.wcs.wcs.cunit = [str(unit) for unit in wcs.wcs.cunit][:3]
-            self.wcs.wcs.ctype = [type for type in wcs.wcs.ctype][:3]
+            self.wcs.wcs.ctype = list(wcs.wcs.ctype)[:3]
         else:
             self.wcs = wcs
 
@@ -533,7 +537,10 @@ class FITSDataset(Dataset):
         self.lon_name = "X"
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         try:
             fileh = check_fits_valid(filename)
         except Exception:
@@ -565,12 +572,13 @@ class FITSDataset(Dataset):
 def find_axes(axis_names, prefixes):
     x = 0
     for p in prefixes:
-        y = np_char.startswith(axis_names, p)
+        y = np.char.startswith(axis_names, p)
         x += np.any(y)
     return x
 
 
 class YTFITSDataset(FITSDataset):
+    _load_requirements = ["astropy"]
     _field_info_class = YTFITSFieldInfo
 
     def _parse_parameter_file(self):
@@ -635,7 +643,10 @@ class YTFITSDataset(FITSDataset):
         self.domain_right_edge = domain_right_edge
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         try:
             fileh = check_fits_valid(filename)
         except Exception:
@@ -653,13 +664,14 @@ class YTFITSDataset(FITSDataset):
 
 
 class SkyDataFITSDataset(FITSDataset):
+    _load_requirements = ["astropy"]
     _field_info_class = WCSFITSFieldInfo
 
     def _determine_wcs(self):
         super()._determine_wcs()
         end = min(self.dimensionality + 1, 4)
         self.ctypes = np.array(
-            [self.primary_header["CTYPE%d" % (i)] for i in range(1, end)]
+            [self.primary_header[f"CTYPE{i}"] for i in range(1, end)]
         )
         self.wcs_2d = self.wcs
 
@@ -675,13 +687,13 @@ class SkyDataFITSDataset(FITSDataset):
 
         self.lat_axis = np.zeros((end - 1), dtype="bool")
         for p in lat_prefixes:
-            self.lat_axis += np_char.startswith(self.ctypes, p)
+            self.lat_axis += np.char.startswith(self.ctypes, p)
         self.lat_axis = np.where(self.lat_axis)[0][0]
         self.lat_name = self.ctypes[self.lat_axis].split("-")[0].lower()
 
         self.lon_axis = np.zeros((end - 1), dtype="bool")
         for p in lon_prefixes:
-            self.lon_axis += np_char.startswith(self.ctypes, p)
+            self.lon_axis += np.char.startswith(self.ctypes, p)
         self.lon_axis = np.where(self.lon_axis)[0][0]
         self.lon_name = self.ctypes[self.lon_axis].split("-")[0].lower()
 
@@ -712,7 +724,10 @@ class SkyDataFITSDataset(FITSDataset):
             self.unit_registry.add("beam", beam_size, dimensions=dimensions.solid_angle)
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         try:
             return check_sky_coords(filename, ndim=2)
         except Exception:
@@ -724,7 +739,7 @@ class SpectralCubeFITSHierarchy(FITSHierarchy):
         dz = self.ds.quan(1.0, "code_length") * self.ds.spectral_factor
         self.grid_dimensions[:, 2] = np.around(
             float(self.ds.domain_dimensions[2]) / self.num_grids
-        ).astype("int")
+        ).astype("int64")
         self.grid_dimensions[-1, 2] += self.ds.domain_dimensions[2] % self.num_grids
         self.grid_left_edge[0, 2] = self.ds.domain_left_edge[2]
         self.grid_left_edge[1:, 2] = (
@@ -739,6 +754,7 @@ class SpectralCubeFITSHierarchy(FITSHierarchy):
 
 
 class SpectralCubeFITSDataset(SkyDataFITSDataset):
+    _load_requirements = ["astropy"]
     _index_class = SpectralCubeFITSHierarchy
 
     def __init__(
@@ -778,7 +794,7 @@ class SpectralCubeFITSDataset(SkyDataFITSDataset):
 
         self.spec_axis = np.zeros(end - 1, dtype="bool")
         for p in spec_names.keys():
-            self.spec_axis += np_char.startswith(self.ctypes, p)
+            self.spec_axis += np.char.startswith(self.ctypes, p)
         self.spec_axis = np.where(self.spec_axis)[0][0]
         self.spec_name = spec_names[self.ctypes[self.spec_axis].split("-")[0][0]]
 
@@ -800,7 +816,7 @@ class SpectralCubeFITSDataset(SkyDataFITSDataset):
             self.domain_right_edge[self.spec_axis]
             - self.domain_left_edge[self.spec_axis]
         )
-        dre = self.domain_right_edge
+        dre = self.domain_right_edge.copy()
         dre[self.spec_axis] = (
             self.domain_left_edge[self.spec_axis] + self.spectral_factor * Dz
         )
@@ -811,7 +827,7 @@ class SpectralCubeFITSDataset(SkyDataFITSDataset):
     def _determine_nprocs(self):
         # If nprocs is None, do some automatic decomposition of the domain
         if self.specified_parameters["nprocs"] is None:
-            nprocs = np.around(self.domain_dimensions[2] / 8).astype("int")
+            nprocs = np.around(self.domain_dimensions[2] / 8).astype("int64")
             self.parameters["nprocs"] = max(min(nprocs, 512), 1)
         else:
             self.parameters["nprocs"] = self.specified_parameters["nprocs"]
@@ -825,7 +841,10 @@ class SpectralCubeFITSDataset(SkyDataFITSDataset):
         return self.arr((pv.v - self._p0) * self._dz + self._z0, self.spec_unit)
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         try:
             return check_sky_coords(filename, ndim=3)
         except Exception:
@@ -844,7 +863,7 @@ class EventsFITSHierarchy(FITSHierarchy):
                 field_unit = "code_length"
             else:
                 field_unit = v
-            self.dataset.field_units[("io", fname)] = field_unit
+            self.dataset.field_units["io", fname] = field_unit
         return
 
     def _parse_index(self):
@@ -858,6 +877,7 @@ class EventsFITSHierarchy(FITSHierarchy):
 
 
 class EventsFITSDataset(SkyDataFITSDataset):
+    _load_requirements = ["astropy"]
     _index_class = EventsFITSHierarchy
 
     def __init__(
@@ -927,7 +947,10 @@ class EventsFITSDataset(SkyDataFITSDataset):
         self.wcs_2d = self.wcs
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         try:
             fileh = check_fits_valid(filename)
         except Exception:

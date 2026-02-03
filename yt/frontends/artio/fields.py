@@ -58,10 +58,8 @@ class ARTIOFieldInfo(FieldInfoContainer):
         unit_system = self.ds.unit_system
 
         def _get_vel(axis):
-            def velocity(field, data):
-                return (
-                    data[("gas", f"momentum_density_{axis}")] / data[("gas", "density")]
-                )
+            def velocity(data):
+                return data["gas", f"momentum_density_{axis}"] / data["gas", "density"]
 
             return velocity
 
@@ -73,8 +71,8 @@ class ARTIOFieldInfo(FieldInfoContainer):
                 units=unit_system["velocity"],
             )
 
-        def _temperature(field, data):
-            tr = data[("gas", "thermal_energy_density")] / data[("gas", "density")]
+        def _temperature(data):
+            tr = data["gas", "thermal_energy_density"] / data["gas", "density"]
             # We want this to match *exactly* what ARTIO would compute
             # internally.  We therefore use the exact values that are internal
             # to ARTIO, rather than yt's own internal constants.
@@ -86,7 +84,7 @@ class ARTIOFieldInfo(FieldInfoContainer):
             mb = XH * mH + XHe * mHe
             wmu = 4.0 / (8.0 - 5.0 * Yp)
             # Note that we have gamma = 5.0/3.0 here
-            tr *= data[("gas", "gamma")] - 1.0
+            tr *= data["gas", "gamma"] - 1.0
             tr *= wmu
             tr *= mb / boltzmann_constant_cgs
             return tr
@@ -107,20 +105,20 @@ class ARTIOFieldInfo(FieldInfoContainer):
         if flag1 or flag2:
             if flag1 and flag2:
 
-                def _metal_density(field, data):
-                    tr = data[("gas", "metal_ia_density")].copy()
-                    np.add(tr, data[("gas", "metal_ii_density")], out=tr)
+                def _metal_density(data):
+                    tr = data["gas", "metal_ia_density"].copy()
+                    np.add(tr, data["gas", "metal_ii_density"], out=tr)
                     return tr
 
             elif flag1 and not flag2:
 
-                def _metal_density(field, data):
+                def _metal_density(data):
                     tr = data["metal_ia_density"]
                     return tr
 
             else:
 
-                def _metal_density(field, data):
+                def _metal_density(data):
                     tr = data["metal_ii_density"]
                     return tr
 
@@ -135,13 +133,13 @@ class ARTIOFieldInfo(FieldInfoContainer):
     def setup_particle_fields(self, ptype):
         if ptype == "STAR":
 
-            def _creation_time(field, data):
+            def _creation_time(data):
                 return YTArray(
                     data.ds._handle.tphys_from_tcode_array(data["STAR", "BIRTH_TIME"]),
                     "yr",
                 )
 
-            def _age(field, data):
+            def _age(data):
                 return data.ds.current_time - data["STAR", "creation_time"]
 
             self.add_field(
@@ -156,7 +154,7 @@ class ARTIOFieldInfo(FieldInfoContainer):
 
             if self.ds.cosmological_simulation:
 
-                def _creation_redshift(field, data):
+                def _creation_redshift(data):
                     return (
                         1.0
                         / data.ds._handle.auni_from_tcode_array(

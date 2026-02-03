@@ -1,7 +1,8 @@
 import weakref
 from numbers import Real
-from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, TypeAlias, Union
 
+import matplotlib as mpl
 import numpy as np
 import unyt as un
 from matplotlib.colors import Colormap, LogNorm, Normalize, SymLogNorm
@@ -10,7 +11,24 @@ from unyt import unyt_quantity
 from yt._typing import Quantity, Unit
 from yt.config import ytcfg
 from yt.funcs import get_brewer_cmap, is_sequence, mylog
-from yt.visualization.color_maps import _get_cmap
+
+if TYPE_CHECKING:
+    # RGBColorType, RGBAColorType and ColorType are backported from matplotlib 3.8.0
+    RGBColorType = tuple[float, float, float] | str
+    RGBAColorType = Union[  # noqa: UP007
+        str,  # "none" or "#RRGGBBAA"/"#RGBA" hex strings
+        tuple[float, float, float, float],
+        # 2 tuple (color, alpha) representations, not infinitely recursive
+        # RGBColorType includes the (str, float) tuple, even for RGBA strings
+        tuple[RGBColorType, float],
+        # (4-tuple, float) is odd, but accepted as the outer float overriding A of 4-tuple
+        tuple[tuple[float, float, float, float], float],
+    ]
+
+    ColorType = RGBColorType | RGBAColorType
+
+    # this type alias is unique to the present module
+    ColormapInput: TypeAlias = Colormap | str | None
 
 
 class NormHandler:
@@ -39,8 +57,9 @@ class NormHandler:
         "_linthresh",
         "_norm_type",
         "_norm",
+        "prefer_log",
     )
-    _constraint_attrs: List[str] = [
+    _constraint_attrs: list[str] = [
         "vmin",
         "vmax",
         "dynamic_range",
@@ -53,12 +72,12 @@ class NormHandler:
         data_source,
         *,
         display_units: un.Unit,
-        vmin: Optional[un.unyt_quantity] = None,
-        vmax: Optional[un.unyt_quantity] = None,
-        dynamic_range: Optional[float] = None,
-        norm_type: Optional[Type[Normalize]] = None,
-        norm: Optional[Normalize] = None,
-        linthresh: Optional[float] = None,
+        vmin: un.unyt_quantity | None = None,
+        vmax: un.unyt_quantity | None = None,
+        dynamic_range: float | None = None,
+        norm_type: type[Normalize] | None = None,
+        norm: Normalize | None = None,
+        linthresh: float | None = None,
     ):
         self.data_source = weakref.proxy(data_source)
         self.ds = data_source.ds  # should already be a weakref proxy
@@ -70,14 +89,15 @@ class NormHandler:
         self._dynamic_range = dynamic_range
         self._norm_type = norm_type
         self._linthresh = linthresh
+        self.prefer_log = True
 
-        if self.has_norm and self.has_constraints:
+        if self.norm is not None and self.has_constraints:
             raise TypeError(
                 "NormHandler input is malformed. "
                 "A norm cannot be passed along other constraints."
             )
 
-    def _get_constraints(self) -> Dict[str, Any]:
+    def _get_constraints(self) -> dict[str, Any]:
         return {
             attr: getattr(self, attr)
             for attr in self.__class__._constraint_attrs
@@ -98,12 +118,8 @@ class NormHandler:
         for name in constraints.keys():
             setattr(self, name, None)
 
-    @property
-    def has_norm(self) -> bool:
-        return self._norm is not None
-
-    def _reset_norm(self):
-        if not self.has_norm:
+    def _reset_norm(self) -> None:
+        if self.norm is None:
             return
         mylog.warning("Dropping norm (%s)", self.norm)
         self._norm = None
@@ -134,9 +150,7 @@ class NormHandler:
     def display_units(self, newval: Unit) -> None:
         self._display_units = un.Unit(newval, registry=self.ds.unit_registry)
 
-    def _set_quan_attr(
-        self, attr: str, newval: Optional[Union[Quantity, float]]
-    ) -> None:
+    def _set_quan_attr(self, attr: str, newval: Quantity | float | None) -> None:
         if newval is None:
             setattr(self, attr, None)
         else:
@@ -151,11 +165,11 @@ class NormHandler:
                 setattr(self, attr, quan)
 
     @property
-    def vmin(self) -> Optional[Union[un.unyt_quantity, Literal["min"]]]:
+    def vmin(self) -> un.unyt_quantity | Literal["min"] | None:
         return self._vmin
 
     @vmin.setter
-    def vmin(self, newval: Optional[Union[Quantity, float, Literal["min"]]]) -> None:
+    def vmin(self, newval: Quantity | float | Literal["min"] | None) -> None:
         self._reset_norm()
         if newval == "min":
             self._vmin = "min"
@@ -163,11 +177,11 @@ class NormHandler:
             self._set_quan_attr("_vmin", newval)
 
     @property
-    def vmax(self) -> Optional[Union[un.unyt_quantity, Literal["max"]]]:
+    def vmax(self) -> un.unyt_quantity | Literal["max"] | None:
         return self._vmax
 
     @vmax.setter
-    def vmax(self, newval: Optional[Union[Quantity, float, Literal["max"]]]) -> None:
+    def vmax(self, newval: Quantity | float | Literal["max"] | None) -> None:
         self._reset_norm()
         if newval == "max":
             self._vmax = "max"
@@ -175,11 +189,11 @@ class NormHandler:
             self._set_quan_attr("_vmax", newval)
 
     @property
-    def dynamic_range(self) -> Optional[float]:
+    def dynamic_range(self) -> float | None:
         return self._dynamic_range
 
     @dynamic_range.setter
-    def dynamic_range(self, newval: Optional[float]) -> None:
+    def dynamic_range(self, newval: float | None) -> None:
         if newval is None:
             return
 
@@ -200,8 +214,8 @@ class NormHandler:
         self._dynamic_range = newval
 
     def get_dynamic_range(
-        self, dvmin: Optional[float], dvmax: Optional[float]
-    ) -> Tuple[float, float]:
+        self, dvmin: float | None, dvmax: float | None
+    ) -> tuple[float, float]:
         if self.dynamic_range is None:
             raise RuntimeError(
                 "Something went terribly wrong in setting up a dynamic range"
@@ -226,16 +240,15 @@ class NormHandler:
             return dvmax / self.dynamic_range, dvmax
         else:
             raise TypeError(
-                "Cannot set dynamic range with both "
-                "vmin and vmax already constrained."
+                "Cannot set dynamic range with both vmin and vmax already constrained."
             )
 
     @property
-    def norm_type(self) -> Optional[Type[Normalize]]:
+    def norm_type(self) -> type[Normalize] | None:
         return self._norm_type
 
     @norm_type.setter
-    def norm_type(self, newval: Optional[Type[Normalize]]) -> None:
+    def norm_type(self, newval: type[Normalize] | None) -> None:
         if not (
             newval is None
             or (isinstance(newval, type) and issubclass(newval, Normalize))
@@ -250,7 +263,7 @@ class NormHandler:
         self._norm_type = newval
 
     @property
-    def norm(self) -> Optional[Normalize]:
+    def norm(self) -> Normalize | None:
         return self._norm
 
     @norm.setter
@@ -264,11 +277,11 @@ class NormHandler:
         self._norm = newval
 
     @property
-    def linthresh(self) -> Optional[float]:
+    def linthresh(self) -> float | None:
         return self._linthresh
 
     @linthresh.setter
-    def linthresh(self, newval: Optional[Union[Quantity, float]]) -> None:
+    def linthresh(self, newval: Quantity | float | None) -> None:
         self._reset_norm()
         self._set_quan_attr("_linthresh", newval)
         if self._linthresh is not None and self._linthresh <= 0:
@@ -279,7 +292,7 @@ class NormHandler:
             self.norm_type = SymLogNorm
 
     def get_norm(self, data: np.ndarray, *args, **kw) -> Normalize:
-        if self.has_norm:
+        if self.norm is not None:
             return self.norm
 
         dvmin = dvmax = None
@@ -310,6 +323,7 @@ class NormHandler:
             dvmax = 1 * getattr(data, "units", 1)
         kw.setdefault("vmax", dvmax)
 
+        norm_type: type[Normalize]
         if data.ndim == 3:
             assert data.shape[-1] == 4
             # this is an RGBA array, only linear normalization makes sense here
@@ -319,7 +333,11 @@ class NormHandler:
             # allowing to toggle between lin and log scaling without detailed user input
             norm_type = self.norm_type
         else:
-            if kw["vmin"] == kw["vmax"] or not np.any(finite_values_mask):
+            if (
+                not self.prefer_log
+                or kw["vmin"] == kw["vmax"]
+                or not np.any(finite_values_mask)
+            ):
                 norm_type = Normalize
             elif kw["vmin"] <= 0:
                 # note: see issue 3944 (and PRs and issues linked therein) for a
@@ -397,14 +415,14 @@ class ColorbarHandler:
         *,
         draw_cbar: bool = True,
         draw_minorticks: bool = True,
-        cmap: Optional[Union[Colormap, str]] = None,
-        background_color: Optional[str] = None,
+        cmap: "ColormapInput" = None,
+        background_color: str | None = None,
     ):
         self._draw_cbar = draw_cbar
         self._draw_minorticks = draw_minorticks
-        self._cmap: Optional[Colormap] = None
-        self.cmap = cmap
-        self._background_color = background_color
+        self._cmap: Colormap | None = None
+        self._set_cmap(cmap)
+        self._background_color: ColorType | None = background_color
 
     @property
     def draw_cbar(self) -> bool:
@@ -432,15 +450,21 @@ class ColorbarHandler:
 
     @property
     def cmap(self) -> Colormap:
-        return self._cmap or _get_cmap(ytcfg.get("yt", "default_colormap"))
+        return self._cmap or mpl.colormaps[ytcfg.get("yt", "default_colormap")]
 
     @cmap.setter
-    def cmap(self, newval) -> None:
+    def cmap(self, newval: "ColormapInput") -> None:
+        self._set_cmap(newval)
+
+    def _set_cmap(self, newval: "ColormapInput") -> None:
+        # a separate setter function is better supported by type checkers (mypy)
+        # than relying purely on a property setter to narrow type
+        # from ColormapInput to Colormap
         if isinstance(newval, Colormap) or newval is None:
             self._cmap = newval
         elif isinstance(newval, str):
-            self._cmap = _get_cmap(newval)
-        elif is_sequence(newval):
+            self._cmap = mpl.colormaps[newval]
+        elif is_sequence(newval):  # type: ignore[unreachable]
             # tuple colormaps are from palettable (or brewer2mpl)
             self._cmap = get_brewer_cmap(newval)
         else:
@@ -450,14 +474,11 @@ class ColorbarHandler:
             )
 
     @property
-    def background_color(self) -> Any:
+    def background_color(self) -> "ColorType":
         return self._background_color or "white"
 
     @background_color.setter
-    def background_color(self, newval: Any):
-        # not attempting to constrain types here because
-        # down the line it really depends on matplotlib.axes.Axes.set_faceolor
-        # which is very type-flexibile
+    def background_color(self, newval: Optional["ColorType"]) -> None:
         if newval is None:
             self._background_color = self.cmap(0)
         else:

@@ -5,12 +5,12 @@ import struct
 import weakref
 
 import numpy as np
+from ewah_bool_utils.ewah_bool_wrap import BoolArrayCollection
 
 from yt.data_objects.index_subobjects.particle_container import ParticleContainer
 from yt.funcs import get_pbar, is_sequence, only_on_root
 from yt.geometry.geometry_handler import Index, YTDataChunk
 from yt.geometry.particle_oct_container import ParticleBitmap
-from yt.utilities.lib.ewah_bool_wrap import BoolArrayCollection
 from yt.utilities.lib.fnv_hash import fnv_hash
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.parallel_tools.parallel_analysis_interface import parallel_objects
@@ -24,9 +24,9 @@ def validate_index_order(index_order):
     else:
         if len(index_order) != 2:
             raise RuntimeError(
-                "Tried to load a dataset with index_order={}, but "
+                f"Tried to load a dataset with index_order={index_order}, but "
                 "index_order\nmust be an integer or a two-element tuple of "
-                "integers.".format(index_order)
+                "integers."
             )
         index_order = tuple(int(o) for o in index_order)
     return index_order
@@ -156,7 +156,7 @@ class ParticleIndex(Index):
         ds = self.dataset
         only_on_root(
             mylog.info,
-            "Allocating for %0.3e particles",
+            "Allocating for %0.4g particles",
             self.total_particles,
             global_rootonly=True,
         )

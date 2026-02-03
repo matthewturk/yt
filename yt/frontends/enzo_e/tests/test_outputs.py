@@ -1,8 +1,9 @@
 import numpy as np
+from numpy.testing import assert_array_equal, assert_equal
 
 from yt.frontends.enzo_e.api import EnzoEDataset
 from yt.frontends.enzo_e.fields import NODAL_FLAGS
-from yt.testing import assert_array_equal, assert_equal, requires_file, requires_module
+from yt.testing import requires_file, requires_module
 from yt.utilities.answer_testing.framework import (
     FieldValuesTest,
     PixelizedProjectionValuesTest,
@@ -54,7 +55,7 @@ def test_hello_world():
                     )
             yield FieldValuesTest(hello_world, field, dobj_name)
         dobj = create_obj(ds, dobj_name)
-        s1 = dobj[("index", "ones")].sum()
+        s1 = dobj["index", "ones"].sum()
         s2 = sum(mask.sum() for block, mask in dobj.blocks)
         assert_equal(s1, s2)
 
@@ -69,7 +70,7 @@ def test_particle_fields():
         for field in _pfields:
             yield FieldValuesTest(ep_cosmo, field, dobj_name, particle_type=True)
         dobj = create_obj(ds, dobj_name)
-        s1 = dobj[("index", "ones")].sum()
+        s1 = dobj["index", "ones"].sum()
         s2 = sum(mask.sum() for block, mask in dobj.blocks)
         assert_equal(s1, s2)
 

@@ -20,16 +20,13 @@ data_url = "http://yt-project.org/data"
 
 
 def _get_data_file(table_type, data_dir=None):
-    data_file = "%s_emissivity_v%d.h5" % (table_type, data_version[table_type])
+    data_file = f"{table_type}_emissivity_v{data_version[table_type]}.h5"
     if data_dir is None:
         supp_data_dir = ytcfg.get("yt", "supp_data_dir")
         data_dir = supp_data_dir if os.path.exists(supp_data_dir) else "."
     data_path = os.path.join(data_dir, data_file)
     if not os.path.exists(data_path):
-        msg = "Failed to find emissivity data file {}! Please download from {}".format(
-            data_file,
-            data_url,
-        )
+        msg = f"Failed to find emissivity data file {data_file}! Please download from {data_url}"
         mylog.error(msg)
         raise OSError(msg)
     return data_path
@@ -46,7 +43,7 @@ class EnergyBoundsException(YTException):
 
 class ObsoleteDataException(YTException):
     def __init__(self, table_type):
-        data_file = "%s_emissivity_v%d.h5" % (table_type, data_version[table_type])
+        data_file = f"{table_type}_emissivity_v{data_version[table_type]}.h5"
         self.msg = "X-ray emissivity data is out of date.\n"
         self.msg += f"Download the latest data from {data_url}/{data_file}."
 
@@ -229,7 +226,7 @@ def add_xray_emissivity_field(
         # APEC wants to scale by nH*ne
         other_n = "El_number_density"
 
-    def _norm_field(field, data):
+    def _norm_field(data):
         return data[ftype, "H_nuclei_density"] * data[ftype, other_n]
 
     ds.add_field(
@@ -244,7 +241,7 @@ def add_xray_emissivity_field(
         em_Z = my_si.get_interpolator("metals", e_min, e_max)
         emp_Z = my_si.get_interpolator("metals", e_min, e_max, energy=False)
 
-    def _emissivity_field(field, data):
+    def _emissivity_field(data):
         with np.errstate(all="ignore"):
             dd = {
                 "log_nH": np.log10(data[ftype, "H_nuclei_density"]),
@@ -272,7 +269,7 @@ def add_xray_emissivity_field(
         units="erg/cm**3/s",
     )
 
-    def _luminosity_field(field, data):
+    def _luminosity_field(data):
         return data[emiss_name] * data[ftype, "mass"] / data[ftype, "density"]
 
     lum_name = (ftype, f"xray_luminosity_{e_min}_{e_max}_keV")
@@ -284,7 +281,7 @@ def add_xray_emissivity_field(
         units="erg/s",
     )
 
-    def _photon_emissivity_field(field, data):
+    def _photon_emissivity_field(data):
         dd = {
             "log_nH": np.log10(data[ftype, "H_nuclei_density"]),
             "log_T": np.log10(data[ftype, "temperature"]),
@@ -345,7 +342,7 @@ def add_xray_emissivity_field(
 
         ei_name = (ftype, f"xray_intensity_{e_min}_{e_max}_keV")
 
-        def _intensity_field(field, data):
+        def _intensity_field(data):
             I = dist_fac * data[emiss_name]
             return I.in_units("erg/cm**3/s/arcsec**2")
 
@@ -359,7 +356,7 @@ def add_xray_emissivity_field(
 
         i_name = (ftype, f"xray_photon_intensity_{e_min}_{e_max}_keV")
 
-        def _photon_intensity_field(field, data):
+        def _photon_intensity_field(data):
             I = (1.0 + redshift) * dist_fac * data[phot_name]
             return I.in_units("photons/cm**3/s/arcsec**2")
 

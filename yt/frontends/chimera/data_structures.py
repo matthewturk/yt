@@ -103,7 +103,7 @@ class ChimeraUNSIndex(UnstructuredIndex):
                     mylog.warning(
                         "Yin-Yang File Detected; This data is not currently supported."
                     )
-                coords.shape = (nxd * nyd * nzd, 3)
+                coords = coords.reshape(nxd * nyd * nzd, 3)
                 # Connectivity is an array of rows, each of which corresponds to a grid cell.
                 # The 8 elements of each row are integers representing the cell vertices.
                 # These integers reference the numerical index of the element of the
@@ -165,9 +165,9 @@ class ChimeraUNSIndex(UnstructuredIndex):
                 for i in f["abundance"]
                 if np.shape(f["abundance"][i]) == np.shape(f["fluid"]["rho_c"])
             ]
-            e_rms = [("chimera", f"e_rms_{i+1}") for i in range(4)]
-            lumin = [("chimera", f"lumin_{i+1}") for i in range(4)]
-            num_lumin = [("chimera", f"num_lumin_{i+1}") for i in range(4)]
+            e_rms = [("chimera", f"e_rms_{i + 1}") for i in range(4)]
+            lumin = [("chimera", f"lumin_{i + 1}") for i in range(4)]
+            num_lumin = [("chimera", f"num_lumin_{i + 1}") for i in range(4)]
             a_name = [
                 ("chimera", i.decode("utf-8").strip()) for i in f["abundance"]["a_name"]
             ]
@@ -195,6 +195,7 @@ class ChimeraUNSIndex(UnstructuredIndex):
 
 
 class ChimeraDataset(Dataset):
+    _load_requirements = ["h5py"]
     _index_class = ChimeraUNSIndex  # ChimeraHierarchy
     _field_info_class = ChimeraFieldInfo
 
@@ -267,17 +268,20 @@ class ChimeraDataset(Dataset):
         self.cosmological_simulation = 0  # Chimera is not a cosmological simulation
 
     @classmethod
-    def _is_valid(cls, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
+        if cls._missing_load_requirements():
+            return False
+
         try:
-            fileh = HDF5FileHandler(args[0])
+            fileh = HDF5FileHandler(filename)
             if (
                 "fluid" in fileh
                 and "agr_c" in fileh["fluid"].keys()
                 and "grav_x_c" in fileh["fluid"].keys()
             ):
                 return True  # Numpy bless
-        except (OSError, ImportError):
+        except OSError:
             pass
         return False

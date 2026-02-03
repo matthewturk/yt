@@ -2,9 +2,10 @@ import abc
 import weakref
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
+from unyt import unyt_array
 
 from yt._maintenance.deprecation import issue_deprecation_warning
 from yt._typing import AnyFieldKey, FieldKey, FieldName
@@ -33,8 +34,8 @@ if TYPE_CHECKING:
 
 
 def sanitize_weight_field(ds, field, weight):
-    field_object = ds._get_field_info(field)
     if weight is None:
+        field_object = ds._get_field_info(field)
         if field_object.sampling_type == "particle":
             if field_object.name[0] == "gas":
                 ptype = ds._sph_ptypes[0]
@@ -66,14 +67,14 @@ class YTDataContainer(abc.ABC):
 
     _chunk_info = None
     _num_ghost_zones = 0
-    _con_args: Tuple[str, ...] = ()
+    _con_args: tuple[str, ...] = ()
     _skip_add = False
-    _container_fields: Tuple[AnyFieldKey, ...] = ()
-    _tds_attrs: Tuple[str, ...] = ()
-    _tds_fields: Tuple[str, ...] = ()
+    _container_fields: tuple[AnyFieldKey, ...] = ()
+    _tds_attrs: tuple[str, ...] = ()
+    _tds_fields: tuple[str, ...] = ()
     _field_cache = None
     _index = None
-    _key_fields: List[str]
+    _key_fields: list[str]
 
     def __init__(self, ds: Optional["Dataset"], field_parameters) -> None:
         """
@@ -87,7 +88,7 @@ class YTDataContainer(abc.ABC):
         # constructor, in which case it will override the default.
         # This code ensures it is never not set.
 
-        self.ds: "Dataset"
+        self.ds: Dataset
         if ds is not None:
             self.ds = ds
         else:
@@ -204,11 +205,24 @@ class YTDataContainer(abc.ABC):
         """
         return name in self.field_parameters
 
-    def clear_data(self):
+    def clear_data(self, fields: list[AnyFieldKey] | AnyFieldKey | None = None):
         """
-        Clears out all data from the YTDataContainer instance, freeing memory.
+        Clears out data from the YTDataContainer instance, freeing memory.
+
+        Parameters
+        ----------
+        fields : list[str] | str | None
+            The fields to clear. If None, all fields are cleared.
         """
-        self.field_data.clear()
+        if fields is None:
+            self.field_data.clear()
+            return
+
+        if isinstance(fields, (str, tuple)):
+            fields = [fields]
+
+        for field in fields:
+            self.field_data.pop(field, None)
 
     def has_key(self, key):
         """
@@ -260,6 +274,13 @@ class YTDataContainer(abc.ABC):
         if key not in self.field_data:
             key = self._determine_fields(key)[0]
         del self.field_data[key]
+
+    @abc.abstractmethod
+    def get_bbox(self) -> tuple[unyt_array, unyt_array]:
+        """
+        Return the bounding box for this data container.
+        """
+        pass
 
     def _generate_field(self, field):
         ftype, fname = field
@@ -558,11 +579,11 @@ class YTDataContainer(abc.ABC):
         >>> fn = sp.save_as_dataset(fields=[("gas", "density"), ("gas", "temperature")])
         >>> sphere_ds = yt.load(fn)
         >>> # the original data container is available as the data attribute
-        >>> print(sds.data[("gas", "density")])
+        >>> print(sds.data["gas", "density"])
         [  4.46237613e-32   4.86830178e-32   4.46335118e-32 ...,   6.43956165e-30
            3.57339907e-30   2.83150720e-30] g/cm**3
         >>> ad = sphere_ds.all_data()
-        >>> print(ad[("gas", "temperature")])
+        >>> print(ad["gas", "temperature"])
         [  1.00000000e+00   1.00000000e+00   1.00000000e+00 ...,   4.40108359e+04
            4.54380547e+04   4.72560117e+04] K
 
@@ -778,6 +799,7 @@ class YTDataContainer(abc.ABC):
             issue_deprecation_warning(
                 "The 'JSONdir' keyword argument is a deprecated alias for 'datadir'."
                 "Please use 'datadir' directly.",
+                stacklevel=3,
                 since="4.1",
             )
             datadir = JSONdir
@@ -796,7 +818,7 @@ class YTDataContainer(abc.ABC):
             # tuples containing some sort of special "any" ParticleGroup
             unambiguous_fields_to_include = []
             unambiguous_fields_units = []
-            for field, field_unit in zip(fields_to_include, fields_units):
+            for field, field_unit in zip(fields_to_include, fields_units, strict=True):
                 if isinstance(field, tuple):
                     # skip tuples, they'll be checked with _determine_fields
                     unambiguous_fields_to_include.append(field)
@@ -848,7 +870,7 @@ class YTDataContainer(abc.ABC):
             field_names = []
 
             ## explicitly go after the fields we want
-            for field, units in zip(fields_to_include, fields_units):
+            for field, units in zip(fields_to_include, fields_units, strict=True):
                 ## Only interested in fields with the current particle type,
                 ## whether that means general fields or field tuples
                 ftype, fname = field
@@ -1168,6 +1190,8 @@ class YTDataContainer(abc.ABC):
         accumulation=False,
         fractional=False,
         deposition="ngp",
+        *,
+        override_bins=None,
     ):
         r"""
         Create a 1, 2, or 3D profile object from this data_source.
@@ -1213,8 +1237,11 @@ class YTDataContainer(abc.ABC):
             distribution function.
         deposition : Controls the type of deposition used for ParticlePhasePlots.
             Valid choices are 'ngp' and 'cic'. Default is 'ngp'. This parameter is
-            ignored the if the input fields are not of particle type.
-
+            ignored if the input fields are not of particle type.
+        override_bins : dict of bins to profile plot with
+            If set, ignores n_bins and extrema settings and uses the
+            supplied bins to profile the field. If a units dict is provided,
+            bins are understood to be in the units specified in the dictionary.
 
         Examples
         --------
@@ -1245,6 +1272,7 @@ class YTDataContainer(abc.ABC):
             accumulation,
             fractional,
             deposition,
+            override_bins=override_bins,
         )
         return p
 
@@ -1403,7 +1431,7 @@ class YTDataContainer(abc.ABC):
         >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
         >>> sp = ds.sphere("c", 0.1)
         >>> sp_clone = sp.clone()
-        >>> sp[("gas", "density")]
+        >>> sp["gas", "density"]
         >>> print(sp.field_data.keys())
         [("gas", "density")]
         >>> print(sp_clone.field_data.keys())
@@ -1417,9 +1445,8 @@ class YTDataContainer(abc.ABC):
         s = f"{self.__class__.__name__} ({self.ds}): "
         for i in self._con_args:
             try:
-                s += ", {}={}".format(
-                    i,
-                    getattr(self, i).in_base(unit_system=self.ds.unit_system),
+                s += (
+                    f", {i}={getattr(self, i).in_base(unit_system=self.ds.unit_system)}"
                 )
             except AttributeError:
                 s += f", {i}={getattr(self, i)}"

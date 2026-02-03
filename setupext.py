@@ -9,20 +9,27 @@ import sys
 import tempfile
 from textwrap import dedent
 from concurrent.futures import ThreadPoolExecutor
+from distutils import sysconfig
 from distutils.ccompiler import CCompiler, new_compiler
 from distutils.sysconfig import customize_compiler
 from subprocess import PIPE, Popen
 from sys import platform as _platform
+import ewah_bool_utils
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.sdist import sdist as _sdist
 from setuptools.errors import CompileError, LinkError
-
-if sys.version_info >= (3, 9):
-    import importlib.resources as importlib_resources
-else:
-    import importlib_resources
+import importlib.resources as importlib_resources
 
 log = logging.getLogger("setupext")
+
+USE_PY_LIMITED_API = (
+    os.getenv('YT_LIMITED_API', '0') == '1'
+    and sys.version_info >= (3, 11)
+    and not sysconfig.get_config_var("Py_GIL_DISABLED")
+)
+ABI3_TARGET_VERSION = "".join(str(_) for _ in sys.version_info[:2])
+ABI3_TARGET_HEX = hex(sys.hexversion & 0xFFFF00F0)
+
 
 @contextlib.contextmanager
 def stdchannel_redirected(stdchannel, dest_filename):
@@ -371,6 +378,38 @@ def install_ccompiler():
     CCompiler.compile = _compile
 
 
+def get_python_include_dirs():
+    """Extracted from distutils.command.build_ext.build_ext.finalize_options(),
+    https://github.com/python/cpython/blob/812245ecce2d8344c3748228047bab456816180a/Lib/distutils/command/build_ext.py#L148-L167
+    """
+    include_dirs = []
+
+    # Make sure Python's include directories (for Python.h, pyconfig.h,
+    # etc.) are in the include search path.
+    py_include = sysconfig.get_python_inc()
+    plat_py_include = sysconfig.get_python_inc(plat_specific=1)
+
+    # If in a virtualenv, add its include directory
+    # Issue 16116
+    if sys.exec_prefix != sys.base_exec_prefix:
+        include_dirs.append(os.path.join(sys.exec_prefix, 'include'))
+
+    # Put the Python "system" include dir at the end, so that
+    # any local include dirs take precedence.
+    include_dirs.extend(py_include.split(os.path.pathsep))
+    if plat_py_include != py_include:
+        include_dirs.extend(plat_py_include.split(os.path.pathsep))
+
+    return include_dirs
+
+
+NUMPY_MACROS = [
+    ("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION"),
+    # keep in sync with runtime requirements (pyproject.toml)
+    ("NPY_TARGET_VERSION", "NPY_1_21_API_VERSION"),
+]
+
+
 def create_build_ext(lib_exts, cythonize_aliases):
     class build_ext(_build_ext):
         # subclass setuptools extension builder to avoid importing cython and numpy
@@ -400,6 +439,18 @@ def create_build_ext(lib_exts, cythonize_aliases):
             import numpy
 
             self.include_dirs.append(numpy.get_include())
+            self.include_dirs.append(ewah_bool_utils.get_include())
+
+            define_macros = NUMPY_MACROS
+            if USE_PY_LIMITED_API:
+                define_macros.append(("Py_LIMITED_API", ABI3_TARGET_HEX))
+                for ext in self.extensions:
+                    ext.py_limited_api = True
+
+            if self.define is None:
+                self.define = define_macros
+            else:
+                self.define.extend(define_macros)
 
         def build_extensions(self):
             self.check_extensions_list(self.extensions)
@@ -440,3 +491,9 @@ def create_build_ext(lib_exts, cythonize_aliases):
             _sdist.run(self)
 
     return build_ext, sdist
+
+def get_setup_options():
+    if USE_PY_LIMITED_API:
+        return {"bdist_wheel": {"py_limited_api": f"cp{ABI3_TARGET_VERSION}"}}
+    else:
+        return {}

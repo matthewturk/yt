@@ -4,6 +4,7 @@ AMRVAC-specific IO functions
 
 
 """
+
 import os
 
 import numpy as np
@@ -40,6 +41,9 @@ def read_amrvac_namelist(parfiles):
     unified_namelist = f90nml.Namelist()
     for nml in namelists:
         unified_namelist.patch(nml)
+
+    if "filelist" not in unified_namelist:
+        return unified_namelist
 
     # accumulate `&filelist:base_filename`
     base_filename = "".join(
@@ -99,14 +103,12 @@ class AMRVACIOHandler(BaseIOHandler):
         offset = grid._index.block_offsets[ileaf]
         field_idx = self.ds.parameters["w_names"].index(field)
 
-        field_shape = self.block_shape[:-1]
+        field_shape = self.block_shape[:-1][::-1]
         count = np.prod(field_shape)
         byte_size_field = count * 8  # size of a double
 
         fid.seek(offset + byte_size_field * field_idx)
-        data = np.fromfile(fid, "=f8", count=count)
-        data.shape = field_shape[::-1]
-        data = data.T
+        data = np.fromfile(fid, dtype="=f8", count=count).reshape(field_shape).T
         # Always convert data to 3D, as grid.ActiveDimensions is always 3D
         while len(data.shape) < 3:
             data = data[..., np.newaxis]

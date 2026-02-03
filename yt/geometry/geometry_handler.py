@@ -1,7 +1,6 @@
 import abc
 import os
 import weakref
-from typing import Optional, Tuple
 
 import numpy as np
 
@@ -22,8 +21,8 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 class Index(ParallelAnalysisInterface, abc.ABC):
     """The base index class"""
 
-    _unsupported_objects: Tuple[str, ...] = ()
-    _index_properties: Tuple[str, ...] = ()
+    _unsupported_objects: tuple[str, ...] = ()
+    _index_properties: tuple[str, ...] = ()
 
     def __init__(self, ds, dataset_type):
         ParallelAnalysisInterface.__init__(self)
@@ -56,8 +55,8 @@ class Index(ParallelAnalysisInterface, abc.ABC):
         self,
         icoords: np.ndarray,
         ires: np.ndarray,
-        axes: Optional[Tuple[int, ...]] = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        axes: tuple[int, ...] | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
         # What's the use of raising NotImplementedError for this, when it's an
         # abstract base class?  Well, only *some* of the subclasses have it --
         # and for those that *don't*, we should not be calling it -- and since
@@ -124,6 +123,10 @@ class Index(ParallelAnalysisInterface, abc.ABC):
         if getattr(self, "io", None) is not None:
             return
         self.io = io_registry[self.dataset_type](self.dataset)
+
+    @parallel_root_only
+    def print_stats(self):
+        raise NotImplementedError(f"{type(self)} has no print_stats method.")
 
     @parallel_root_only
     def save_data(
@@ -327,6 +330,10 @@ class YTDataChunk:
             arrs = [arr[0] for arr in arrs]
         elif method == "tcoords":
             arrs = [arr[1] for arr in arrs]
+        if len(arrs) == 0:
+            self.data_size = 0
+            return np.empty((0, 3), dtype="float64")
+
         arrs = uconcatenate(arrs)
         self.data_size = arrs.shape[0]
         return arrs
@@ -490,6 +497,7 @@ def is_curvilinear(geo):
         "if is_curvilinear(geometry):\n    ...\n"
         "should be rewritten as:"
         "if geometry is Geometry.POLAR or geometry is Geometry.CYLINDRICAL or geometry is Geometry.SPHERICAL:\n    ...",
+        stacklevel=3,
         since="4.2",
     )
     if geo in ["polar", "cylindrical", "spherical"]:

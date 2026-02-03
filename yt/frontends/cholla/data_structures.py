@@ -8,6 +8,7 @@ from yt.data_objects.static_output import Dataset
 from yt.funcs import setdefaultattr
 from yt.geometry.api import Geometry
 from yt.geometry.grid_geometry_handler import GridIndex
+from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.on_demand_imports import _h5py as h5py
 
 from .fields import ChollaFieldInfo
@@ -62,6 +63,7 @@ class ChollaHierarchy(GridIndex):
 
 
 class ChollaDataset(Dataset):
+    _load_requirements = ["h5py"]
     _index_class = ChollaHierarchy
     _field_info_class = ChollaFieldInfo
 
@@ -100,15 +102,29 @@ class ChollaDataset(Dataset):
     def _parse_parameter_file(self):
         with h5py.File(self.parameter_filename, mode="r") as h5f:
             attrs = h5f.attrs
-            self.parameters = {k: v for (k, v) in attrs.items()}
+            self.parameters = dict(attrs.items())
             self.domain_left_edge = attrs["bounds"][:].astype("=f8")
-            self.domain_right_edge = attrs["domain"][:].astype("=f8")
+            self.domain_right_edge = self.domain_left_edge + attrs["domain"][:].astype(
+                "=f8"
+            )
             self.dimensionality = len(attrs["dims"][:])
             self.domain_dimensions = attrs["dims"][:].astype("=f8")
             self.current_time = attrs["t"][:]
             self._periodicity = tuple(attrs.get("periodicity", (False, False, False)))
             self.gamma = attrs.get("gamma", 5.0 / 3.0)
-            self.mu = attrs.get("mu", 1.0)
+            if (self.default_species_fields is not None) and "mu" in attrs:
+                raise ValueError(
+                    'default_species_fields must be None when "mu" is an hdf5 attribute'
+                )
+            elif "mu" in attrs:
+                self.mu = attrs["mu"]
+            elif self.default_species_fields is None:
+                # other yt-machinery can't handle ds.mu == None, so we simply
+                # avoid defining the mu attribute if we don't know its value
+                mylog.info(
+                    'add the "mu" hdf5 attribute OR use the default_species_fields kwarg '
+                    "to compute temperature"
+                )
             self.refine_by = 1
 
             # If header specifies code units, default to those (in CGS)
@@ -144,12 +160,15 @@ class ChollaDataset(Dataset):
         self.geometry = Geometry.CARTESIAN
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
+        if cls._missing_load_requirements():
+            return False
+
         try:
             fileh = h5py.File(filename, mode="r")
-        except (ImportError, OSError):
+        except OSError:
             return False
 
         try:

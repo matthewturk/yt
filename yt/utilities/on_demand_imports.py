@@ -1,7 +1,6 @@
 import sys
 from functools import wraps
 from importlib.util import find_spec
-from typing import Optional, Type
 
 
 class NotAModule:
@@ -11,7 +10,7 @@ class NotAModule:
     package installed.
     """
 
-    def __init__(self, pkg_name, exc: Optional[BaseException] = None):
+    def __init__(self, pkg_name, exc: BaseException | None = None):
         self.pkg_name = pkg_name
         self._original_exception = exc
         error_note = (
@@ -47,7 +46,7 @@ class NotAModule:
 
 
 class OnDemand:
-    _default_factory: Type[NotAModule] = NotAModule
+    _default_factory: type[NotAModule] = NotAModule
 
     def __init_subclass__(cls):
         if not cls.__name__.endswith("_imports"):
@@ -83,16 +82,6 @@ def safe_import(func):
 
 
 class netCDF4_imports(OnDemand):
-    def __init__(self):
-        # this ensures the import ordering between netcdf4 and h5py. If h5py is
-        # imported first, can get file lock errors on some systems (including travis-ci)
-        # so we need to do this before initializing h5py_imports()!
-        # similar to this issue https://github.com/pydata/xarray/issues/2560
-        try:
-            import netCDF4  # noqa F401
-        except ImportError:
-            pass
-
     @safe_import
     def Dataset(self):
         from netCDF4 import Dataset
@@ -182,23 +171,23 @@ class NotCartopy(NotAModule):
     for cartopy imports.
     """
 
-    def __init__(self, pkg_name):
-        self.pkg_name = pkg_name
+    def __init__(self, pkg_name, exc: BaseException | None = None):
+        super().__init__(pkg_name, exc)
         if any(s in sys.version for s in ("Anaconda", "Continuum")):
             # the conda-based installs of cartopy don't have issues with the
             # GEOS library, so the error message for users with conda can be
             # relatively short. Discussion related to this is in
             # yt-project/yt#1966
             self.error = ImportError(
-                "This functionality requires the %s "
-                "package to be installed." % self.pkg_name
+                f"This functionality requires the {self.pkg_name} "
+                "package to be installed."
             )
         else:
             self.error = ImportError(
                 f"This functionality requires the {pkg_name} "
                 "package to be installed.\n"
                 "For further instruction please refer to Cartopy's documentation\n"
-                "https://scitools.org.uk/cartopy/docs/latest/installing.html"
+                "https://cartopy.readthedocs.io/stable/installing.html"
             )
 
 
@@ -299,6 +288,18 @@ _scipy = scipy_imports()
 
 
 class h5py_imports(OnDemand):
+    def __init__(self):
+        # this ensures the import ordering between netcdf4 and h5py. If h5py is
+        # imported first, can get file lock errors on some systems (including travis-ci)
+        # so we need to do this before initializing h5py_imports()!
+        # similar to this issue https://github.com/pydata/xarray/issues/2560
+        if find_spec("h5py") is None or find_spec("netCDF4") is None:
+            return
+        try:
+            import netCDF4  # noqa F401
+        except ImportError:
+            pass
+
     @safe_import
     def File(self):
         from h5py import File
@@ -483,6 +484,12 @@ class pandas_imports(OnDemand):
         from pandas import concat
 
         return concat
+
+    @safe_import
+    def read_csv(self):
+        from pandas import read_csv
+
+        return read_csv
 
 
 _pandas = pandas_imports()

@@ -92,6 +92,7 @@ cdef class OctreeContainer:
         visitor.global_index = -1
         visitor.level = 0
         visitor.nz = visitor.nzones = 1
+        visitor.max_level = 0
         assert(ref_mask.shape[0] / float(visitor.nzones) ==
             <int>(ref_mask.shape[0]/float(visitor.nzones)))
         obj.allocate_domains([ref_mask.shape[0] / visitor.nzones])
@@ -135,6 +136,7 @@ cdef class OctreeContainer:
         if obj.nocts * visitor.nz != ref_mask.size:
             raise KeyError(ref_mask.size, obj.nocts, obj.nz,
                 obj.partial_coverage, visitor.nzones)
+        obj.max_level = visitor.max_level
         return obj
 
     def __dealloc__(self):
@@ -170,7 +172,7 @@ cdef class OctreeContainer:
                 pos[2] = self.DLE[2] + dds[2]/2.0
                 for k in range(self.nn[2]):
                     if self.root_mesh[i][j][k] == NULL:
-                        raise RuntimeError
+                        raise KeyError(i,j,k)
                     visitor.pos[0] = i
                     visitor.pos[1] = j
                     visitor.pos[2] = k
@@ -184,7 +186,17 @@ cdef class OctreeContainer:
     cdef np.int64_t get_domain_offset(self, int domain_id):
         return 0
 
-    cdef int get_root(self, int ind[3], Oct **o) nogil:
+    def _check_root_mesh(self):
+        cdef count = 0
+        for i in range(self.nn[0]):
+            for j in range(self.nn[1]):
+                for k in range(self.nn[2]):
+                    if self.root_mesh[i][j][k] == NULL:
+                        print("Missing ", i, j, k)
+                        count += 1
+        print("Missing total of %s out of %s" % (count, self.nn[0] * self.nn[1] * self.nn[2]))
+
+    cdef int get_root(self, int ind[3], Oct **o) noexcept nogil:
         cdef int i
         for i in range(3):
             if ind[i] < 0 or ind[i] >= self.nn[i]:
@@ -197,7 +209,7 @@ cdef class OctreeContainer:
     @cython.wraparound(False)
     @cython.cdivision(True)
     cdef Oct *get(self, np.float64_t ppos[3], OctInfo *oinfo = NULL,
-                  int max_level = 99) nogil:
+                  int max_level = 99) noexcept nogil:
         #Given a floating point position, retrieve the most
         #refined oct at that time
         cdef int ind32[3]
@@ -566,7 +578,11 @@ cdef class OctreeContainer:
     def add(self, int curdom, int curlevel,
             np.ndarray[np.float64_t, ndim=2] pos,
             int skip_boundary = 1,
-            int count_boundary = 0):
+            int count_boundary = 0,
+            np.ndarray[np.uint64_t, ndim=1, cast=True] levels = None
+            ):
+        # In this function, if we specify curlevel = -1, then we query the
+        # (optional) levels array for the oct level.
         cdef int no, p, i
         cdef int ind[3]
         cdef int nb = 0
@@ -581,6 +597,12 @@ cdef class OctreeContainer:
         cdef int in_boundary = 0
         # How do we bootstrap ourselves?
         for p in range(no):
+            # We allow specifying curlevel = -1 to query from the levels array
+            # instead.
+            if curlevel == -1:
+                this_level = levels[p]
+            else:
+                this_level = curlevel
             #for every oct we're trying to add find the
             #floating point unitary position on this level
             in_boundary = 0
@@ -598,7 +620,7 @@ cdef class OctreeContainer:
             if cur == NULL: raise RuntimeError
             # Now we find the location we want
             # Note that RAMSES I think 1-findiceses levels, but we don't.
-            for _ in range(curlevel):
+            for _ in range(this_level):
                 # At every level, find the cell this oct
                 # lives inside
                 for i in range(3):
@@ -720,14 +742,18 @@ cdef class OctreeContainer:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def fill_level(self, int level,
-                   np.ndarray[np.uint8_t, ndim=1] levels,
-                   np.ndarray[np.uint8_t, ndim=1] cell_inds,
-                   np.ndarray[np.int64_t, ndim=1] file_inds,
-                   dest_fields, source_fields,
-                   np.int64_t offset = 0):
-        cdef np.ndarray[np.float64_t, ndim=2] source
-        cdef np.ndarray[np.float64_t, ndim=1] dest
+    cpdef void fill_level(
+        self,
+        const int level,
+        const np.uint8_t[::1] levels,
+        const np.uint8_t[::1] cell_inds,
+        const np.int64_t[::1] file_inds,
+        dict dest_fields,
+        dict source_fields,
+        np.int64_t offset = 0
+    ):
+        cdef np.float64_t[:, :] source
+        cdef np.float64_t[::1] dest
         cdef int i, lvl
 
         for key in dest_fields:
@@ -802,25 +828,26 @@ cdef class OctreeContainer:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def fill_level_with_domain(
-                   self, int level,
-                   np.uint8_t[:] levels,
-                   np.uint8_t[:] cell_inds,
-                   np.int64_t[:] file_inds,
-                   np.int32_t[:] domains,
-                   dict dest_fields,
-                   dict source_fields,
-                   np.int32_t domain,
-                   np.int64_t offset = 0
-                   ):
+    cpdef int fill_level_with_domain(
+        self,
+        const int level,
+        const np.uint8_t[::1] level_inds,
+        const np.uint8_t[::1] cell_inds,
+        const np.int64_t[::1] file_inds,
+        const np.int32_t[::1] domain_inds,
+        dict dest_fields,
+        dict source_fields,
+        const np.int32_t domain,
+        np.int64_t offset = 0
+    ):
         """Similar to fill_level but accepts a domain argument.
 
         This is particularly useful for frontends that have buffer zones at CPU boundaries.
         These buffer oct cells have a different domain than the local one and
         are usually not read, but one has to read them e.g. to compute ghost zones.
         """
-        cdef np.ndarray[np.float64_t, ndim=2] source
-        cdef np.ndarray[np.float64_t, ndim=1] dest
+        cdef np.float64_t[:, :] source
+        cdef np.float64_t[::1] dest
         cdef int i, count, lev
         cdef np.int32_t dom
 
@@ -828,9 +855,9 @@ cdef class OctreeContainer:
             dest = dest_fields[key]
             source = source_fields[key]
             count = 0
-            for i in range(levels.shape[0]):
-                lev = levels[i]
-                dom = domains[i]
+            for i in range(level_inds.shape[0]):
+                lev = level_inds[i]
+                dom = domain_inds[i]
                 if lev != level or dom != domain: continue
                 count += 1
                 if file_inds[i] < 0:
@@ -971,7 +998,7 @@ cdef class SparseOctreeContainer(OctreeContainer):
     def save_octree(self):
         raise NotImplementedError
 
-    cdef int get_root(self, int ind[3], Oct **o) nogil:
+    cdef int get_root(self, int ind[3], Oct **o) noexcept nogil:
         o[0] = NULL
         cdef np.int64_t key = self.ipos_to_key(ind)
         cdef OctKey okey
@@ -995,7 +1022,7 @@ cdef class SparseOctreeContainer(OctreeContainer):
             pos[2 - j] = (<np.int64_t>(key & ukey))
             key = key >> 20
 
-    cdef np.int64_t ipos_to_key(self, int pos[3]) nogil:
+    cdef np.int64_t ipos_to_key(self, int pos[3]) noexcept nogil:
         # We (hope) that 20 bits is enough for each index.
         cdef int i
         cdef np.int64_t key = 0

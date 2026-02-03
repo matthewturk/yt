@@ -1,11 +1,11 @@
 import logging
 import sys
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from yt.utilities.configure import YTConfig, configuration_callbacks
 
-_yt_sh: Optional[logging.StreamHandler] = None
-_original_emitter: Optional[Callable[[logging.LogRecord], None]] = None
+_yt_sh: logging.StreamHandler | None = None
+_original_emitter: Callable[[logging.LogRecord], None] | None = None
 
 
 def set_log_level(level):

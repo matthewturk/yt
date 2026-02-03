@@ -104,31 +104,24 @@ class StreamParticleIOHandler(BaseParticleIOHandler):
         super().__init__(ds)
 
     def _read_particle_coords(self, chunks, ptf):
-        for data_file in sorted(
-            self._get_data_files(chunks), key=lambda x: (x.filename, x.start)
-        ):
+        for data_file in self._sorted_chunk_iterator(chunks):
             f = self.fields[data_file.filename]
             # This double-reads
             for ptype in sorted(ptf):
-                yield ptype, (
-                    f[ptype, "particle_position_x"],
-                    f[ptype, "particle_position_y"],
-                    f[ptype, "particle_position_z"],
-                ), 0.0
+                yield (
+                    ptype,
+                    (
+                        f[ptype, "particle_position_x"],
+                        f[ptype, "particle_position_y"],
+                        f[ptype, "particle_position_z"],
+                    ),
+                    0.0,
+                )
 
     def _read_smoothing_length(self, chunks, ptf, ptype):
-        for data_file in sorted(
-            self._get_data_files(chunks), key=lambda x: (x.filename, x.start)
-        ):
+        for data_file in self._sorted_chunk_iterator(chunks):
             f = self.fields[data_file.filename]
             return f[ptype, "smoothing_length"]
-
-    def _get_data_files(self, chunks):
-        data_files = set()
-        for chunk in chunks:
-            for obj in chunk.objs:
-                data_files.update(obj.data_files)
-        return data_files
 
     def _read_particle_data_file(self, data_file, ptf, selector=None):
         return_data = {}
@@ -155,7 +148,7 @@ class StreamParticleIOHandler(BaseParticleIOHandler):
                 if selector:
                     data = data[mask]
 
-                return_data[(ptype, field)] = data
+                return_data[ptype, field] = data
 
         return return_data
 
@@ -168,7 +161,7 @@ class StreamParticleIOHandler(BaseParticleIOHandler):
                 pos = np.column_stack(
                     [
                         self.fields[data_file.filename][
-                            (ptype, f"particle_position_{ax}")
+                            ptype, f"particle_position_{ax}"
                         ]
                         for ax in "xyz"
                     ]
@@ -265,6 +258,9 @@ class IOHandlerStreamOctree(BaseIOHandler):
                     field_vals[field] = self.fields[
                         subset.domain_id - subset._domain_offset
                     ][field]
+
+                    if callable(field_vals[field]):
+                        field_vals[field] = field_vals[field]()
                 subset.fill(field_vals, rv, selector, ind)
         return rv
 
@@ -299,7 +295,7 @@ class IOHandlerStreamUnstructured(BaseIOHandler):
             ind = 0
             ftype, fname = field
             if ftype == "all":
-                objs = [mesh for mesh in self.ds.index.mesh_union]
+                objs = list(self.ds.index.mesh_union)
             else:
                 mesh_ids = [int(ftype[-1])]
                 chunk = chunks[mesh_ids[0] - 1]
@@ -307,7 +303,7 @@ class IOHandlerStreamUnstructured(BaseIOHandler):
             for g in objs:
                 ds = self.fields[g.mesh_id].get(field, None)
                 if ds is None:
-                    f = ("connect%d" % (g.mesh_id + 1), fname)
+                    f = (f"connect{(g.mesh_id + 1)}", fname)
                     ds = self.fields[g.mesh_id][f]
                 ind += g.select(selector, ds, rv[field], ind)  # caches
             rv[field] = rv[field][:ind]

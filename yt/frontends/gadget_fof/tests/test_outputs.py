@@ -1,13 +1,8 @@
 import numpy as np
+from numpy.testing import assert_array_equal, assert_equal
 
 from yt.frontends.gadget_fof.api import GadgetFOFDataset
-from yt.testing import (
-    ParticleSelectionComparison,
-    assert_array_equal,
-    assert_equal,
-    requires_file,
-    requires_module,
-)
+from yt.testing import ParticleSelectionComparison, requires_file, requires_module
 from yt.utilities.answer_testing.framework import (
     FieldValuesTest,
     data_dir_load,
@@ -70,11 +65,11 @@ def test_subhalos():
     total_int = 0
     for hid in range(0, ds.index.particle_count["Group"]):
         my_h = ds.halo("Group", hid)
-        h_ids = my_h[("Group", "ID")]
-        for sid in range(int(my_h[("Group", "subhalo_number")][0])):
+        h_ids = my_h["Group", "ID"]
+        for sid in range(int(my_h["Group", "subhalo_number"][0])):
             my_s = ds.halo("Subhalo", (my_h.particle_identifier, sid))
-            total_sub += my_s[("Subhalo", "ID")].size
-            total_int += np.intersect1d(h_ids, my_s[("Subhalo", "ID")]).size
+            total_sub += my_s["Subhalo", "ID"].size
+            total_int += np.intersect1d(h_ids, my_s["Subhalo", "ID"]).size
 
     # Test that all subhalo particles are contained within
     # their parent group.
@@ -110,9 +105,9 @@ g56 = "gadget_halos/data/groups_056/fof_subhalo_tab_056.0.hdf5"
 def test_unbalanced_dataset():
     ds = data_dir_load(g56)
     halo = ds.halo("Group", 0)
-    assert_equal(len(halo[("Group", "member_ids")]), 33)
-    assert_equal(halo[("Group", "member_ids")].min().d, 723254.0)
-    assert_equal(halo[("Group", "member_ids")].max().d, 772662.0)
+    assert_equal(len(halo["Group", "member_ids"]), 33)
+    assert_equal(halo["Group", "member_ids"].min().d, 723254.0)
+    assert_equal(halo["Group", "member_ids"].max().d, 772662.0)
 
 
 # fof/subhalo catalog with no member ids in first file
@@ -128,5 +123,5 @@ def test_3file_halo():
     # this halo's particles are distributed over 3 files with the
     # middle file being empty
     halo = ds.halo("Group", 6)
-    halo[("Group", "member_ids")]
+    halo["Group", "member_ids"]
     assert True

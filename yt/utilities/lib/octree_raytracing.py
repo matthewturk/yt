@@ -29,10 +29,10 @@ class OctreeRayTracing:
         self.octree = _OctreeRayTracing(LE, RE, depth)
         ds = data_source.ds
 
-        xyz = np.stack([data_source[key].to("unitary").value for key in "xyz"], axis=-1)
-        lvl = data_source["grid_level"].astype(int).value + lvl_min
+        xyz = np.stack([data_source[key].to_value("unitary") for key in "xyz"], axis=-1)
+        lvl = data_source["grid_level"].value.astype("int64", copy=False) + lvl_min
 
-        ipos = np.floor(xyz * (1 << depth)).astype(int)
+        ipos = np.floor(xyz * (1 << depth)).astype("int64")
         mylog.debug("Adding cells to volume")
         self.octree.add_nodes(
             ipos.astype(np.int32),
@@ -50,7 +50,7 @@ class OctreeRayTracing:
             np.zeros((2, 2, 2, data_source.ires.size), dtype="float64"), units
         )
         binary_3D_index_iter = product(*[range(2)] * 3)
-        ind = {(i, j, k): 0 for i, j, k in binary_3D_index_iter}
+        ind = dict.fromkeys(binary_3D_index_iter, 0)
         for chunk in chunks:
             with data_source._chunked_read(chunk):
                 gz = data_source._current_chunk.objs[0]

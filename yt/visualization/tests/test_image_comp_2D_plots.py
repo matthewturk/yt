@@ -1,13 +1,11 @@
 # image tests using pytest-mpl
-import re
-from importlib.metadata import version
 from itertools import chain
-from typing import Dict
 
+import matplotlib as mpl
 import numpy as np
 import numpy.testing as npt
 import pytest
-from packaging.version import Version
+from matplotlib.colors import SymLogNorm
 
 from yt.data_objects.profiles import create_profile
 from yt.loaders import load_uniform_grid
@@ -19,8 +17,6 @@ from yt.visualization.api import (
     ProfilePlot,
     SlicePlot,
 )
-
-MPL_VERSION = Version(version("matplotlib"))
 
 
 def test_sliceplot_set_unit_and_zlim_order():
@@ -43,6 +39,37 @@ def test_sliceplot_set_unit_and_zlim_order():
     im1 = p1.plots[field].image._A
 
     npt.assert_allclose(im0, im1)
+
+
+def test_annotation_parse_h():
+    ds = fake_random_ds(16)
+
+    # Make sure `h` (reduced Hubble constant) is not equal to 1
+    ds.unit_registry.modify("h", 0.7)
+
+    rad = ds.quan(0.1, "cm/h")
+    center = ds.arr([0.5] * 3, "code_length")
+
+    # Twice the same slice plot
+    p1 = SlicePlot(ds, "x", "density")
+    p2 = SlicePlot(ds, "x", "density")
+
+    # But the *same* center is given in different units
+    p1.annotate_sphere(center.to("cm"), rad, circle_args={"color": "black"})
+    p2.annotate_sphere(center.to("cm/h"), rad, circle_args={"color": "black"})
+
+    # Render annotations, and extract matplotlib image
+    # as an RGB array
+    p1.render()
+    p1.plots["gas", "density"].figure.canvas.draw()
+    img1 = p1.plots["gas", "density"].figure.canvas.renderer.buffer_rgba()
+
+    p2.render()
+    p2.plots["gas", "density"].figure.canvas.draw()
+    img2 = p2.plots["gas", "density"].figure.canvas.renderer.buffer_rgba()
+
+    # This should be the same image
+    npt.assert_allclose(img1, img2)
 
 
 @pytest.mark.mpl_image_compare
@@ -74,10 +101,6 @@ def test_inf_and_finite_values_set_zlim():
     return p.plots[field].figure
 
 
-@pytest.mark.skipif(
-    MPL_VERSION < Version("3.5"),
-    reason=f"Correct behaviour requires MPL 3.5 we have {MPL_VERSION}",
-)
 @pytest.mark.mpl_image_compare
 def test_sliceplot_custom_norm():
     from matplotlib.colors import TwoSlopeNorm
@@ -91,32 +114,18 @@ def test_sliceplot_custom_norm():
     return p.plots[field].figure
 
 
-@pytest.mark.skipif(
-    MPL_VERSION >= Version("3.5"),
-    reason=f"Testing a warning that should only happen with MPL < 3.5, we have {MPL_VERSION}",
-)
 @pytest.mark.mpl_image_compare
-def test_sliceplot_custom_norm_warning():
-    from matplotlib.colors import TwoSlopeNorm
-
+def test_sliceplot_custom_norm_symlog_int_base():
     ds = fake_random_ds(16)
-    field = ("gas", "density")
+    add_noise_fields(ds)
+    field = "noise3"
     p = SlicePlot(ds, "z", field)
-    p.set_norm(field, norm=TwoSlopeNorm(vcenter=0, vmin=-0.5, vmax=1))
 
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            "Failed to format colorbar ticks. "
-            "This is expected when using the set_norm method "
-            "with some matplotlib classes (e.g. TwoSlopeNorm) "
-            "with matplotlib versions older than 3.5\n"
-            "Please try upgrading matplotlib to a more recent version. "
-            "If the problem persists, please file a report to "
-            "https://github.com/yt-project/yt/issues/new"
-        ),
-    ):
-        p.render()
+    # using integer base !=10 and >2 to exercise special case
+    # for colorbar minor ticks
+    p.set_norm(field, norm=SymLogNorm(linthresh=0.1, base=5))
+
+    p.render()
     return p.plots[field].figure
 
 
@@ -169,6 +178,29 @@ def test_particleprojectionplot_set_colorbar_properties():
     return p.plots[field].figure
 
 
+class TestMultipanelPlot:
+    @classmethod
+    def setup_class(cls):
+        cls.fields = [
+            ("gas", "density"),
+            ("gas", "velocity_x"),
+            ("gas", "velocity_y"),
+            ("gas", "velocity_magnitude"),
+        ]
+        cls.ds = fake_random_ds(16)
+
+    @pytest.mark.parametrize("cbar_location", ["top", "bottom", "left", "right"])
+    @pytest.mark.mpl_image_compare
+    def test_multipanelplot_colorbar_orientation_simple(self, cbar_location):
+        p = SlicePlot(self.ds, "z", self.fields)
+        return p.export_to_mpl_figure((2, 2), cbar_location=cbar_location)
+
+    @pytest.mark.parametrize("cbar_location", ["top", "bottom"])
+    def test_multipanelplot_colorbar_orientation_warning(self, cbar_location):
+        p = SlicePlot(self.ds, "z", self.fields)
+        p.export_to_mpl_figure((2, 2), cbar_location=cbar_location)
+
+
 class TestProfilePlot:
     @classmethod
     def setup_class(cls):
@@ -183,7 +215,7 @@ class TestProfilePlot:
             [("gas", "density"), ("index", "radius")],
             [("gas", "velocity_magnitude"), ("gas", "mass")],
         ]
-        cls.profiles: Dict[str, ProfilePlot] = {}
+        cls.profiles: dict[str, ProfilePlot] = {}
         for i_reg, reg in enumerate(regions):
             id_prefix = str(i_reg)
             for x_field, y_field in pr_fields:
@@ -262,7 +294,7 @@ class TestPhasePlot:
                 ("gas", "velocity_magnitude"),
             ],
         ]
-        cls.profiles: Dict[str, PhasePlot] = {}
+        cls.profiles: dict[str, PhasePlot] = {}
         for i_reg, reg in enumerate(regions):
             id_prefix = str(i_reg)
             for x_field, y_field, z_field in pr_fields:
@@ -356,6 +388,17 @@ class TestSetBackgroundColor:
     def setup_class(cls):
         cls.ds = fake_random_ds(16)
 
+        def some_nans_field(data):
+            ret = data["gas", "density"]
+            ret[::2] *= np.nan
+            return ret
+
+        cls.ds.add_field(
+            name=("gas", "polluted_field"),
+            function=some_nans_field,
+            sampling_type="local",
+        )
+
     @pytest.mark.mpl_image_compare
     def test_sliceplot_set_background_color_linear(self):
         field = ("gas", "density")
@@ -375,13 +418,27 @@ class TestSetBackgroundColor:
         p.render()
         return p.plots[field].figure
 
+    @pytest.mark.mpl_image_compare
+    def test_sliceplot_set_background_color_and_bad_value(self):
+        # see https://github.com/yt-project/yt/issues/4639
+        field = ("gas", "polluted_field")
+        p = SlicePlot(self.ds, "z", field, width=1.5)
+        p.set_background_color(field, color="black")
+
+        # copy the default colormap
+        cmap = mpl.colormaps["cmyt.arbre"].with_extremes(bad="red")
+        p.set_cmap(field, cmap)
+
+        p.render()
+        return p.plots[field].figure
+
 
 class TestCylindricalZSlicePlot:
     @classmethod
     def setup_class(cls):
         cls.ds = fake_amr_ds(geometry="cylindrical")
         add_noise_fields(cls.ds)
-        fields = ["noise%d" % i for i in range(4)]
+        fields = [f"noise{i}" for i in range(4)]
         cls.plot = SlicePlot(cls.ds, "z", fields)
 
     @pytest.mark.parametrize("field", ["noise0", "noise1", "noise2", "noise3"])
@@ -395,13 +452,41 @@ class TestCylindricalZSlicePlot:
         self.plot.set_log("noise0", False)
         return self.plot.plots[field].figure
 
+    @pytest.mark.parametrize(
+        "theta_min, theta_max",
+        [
+            pytest.param(0, 2 * np.pi, id="full_azimuthal_domain"),
+            pytest.param(3 / 4 * np.pi, 5 / 4 * np.pi, id="restricted_sector"),
+        ],
+    )
+    @pytest.mark.mpl_image_compare
+    def test_exclude_pixels_with_partial_bbox_intersection(self, theta_min, theta_max):
+        rmin = 1.0
+        rmax = 2.0
+        ds = fake_amr_ds(
+            geometry="cylindrical",
+            domain_left_edge=[rmin, 0, theta_min],
+            domain_right_edge=[rmax, 1, theta_max],
+        )
+        add_noise_fields(ds)
+        plot = SlicePlot(ds, "z", ("gas", "noise0"))
+        for radius in [rmin - 0.01, rmax]:
+            plot.annotate_sphere(
+                center=[0, 0, 0],
+                radius=radius,
+                circle_args={"color": "red", "alpha": 0.4, "linewidth": 3},
+            )
+        plot.annotate_title("all pixels beyond (or on) red lines should be white")
+        plot.render()
+        return plot.plots["gas", "noise0"].figure
+
 
 class TestSphericalPhiSlicePlot:
     @classmethod
     def setup_class(cls):
         cls.ds = fake_amr_ds(geometry="spherical")
         add_noise_fields(cls.ds)
-        fields = ["noise%d" % i for i in range(4)]
+        fields = [f"noise{i}" for i in range(4)]
         cls.plot = SlicePlot(cls.ds, "phi", fields)
 
     @pytest.mark.parametrize("field", ["noise0", "noise1", "noise2", "noise3"])
@@ -415,7 +500,7 @@ class TestSphericalThetaSlicePlot:
     def setup_class(cls):
         cls.ds = fake_amr_ds(geometry="spherical")
         add_noise_fields(cls.ds)
-        fields = ["noise%d" % i for i in range(4)]
+        fields = [f"noise{i}" for i in range(4)]
         cls.plot = SlicePlot(cls.ds, "theta", fields)
 
     @pytest.mark.parametrize("field", ["noise0", "noise1", "noise2", "noise3"])

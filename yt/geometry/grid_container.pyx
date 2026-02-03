@@ -76,10 +76,10 @@ cdef class GridTree:
                   int refine_by = 2):
 
         cdef int i, j, k
-        cdef np.ndarray[np.int_t, ndim=1] child_ptr
+        cdef np.ndarray[np.int64_t, ndim=1] child_ptr
 
-        child_ptr = np.zeros(num_grids, dtype='int')
         self.refine_by = refine_by
+        child_ptr = np.zeros(num_grids, dtype='int64')
 
         self.num_grids = num_grids
         self.num_root_grids = 0

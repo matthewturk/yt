@@ -70,7 +70,8 @@ Simple HDF5 Data
 .. note::
 
    This wrapper takes advantage of the functionality described in
-   :ref:`loading-via-functions` but the basics of setting up function handlers,
+   :doc:`Loading_Data_via_Functions`
+   but the basics of setting up function handlers,
    guessing fields, etc, are handled by yt.
 
 Using the function :func:`yt.loaders.load_hdf5_file`, you can load a generic
@@ -481,10 +482,7 @@ Athena++ Data
 
 Athena++ HDF5 data is supported and cared for by John ZuHone. Uniform-grid, SMR,
 and AMR datasets in cartesian coordinates are fully supported. Support for
-curvilinear coordinates and logarithmic cell sizes exists, but is preliminary.
-For the latter type of dataset, the data will be loaded in as a semi-structured
-mesh dataset. See :ref:`loading-semi-structured-mesh-data` for more details on
-how this works in yt.
+curvilinear coordinates and/or non-constant grid cell sizes exists, but is preliminary.
 
 The default unit system in yt is cgs ("Gaussian") units, but Athena++ data is
 not normally stored in these units, so the code unit system is the default unit
@@ -555,13 +553,130 @@ using a ``parameters`` dict, accepting the following keys:
   release.
 * Domains may be visualized assuming periodicity.
 
+.. _loading-parthenon-data:
+
+Parthenon Data
+--------------
+
+Parthenon HDF5 data is supported and cared for by Forrest Glines and Philipp Grete.
+The Parthenon framework is the basis for various downstream codes, e.g.,
+`AthenaPK <https://github.com/parthenon-hpc-lab/athenapk>`_,
+`Phoebus <https://github.com/lanl/phoebus>`_,
+`KHARMA <https://github.com/AFD-Illinois/kharma>`_,
+RIOT, and the
+`parthenon-hydro <https://github.com/parthenon-hpc-lab/parthenon-hydro>`_ miniapp.
+Support for these codes is handled through the common Parthenon frontend with
+specifics described in the following.
+Note that only AthenaPK data is currently automatically converted to the
+standard fields known by yt.
+For other codes, the raw data of the fields stored in the output file is accessible
+and a conversion between those fields and yt standard fields needs to be done manually.
+
+   .. rubric:: Caveats
+
+* Reading particle data from Parthenon output is currently not supported.
+* Spherical and cylindrical coordinates only work for AthenaPK data.
+* Only periodic boundary conditions are properly handled. Calculating quantities requiring
+larger stencils (like derivatives) will be incorrect at mesh boundaries that are not periodic.
+
+AthenaPK
+^^^^^^^^
+
+Fluid data on uniform-grid, SMR, and AMR datasets in Cartesian coordinates are fully supported.
+
+AthenaPK data may contain information on units in the output (when specified
+via the ``<units>`` block in the input file when the simulation was originally run).
+If that information is present, it will be used by yt.
+Otherwise the default unit system will be the code unit
+system with conversion of 1 ``code_length`` equalling 1 cm, and so on (given yt's default
+cgs/"Gaussian" unit system).  If you would like to provided different
+conversions, you may supply conversions for length, time, and mass to ``load``
+using the ``units_override`` functionality:
+
+.. code-block:: python
+
+   import yt
+
+   units_override = {
+       "length_unit": (1.0, "Mpc"),
+       "time_unit": (1.0, "Myr"),
+       "mass_unit": (1.0e14, "Msun"),
+   }
+
+   ds = yt.load("parthenon.restart.final.rhdf", units_override=units_override)
+
+This means that the yt fields, e.g. ``("gas","density")``,
+``("gas","velocity_x")``, ``("gas","magnetic_field_x")``, will be in cgs units
+(or whatever unit system was specified), but the AthenaPK fields, e.g.,
+``("parthenon","prim_density")``, ``("parthenon","prim_velocity_1")``,
+``("parthenon","prim_magnetic_field_1")``, will be in code units.
+
+The default normalization for various magnetic-related quantities such as
+magnetic pressure, Alfven speed, etc., as well as the conversion between
+magnetic code units and other units, is Gaussian/CGS, meaning that factors
+of :math:`4\pi` or :math:`\sqrt{4\pi}` will appear in these quantities, e.g.
+:math:`p_B = B^2/8\pi`. To use the Lorentz-Heaviside normalization instead,
+in which the factors of :math:`4\pi` are dropped (:math:`p_B = B^2/2), for
+example), set ``magnetic_normalization="lorentz_heaviside"`` in the call to
+``yt.load``:
+
+.. code-block:: python
+
+    ds = yt.load(
+        "parthenon.restart.final.rhdf",
+        units_override=units_override,
+        magnetic_normalization="lorentz_heaviside",
+    )
+
+Alternative values (i.e., overriding the default ones stored in the simulation
+output) for the following simulation parameters may be specified
+using a ``parameters`` dict, accepting the following keys:
+
+* ``gamma``: ratio of specific heats, Type: Float. If not specified,
+  :math:`\gamma = 5/3` is assumed.
+* ``mu``: mean molecular weight, Type: Float. If not specified, :math:`\mu = 0.6`
+  (for a fully ionized primordial plasma) is assumed.
+
+Other Parthenon based codes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As mentioned above, a default conversion from code fields to yt fields (e.g.,
+from a density field to ``("gas","density")``) is currently not available --
+though more specialized frontends may be added in the future.
+
+All raw data of a Parthenon-based simulation output is available through
+the ``("parthenon","NAME")`` fields where ``NAME`` varies between codes
+and the respective code documentation should be consulted.
+
+One option to manually convert those raw fields to the standard yt fields
+is by adding derived fields, e.g., for the field named "``mass.density``"
+that is stored in cgs units on disk:
+
+.. code-block:: python
+
+    from yt import derived_field
+
+
+    @derived_field(name="density", units="g*cm**-3", sampling_type="cell")
+    def _density(data):
+        return data[("parthenon", "mass.density")] * yt.units.g / yt.units.cm**3
+
+Moreover, an ideal equation of state is assumed with the following parameters,
+which may be specified using a ``parameters`` dict, accepting the following keys:
+
+* ``gamma``: ratio of specific heats, Type: Float. If not specified,
+  :math:`\gamma = 5/3` is assumed.
+* ``mu``: mean molecular weight, Type: Float. If not specified, :math:`\mu = 0.6`
+  (for a fully ionized primordial plasma) is assumed.
+
+
 .. _loading-orion-data:
 
 AMReX / BoxLib Data
 -------------------
 
-AMReX and BoxLib share a frontend (currently named ``boxlib``), since
-the file format nearly identical.  yt has been tested with AMReX/BoxLib
+AMReX and BoxLib share a frontend, since
+the file format is nearly identical.  yt has been tested with AMReX/BoxLib
 data generated by Orion, Nyx, Maestro, Castro, IAMR, and
 WarpX. Currently it is cared for by a combination of Andrew Myers,
 Matthew Turk, and Mike Zingale.
@@ -650,9 +765,9 @@ to the z direction.
 
     ds.index
     ad = ds.all_data()
-    print(ds.field_info[("raw", "Ex")].nodal_flag)
+    print(ds.field_info["raw", "Ex"].nodal_flag)
     print(ad["raw", "Ex"].shape)
-    print(ds.field_info[("raw", "Bx")].nodal_flag)
+    print(ds.field_info["raw", "Bx"].nodal_flag)
     print(ad["raw", "Bx"].shape)
     print(ds.field_info["raw", "Bx"].nodal_flag)
     print(ad["raw", "Bx"].shape)
@@ -667,8 +782,8 @@ volume rendering, and many of the analysis modules will not work.
 
 .. _loading-pluto-data:
 
-Pluto Data
-----------
+Pluto Data (AMR)
+----------------
 
 Support for Pluto AMR data is provided through the Chombo frontend, which
 is currently maintained by Andrew Myers. Pluto output files that don't use
@@ -692,6 +807,18 @@ To load it, you can navigate into that directory and do:
 
 The ``pluto.ini`` file must also be present alongside the HDF5 file.
 By default, all of the Pluto fields will be in code units.
+
+
+.. _loading-idefix-data:
+
+Idefix, Pluto VTK and Pluto XDMF Data
+-------------------------------------
+
+Support for Idefix ``.dmp``, ``.vtk`` data is provided through the ``yt_idefix``
+extension.
+It also supports monogrid ``.vtk`` and ``.h5`` data from Pluto.
+See `the PyPI page <https://pypi.org/project/yt-idefix/>`_ for details.
+
 
 .. _loading-enzo-data:
 
@@ -755,11 +882,11 @@ direction.
 
     ds.index
     ad = ds.all_data()
-    print(ds.field_info[("enzo", "Ex")].nodal_flag)
+    print(ds.field_info["enzo", "Ex"].nodal_flag)
     print(ad["enzo", "Ex"].shape)
-    print(ds.field_info[("enzo", "BxF")].nodal_flag)
+    print(ds.field_info["enzo", "BxF"].nodal_flag)
     print(ad["enzo", "Bx"].shape)
-    print(ds.field_info[("enzo", "Bx")].nodal_flag)
+    print(ds.field_info["enzo", "Bx"].nodal_flag)
     print(ad["enzo", "Bx"].shape)
 
 Here, the field ``('enzo', 'Ex')`` is nodal in two directions, so four values
@@ -1017,7 +1144,7 @@ FITS images are fully-describing in that unit, parameter, and coordinate
 information is passed from the original dataset. These can be created via the
 :class:`~yt.visualization.fits_image.FITSImageData` class and its subclasses.
 For information about how to use these special classes, see
-:ref:`writing_fits_images`.
+:doc:`../visualizing/FITSImageData`.
 
 Once you have produced a FITS file in this fashion, you can load it using
 yt and it will be detected as a ``YTFITSDataset`` object, and it can be analyzed
@@ -1059,7 +1186,7 @@ particle fields in yt, but a grid will be constructed from the WCS
 information in the FITS header. There is a helper function,
 ``setup_counts_fields``, which may be used to make deposited image fields
 from the event data for different energy bands (for an example see
-:ref:`xray_fits`).
+:doc:`../cookbook/fits_xray_images`).
 
 Generic FITS Images
 """""""""""""""""""
@@ -1299,9 +1426,9 @@ Examples of Using FITS Data
 The following Jupyter notebooks show examples of working with FITS data in yt,
 which we recommend you look at in the following order:
 
-* :ref:`radio_cubes`
-* :ref:`xray_fits`
-* :ref:`writing_fits_images`
+* :doc:`../cookbook/fits_radio_cubes`
+* :doc:`../cookbook/fits_xray_images`
+* :doc:`../visualizing/FITSImageData`
 
 .. _loading-flash-data:
 
@@ -1388,9 +1515,10 @@ yt has support for reading Gadget data in both raw binary and HDF5 formats.  It
 is able to access the particles as it would any other particle dataset, and it
 can apply smoothing kernels to the data to produce both quantitative analysis
 and visualization. See :ref:`loading-sph-data` for more details and
-:ref:`gadget-notebook` for a detailed example of loading, analyzing, and
-visualizing a Gadget dataset.  An example which makes use of a Gadget snapshot
-from the OWLS project can be found at :ref:`owls-notebook`.
+:doc:`../cookbook/yt_gadget_analysis` for a detailed example
+of loading, analyzing, and visualizing a Gadget dataset.  An example which
+makes use of a Gadget snapshot from the OWLS project can be found in
+:doc:`../cookbook/yt_gadget_owls_analysis`.
 
 .. note::
 
@@ -1597,6 +1725,40 @@ fields swapped:
 In general, to determine what fields are in your Gadget binary file, it may
 be useful to inspect them with the `g3read <https://github.com/aragagnin/g3read>`_
 code first.
+
+.. _gadget-species-fields:
+
+Gadget Species Fields
+^^^^^^^^^^^^^^^^^^^^^
+
+Gas and star particles in Gadget binary and HDF5 files can have fields
+corresponding to different species fractions or masses. The following field
+definitions are supported, in the sense that they are automatically detected
+and will be used to construct species fractions, densities, and number densities
+after the manner specified in :ref:`species-fields`. For Gadget binary files, the
+following fields (as specified in the ``field_spec`` argument) are supported:
+
+* ``"ElevenMetalMasses"``: 11 mass fields: He, C, Ca, O, N, Ne, Mg, S, Si, Fe, Ej
+* ``"FourMetalFractions"``: 4 fraction fields: C, O, Si, Fe
+
+For Gadget HDF5 files, the fields ``"MetalMasses"`` or ``"Mass Of Metals"`` are
+supported, with the number of species determined by the size of the dataset's
+second dimension in the file. Four different numbers of species in these fields
+are supported, corresponding to the following species:
+
+* 7, corresponding to C, N, O, Mg, Si, Fe, Ej
+* 8, corresponding to He, C, O, Mg, S, Si, Fe, Ej
+* 11, corresponding to He, C, Ca, O, N, Ne, Mg, S, Si, Fe, Ej
+* 15, corresponding to He, C, Ca, O, N, Ne, Mg, S, Si, Fe, Na, Al, Ar, Ni, Ej
+
+Two points should be noted about the above: the "Ej" species corresponds to the
+remaining mass of elements heavier than hydrogen and not enumerated, and in the
+case of 8, 11, and 15 species, hydrogen is assumed to be the remaining mass
+fraction.
+
+Finally, for Gadget HDF5 files, element fields which are of the form
+``"X_fraction"`` are also suppoted, and correspond to the mass fraction of element
+X.
 
 .. _gadget-long-ids:
 
@@ -1835,11 +1997,19 @@ are supported, and the following fields are defined:
 * ``("gas", "four_velocity_[txyz]")``: Four-velocity fields :math:`U_t, U_x, U_y, U_z`
 * ``("gas", "lorentz_factor")``: Lorentz factor :math:`\gamma = \sqrt{1+U_iU^i/c^2}`
   (where :math:`i` runs over the spatial indices)
+* ``("gas", "specific_reduced_enthalpy")``: Specific reduced enthalpy :math:`\tilde{h} = \epsilon + p/\rho`
+* ``("gas", "specific_enthalpy")``: Specific enthalpy :math:`h = c^2 + \epsilon + p/\rho`
 
 These, and other fields following them (3-velocity, energy densities, etc.) are
 computed in the same manner as in the
 `GAMER-SR paper <https://ui.adsabs.harvard.edu/abs/2021MNRAS.504.3298T/abstract>`_
 to avoid catastrophic cancellations.
+
+All of the special relativistic fields will only be available if the ``Temp`` and
+``Enth`` fields are present in the dataset, which can be ensured if the runtime
+options ``OPT__OUTPUT_TEMP = 1`` and ``OPT__OUTPUT_ENTHALPY  = 1`` are set in the
+``Input__Parameter`` file when running the simulation. This greatly speeds up
+calculations of the above derived fields in yt.
 
 .. rubric:: Caveats
 
@@ -1851,14 +2021,14 @@ to avoid catastrophic cancellations.
 Generic AMR Data
 ----------------
 
-See :ref:`loading-numpy-array` and
+See :doc:`Loading_Generic_Array_Data` and
 :func:`~yt.frontends.stream.data_structures.load_amr_grids` for more detail.
 
 .. note::
 
    It is now possible to load data using *only functions*, rather than using the
    fully-in-memory method presented here.  For more information and examples,
-   see :ref:`loading-via-functions`.
+   see :doc:`Loading_Data_via_Functions`.
 
 It is possible to create native yt dataset from Python's dictionary
 that describes set of rectangular patches of data of possibly varying
@@ -1915,7 +2085,7 @@ Particle fields are supported by adding 1-dimensional arrays to each
 Generic Array Data
 ------------------
 
-See :ref:`loading-numpy-array` and
+See :doc:`Loading_Generic_Array_Data` and
 :func:`~yt.frontends.stream.data_structures.load_uniform_grid` for more detail.
 
 Even if your data is not strictly related to fields commonly used in
@@ -1979,7 +2149,7 @@ Semi-Structured Grid Data
 
    See :ref:`loading-stretched-grids` for more information.
 
-See :ref:`loading-numpy-array`,
+See :doc:`Loading_Generic_Array_Data`,
 :func:`~yt.frontends.stream.data_structures.hexahedral_connectivity`,
 :func:`~yt.frontends.stream.data_structures.load_hexahedral_mesh` for
 more detail.
@@ -2051,9 +2221,8 @@ widths are provided in advance.
 
 .. note::
 
-   At present, support is available for a single grid with varying cell-widths,
-   loaded through the stream handler.  Future versions of yt will have more
-   complete and flexible support!
+   At present, stretched grids are restricted to a single level of refinement.
+   Future versions of yt will have more complete and flexible support!
 
 To load a stretched grid, you use the standard (and now rather-poorly named)
 ``load_uniform_grid`` function, but supplying a ``cell_widths`` argument.  This
@@ -2088,12 +2257,13 @@ demonstrates loading a simple "random" dataset with a random set of cell-widths.
 
 
 This can be modified to load data from a file, as well as to use more (or
-fewer) cells.
+fewer) cells. Like with a standard uniform grid, providing ``nprocs>1`` will
+decompose the domain into multiple grids (without refinement).
 
 Unstructured Grid Data
 ----------------------
 
-See :ref:`loading-numpy-array`,
+See :doc:`Loading_Generic_Array_Data`,
 :func:`~yt.frontends.stream.data_structures.load_unstructured_mesh` for
 more detail.
 
@@ -2219,7 +2389,7 @@ Generic Particle Data
    For more information about how yt indexes and reads particle data, set the
    section :ref:`demeshening`.
 
-See :ref:`generic-particle-data` and
+See :doc:`Loading_Generic_Particle_Data` and
 :func:`~yt.frontends.stream.data_structures.load_particles` for more detail.
 
 You can also load generic particle data using the same ``stream`` functionality
@@ -3171,7 +3341,7 @@ Tipsy Data
    For more information about how yt indexes and reads particle data, set the
    section :ref:`demeshening`.
 
-See :ref:`tipsy-notebook` and :ref:`loading-sph-data` for more details.
+See :doc:`../cookbook/tipsy_and_yt` and :ref:`loading-sph-data` for more details.
 
 yt also supports loading Tipsy data.  Many of its characteristics are similar
 to how Gadget data is loaded.

@@ -1,8 +1,9 @@
 # Some tests for the Spherical coordinates handler
 
 import numpy as np
+from numpy.testing import assert_almost_equal, assert_equal
 
-from yt.testing import assert_almost_equal, assert_equal, fake_amr_ds
+from yt.testing import fake_amr_ds
 
 # Our canonical tests are that we can access all of our fields and we can
 # compute our volume correctly.
@@ -27,7 +28,7 @@ def test_spherical_coordinates():
     # don't think it is avoidable as of right now.  Real datasets will almost
     # certainly be correct, if this is correct to 3 decimel places.
     assert_almost_equal(
-        dd[("index", "cell_volume")].sum(dtype="float64"),
+        dd["index", "cell_volume"].sum(dtype="float64"),
         (4.0 / 3.0) * np.pi * ds.domain_width[0] ** 3,
     )
     assert_equal(dd["index", "path_element_r"], dd["index", "dr"])

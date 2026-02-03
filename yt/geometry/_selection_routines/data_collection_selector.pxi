@@ -7,7 +7,7 @@ cdef class DataCollectionSelector(SelectorObject):
         self.nids = self.obj_ids.shape[0]
 
     cdef int select_bbox(self, np.float64_t left_edge[3],
-                               np.float64_t right_edge[3]) nogil:
+                               np.float64_t right_edge[3]) noexcept nogil:
         # We have to return 1 here, although it does make me uncomfortable to
         # do so.  This will always say we're hitting a certain bbox, but the
         # only grids that will be selected are those that match the grid index.
@@ -19,7 +19,7 @@ cdef class DataCollectionSelector(SelectorObject):
     @cython.cdivision(True)
     cdef void visit_grid_cells(self, GridVisitor visitor,
                               GridTreeNode *grid, int use_cache,
-                              np.uint8_t[:] cached_mask):
+                              np.uint8_t *cached_mask):
         # We override so that we can correctly pick out the grids we want to
         # visit.
         cdef np.float64_t left_edge[3]
@@ -83,7 +83,7 @@ cdef class DataCollectionSelector(SelectorObject):
     def fill_mask_regular_grid(self, gobj):
         cdef np.ndarray[np.uint8_t, ndim=3] mask
         mask = np.ones(gobj.ActiveDimensions, dtype='uint8')
-        return mask.astype("bool")
+        return mask.astype("bool"), mask.size
 
     def _hash_vals(self):
         return (hash(self.obj_ids.tobytes()), self.nids)

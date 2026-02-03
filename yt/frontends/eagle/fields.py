@@ -132,12 +132,12 @@ class EagleNetworkFieldInfo(OWLSFieldInfo):
     def _create_ion_density_func(self, ftype, ion):
         """returns a function that calculates the ion density of a particle."""
 
-        def _ion_density(field, data):
+        def _ion_density(data):
             # Lookup the index of the ion
             index = eaglenetwork_ion_lookup[ion]
 
             # Ion to hydrogen number density ratio
-            ion_chem = data[ftype, "Chemistry_%03i" % index]
+            ion_chem = data[ftype, f"Chemistry_{index:03}"]
 
             # Mass of a single ion
             if ion[0:2].isalpha():

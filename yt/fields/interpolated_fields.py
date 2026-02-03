@@ -30,15 +30,15 @@ def add_interpolated_field(
 
     if len(axes_fields) != len(axes_data) or len(axes_fields) != len(table_data.shape):
         raise RuntimeError(
-            "Data dimension mismatch: data is %d, "
-            "%d axes data provided, and %d axes fields provided."
-            % (len(table_data.shape), len(axes_data), len(axes_fields))
+            f"Data dimension mismatch: data is {len(table_data.shape)}, "
+            f"{len(axes_data)} axes data provided, "
+            f"and {len(axes_fields)} axes fields provided."
         )
 
     int_class = _int_class[len(table_data.shape)]
     my_interpolator = int_class(table_data, axes_data, axes_fields, truncate=truncate)
 
-    def _interpolated_field(field, data):
+    def _interpolated_field(data):
         return my_interpolator(data)
 
     add_field(

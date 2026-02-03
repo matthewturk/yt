@@ -10,9 +10,9 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import communicatio
 @yt.derived_field(
     name="IonizedHydrogen", units="", display_name=r"\frac{\rho_{HII}}{\rho_H}"
 )
-def IonizedHydrogen(field, data):
-    return data[("gas", "HII_Density")] / (
-        data[("gas", "HI_Density")] + data[("gas", "HII_Density")]
+def IonizedHydrogen(data):
+    return data["gas", "HII_Density"] / (
+        data["gas", "HI_Density"] + data["gas", "HII_Density"]
     )
 
 

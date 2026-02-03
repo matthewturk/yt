@@ -1,13 +1,12 @@
 from collections import OrderedDict
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 
 from yt.frontends.flash.api import FLASHDataset, FLASHParticleDataset
 from yt.loaders import load
 from yt.testing import (
     ParticleSelectionComparison,
-    assert_allclose,
-    assert_equal,
     disable_dataset_cache,
     requires_file,
     requires_module,
@@ -129,7 +128,7 @@ def test_FLASH25_dataset():
 
     assert_equal(ds.index.num_grids, 73)
     dd = ds.all_data()
-    dd[("gas", "density")]
+    dd["gas", "density"]
 
 
 @requires_module("h5py")

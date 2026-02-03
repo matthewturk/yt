@@ -53,29 +53,27 @@ class WCSFITSFieldInfo(FITSFieldInfo):
     def setup_fluid_fields(self):
         wcs_2d = getattr(self.ds, "wcs_2d", self.ds.wcs)
 
-        def _pixel(field, data):
-            return data.ds.arr(data[("index", "ones")], "pixel")
+        def _pixel(data):
+            return data.ds.arr(data["index", "ones"], "pixel")
 
         self.add_field(
             ("fits", "pixel"), sampling_type="cell", function=_pixel, units="pixel"
         )
 
         def _get_2d_wcs(data, axis):
-            w_coords = wcs_2d.wcs_pix2world(
-                data[("index", "x")], data[("index", "y")], 1
-            )
+            w_coords = wcs_2d.wcs_pix2world(data["index", "x"], data["index", "y"], 1)
             return w_coords[axis]
 
         def world_f(axis, unit):
-            def _world_f(field, data):
+            def _world_f(data):
                 return data.ds.arr(_get_2d_wcs(data, axis), unit)
 
             return _world_f
 
-        for (i, axis), name in zip(
-            enumerate([self.ds.lon_axis, self.ds.lat_axis]),
-            [self.ds.lon_name, self.ds.lat_name],
-        ):
+        for i, axis, name in [
+            (0, self.ds.lon_axis, self.ds.lon_name),
+            (1, self.ds.lat_axis, self.ds.lat_name),
+        ]:
             unit = str(wcs_2d.wcs.cunit[i])
             if unit.lower() == "deg":
                 unit = "degree"
@@ -90,10 +88,10 @@ class WCSFITSFieldInfo(FITSFieldInfo):
 
         if self.ds.dimensionality == 3:
 
-            def _spec(field, data):
+            def _spec(data):
                 axis = "xyz"[data.ds.spec_axis]
                 sp = (
-                    data[("fits", axis)].ndarray_view() - self.ds._p0
+                    data["fits", axis].ndarray_view() - self.ds._p0
                 ) * self.ds._dz + self.ds._z0
                 return data.ds.arr(sp, data.ds.spec_unit)
 

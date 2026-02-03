@@ -5,7 +5,7 @@ from yt.data_objects.static_output import Dataset
 from yt.data_objects.unions import MeshUnion
 from yt.funcs import setdefaultattr
 from yt.geometry.unstructured_mesh_handler import UnstructuredIndex
-from yt.utilities.file_handler import NetCDF4FileHandler, warn_netcdf
+from yt.utilities.file_handler import NetCDF4FileHandler, valid_netcdf_signature
 from yt.utilities.logger import ytLogger as mylog
 
 from .fields import ExodusIIFieldInfo
@@ -41,11 +41,12 @@ class ExodusIIUnstructuredIndex(UnstructuredIndex):
         fnames = elem_names + node_names
         self.field_list = []
         for i in range(1, len(self.meshes) + 1):
-            self.field_list += [("connect%d" % i, fname) for fname in fnames]
+            self.field_list += [(f"connect{i}", fname) for fname in fnames]
         self.field_list += [("all", fname) for fname in fnames]
 
 
 class ExodusIIDataset(Dataset):
+    _load_requirements = ["netCDF4"]
     _index_class = ExodusIIUnstructuredIndex
     _field_info_class = ExodusIIFieldInfo
 
@@ -200,7 +201,7 @@ class ExodusIIDataset(Dataset):
             fluid_types = ()
             i = 1
             while True:
-                ftype = "connect%d" % i
+                ftype = f"connect{i}"
                 if ftype in ds.variables:
                     fluid_types += (ftype,)
                     i += 1
@@ -219,7 +220,7 @@ class ExodusIIDataset(Dataset):
             return
         with self._handle.open_ds() as ds:
             values = ds.variables["vals_glo_var"][:].transpose()
-            for name, value in zip(names, values):
+            for name, value in zip(names, values, strict=True):
                 self.parameters[name] = value
 
     def _load_info_records(self):
@@ -239,7 +240,7 @@ class ExodusIIDataset(Dataset):
                 return ds.variables["time_whole"][self.step]
             except IndexError as e:
                 raise RuntimeError(
-                    "Invalid step number, max is %d" % (self.num_steps - 1)
+                    f"Invalid step number, max is {self.num_steps - 1}"
                 ) from e
             except (KeyError, TypeError):
                 return 0.0
@@ -311,14 +312,12 @@ class ExodusIIDataset(Dataset):
                 )
             else:
                 coords = (
-                    np.array([coord for coord in ds.variables["coord"][:]])
-                    .transpose()
-                    .astype("f8")
+                    np.array(list(ds.variables["coord"][:])).transpose().astype("f8")
                 )
             return coords
 
     def _apply_displacement(self, coords, mesh_id):
-        mesh_name = "connect%d" % (mesh_id + 1)
+        mesh_name = f"connect{mesh_id + 1}"
         new_coords = coords.copy()
         if mesh_name not in self.displacements:
             return new_coords
@@ -330,7 +329,7 @@ class ExodusIIDataset(Dataset):
             for i, ax in enumerate(coord_axes):
                 if f"disp_{ax}" in self.parameters["nod_names"]:
                     ind = self.parameters["nod_names"].index(f"disp_{ax}")
-                    disp = ds.variables["vals_nod_var%d" % (ind + 1)][self.step]
+                    disp = ds.variables[f"vals_nod_var{ind + 1}"][self.step]
                     new_coords[:, i] = coords[:, i] + fac * disp + offset[i]
 
             return new_coords
@@ -343,7 +342,7 @@ class ExodusIIDataset(Dataset):
         connectivity = []
         with self._handle.open_ds() as ds:
             for i in range(self.parameters["num_meshes"]):
-                var = ds.variables["connect%d" % (i + 1)][:].astype("i8")
+                var = ds.variables[f"connect{i + 1}"][:].astype("i8")
                 try:
                     elem_type = var.elem_type.lower()
                     if elem_type == "nfaced":
@@ -362,7 +361,7 @@ class ExodusIIDataset(Dataset):
                         raise NotImplementedError("only equal-size polyhedra supported")
                     q, r = np.divmod(len(conn), npe)
                     assert r == 0
-                    conn.shape = (q, npe)
+                    conn = conn.reshape(q, npe)
                 connectivity.append(conn)
             return connectivity
 
@@ -401,8 +400,13 @@ class ExodusIIDataset(Dataset):
         return mi, ma
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
-        warn_netcdf(filename)
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if not valid_netcdf_signature(filename):
+            return False
+
+        if cls._missing_load_requirements():
+            return False
+
         try:
             from netCDF4 import Dataset
 
@@ -412,4 +416,4 @@ class ExodusIIDataset(Dataset):
                 f.variables["connect1"]
             return True
         except Exception:
-            pass
+            return False

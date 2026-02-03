@@ -4,9 +4,9 @@ AMRVAC data structures
 
 
 """
+
 import os
 import struct
-import sys
 import warnings
 import weakref
 from pathlib import Path
@@ -25,22 +25,6 @@ from yt.utilities.physical_constants import boltzmann_constant_cgs as kb_cgs
 from .datfile_utils import get_header, get_tree_info
 from .fields import AMRVACFieldInfo
 from .io import read_amrvac_namelist
-
-if sys.version_info < (3, 9):
-    # This is directly taken from the standard library,
-    # but only available from Python 3.9
-    def _is_relative_to(self, *other):
-        """Return True if the path is relative to another path or False."""
-        try:
-            self.relative_to(*other)
-            return True
-        except ValueError:
-            return False
-
-    Path.is_relative_to = _is_relative_to  # type: ignore
-else:
-    # an else block is mandated for pyupgrade to enable auto-cleanup
-    pass
 
 
 def _parse_geometry(geometry_tag: str) -> Geometry:
@@ -158,7 +142,9 @@ class AMRVACHierarchy(GridIndex):
         dim = self.dataset.dimensionality
 
         self.grids = np.empty(self.num_grids, dtype="object")
-        for igrid, (ytlevel, morton_index) in enumerate(zip(ytlevels, morton_indices)):
+        for igrid, (ytlevel, morton_index) in enumerate(
+            zip(ytlevels, morton_indices, strict=True)
+        ):
             dx = dx0 / self.dataset.refine_by**ytlevel
             left_edge = xmin + (morton_index - 1) * block_nx * dx
 
@@ -219,20 +205,8 @@ class AMRVACDataset(Dataset):
         # note: geometry_override and parfiles are specific to this frontend
 
         self._geometry_override = geometry_override
-        super().__init__(
-            filename,
-            dataset_type,
-            units_override=units_override,
-            unit_system=unit_system,
-            default_species_fields=default_species_fields,
-        )
+        self._parfiles = []
 
-        self._parfiles = parfiles
-
-        namelist = None
-        namelist_gamma = None
-        c_adiab = None
-        e_is_internal = None
         if parfiles is not None:
             parfiles = list(always_iterable(parfiles))
             ppf = Path(parfiles[0])
@@ -244,7 +218,22 @@ class AMRVACDataset(Dataset):
                     filename,
                 )
                 parfiles = [Path(ytcfg["yt", "test_data_dir"]) / pf for pf in parfiles]
+            self._parfiles = parfiles
 
+        super().__init__(
+            filename,
+            dataset_type,
+            units_override=units_override,
+            unit_system=unit_system,
+            default_species_fields=default_species_fields,
+        )
+
+        namelist = None
+        namelist_gamma = None
+        c_adiab = None
+        e_is_internal = None
+
+        if parfiles is not None:
             namelist = read_amrvac_namelist(parfiles)
             if "hd_list" in namelist:
                 c_adiab = namelist["hd_list"].get("hd_adiab", 1.0)
@@ -281,7 +270,7 @@ class AMRVACDataset(Dataset):
         self.refine_by = 2
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
         """At load time, check whether data is recognized as AMRVAC formatted."""
         validation = False
         if filename.endswith(".dat"):
@@ -389,10 +378,11 @@ class AMRVACDataset(Dataset):
 
         # note: yt sets hydrogen mass equal to proton mass, amrvac doesn't.
         mp_cgs = self.quan(1.672621898e-24, "g")  # This value is taken from AstroPy
-        He_abundance = 0.1  # hardcoded parameter in AMRVAC
 
         # get self.length_unit if overrides are supplied, otherwise use default
         length_unit = getattr(self, "length_unit", self.quan(1, "cm"))
+        namelist = read_amrvac_namelist(self._parfiles)
+        He_abundance = namelist.get("mhd_list", {}).get("he_abundance", 0.1)
 
         # 1. calculations for mass, density, numberdensity
         if "mass_unit" in self.units_override:

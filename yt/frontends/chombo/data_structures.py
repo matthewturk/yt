@@ -1,7 +1,6 @@
 import os
 import re
 import weakref
-from typing import Type
 
 import numpy as np
 
@@ -11,7 +10,7 @@ from yt.fields.field_info_container import FieldInfoContainer
 from yt.funcs import mylog, setdefaultattr
 from yt.geometry.api import Geometry
 from yt.geometry.grid_geometry_handler import GridIndex
-from yt.utilities.file_handler import HDF5FileHandler, warn_h5py
+from yt.utilities.file_handler import HDF5FileHandler, valid_hdf5_signature
 from yt.utilities.lib.misc_utilities import get_box_grids_level
 from yt.utilities.on_demand_imports import _h5py as h5py
 from yt.utilities.parallel_tools.parallel_analysis_interface import parallel_root_only
@@ -103,7 +102,7 @@ class ChomboHierarchy(GridIndex):
 
     def _read_particles(self):
         # only do anything if the dataset contains particles
-        if not any([f[1].startswith("particle_") for f in self.field_list]):
+        if not any(f[1].startswith("particle_") for f in self.field_list):
             return
 
         self.num_particles = 0
@@ -220,7 +219,7 @@ class ChomboHierarchy(GridIndex):
             get_box_grids_level(
                 self.grid_left_edge[i, :],
                 self.grid_right_edge[i, :],
-                self.grid_levels[i] + 1,
+                self.grid_levels[i].item() + 1,
                 self.grid_left_edge,
                 self.grid_right_edge,
                 self.grid_levels,
@@ -235,8 +234,9 @@ class ChomboHierarchy(GridIndex):
 
 
 class ChomboDataset(Dataset):
+    _load_requirements = ["h5py"]
     _index_class = ChomboHierarchy
-    _field_info_class: Type[FieldInfoContainer] = ChomboFieldInfo
+    _field_info_class: type[FieldInfoContainer] = ChomboFieldInfo
 
     def __init__(
         self,
@@ -330,9 +330,7 @@ class ChomboDataset(Dataset):
         is_periodic = np.array([True, True, True])
         for dir in range(self.dimensionality):
             try:
-                is_periodic[dir] = self._handle["/level_0"].attrs[
-                    "is_periodic_%d" % dir
-                ]
+                is_periodic[dir] = self._handle["/level_0"].attrs[f"is_periodic_{dir}"]
             except KeyError:
                 is_periodic[dir] = True
         self._periodicity = tuple(is_periodic)
@@ -359,7 +357,10 @@ class ChomboDataset(Dataset):
         return R_index - L_index
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         if not is_chombo_hdf5(filename):
             return False
 
@@ -508,8 +509,7 @@ class PlutoDataset(ChomboDataset):
             domain_right_edge = np.zeros(self.dimensionality)
             for il, ll in enumerate(
                 lines[
-                    lines.index("[Grid]")
-                    + 2 : lines.index("[Grid]")
+                    lines.index("[Grid]") + 2 : lines.index("[Grid]")
                     + 2
                     + self.dimensionality
                 ]
@@ -519,8 +519,7 @@ class PlutoDataset(ChomboDataset):
             self._periodicity = [0] * 3
             for il, ll in enumerate(
                 lines[
-                    lines.index("[Boundary]")
-                    + 2 : lines.index("[Boundary]")
+                    lines.index("[Boundary]") + 2 : lines.index("[Boundary]")
                     + 2
                     + 6 : 2
                 ]
@@ -553,7 +552,10 @@ class PlutoDataset(ChomboDataset):
         self._determine_current_time()
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         if not is_chombo_hdf5(filename):
             return False
 
@@ -633,6 +635,7 @@ class Orion2Hierarchy(ChomboHierarchy):
 
 
 class Orion2Dataset(ChomboDataset):
+    _load_requirements = ["h5py"]
     _index_class = Orion2Hierarchy
     _field_info_class = Orion2FieldInfo
 
@@ -710,7 +713,10 @@ class Orion2Dataset(ChomboDataset):
                 self.gamma = np.float64(vals)
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if cls._missing_load_requirements():
+            return False
+
         if not is_chombo_hdf5(filename):
             return False
 
@@ -748,6 +754,7 @@ class ChomboPICHierarchy(ChomboHierarchy):
 
 
 class ChomboPICDataset(ChomboDataset):
+    _load_requirements = ["h5py"]
     _index_class = ChomboPICHierarchy
     _field_info_class = ChomboPICFieldInfo3D
 
@@ -775,8 +782,12 @@ class ChomboPICDataset(ChomboDataset):
             self._field_info_class = ChomboPICFieldInfo2D
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
-        warn_h5py(filename)
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
+        if not valid_hdf5_signature(filename):
+            return False
+
+        if cls._missing_load_requirements():
+            return False
 
         if not is_chombo_hdf5(filename):
             return False

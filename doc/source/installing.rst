@@ -32,7 +32,11 @@ Here's a summary for most recent releases
 +------------+------------+----------------+-----------------+
 | yt release | Python 2.7 | Python3 min    | Python3 max     |
 +============+============+================+=================+
-| 4.2.x      | no         | 3.8 (expected) | 3.11 (expected) |
+| 4.4.x      | no         | 3.10.3         | 3.13 (expected) |
++------------+------------+----------------|-----------------|
+| 4.3.x      | no         | 3.9.2          | 3.12            |
++------------+------------+----------------+-----------------+
+| 4.2.x      | no         | 3.8            | 3.11            |
 +------------+------------+----------------+-----------------+
 | 4.1.x      | no         | 3.7            | 3.11            |
 +------------+------------+----------------+-----------------+
@@ -48,6 +52,9 @@ indicates the newest version for which the yt development team
 provides pre-compiled binaries via PyPI and conda-forge.
 It may be possible to compile existing yt versions under more
 recent Python versions, though this is never guaranteed.
+
+yt also adheres to `SPEC 0 <https://scientific-python.org/specs/spec-0000/>`_ as a soft
+guideline for our support policy of core dependencies (Python, numpy, matplotlib ...).
 
 
 Getting yt
@@ -69,7 +76,6 @@ The latest stable release can be obtained from PyPI with pip
 
 .. code-block:: bash
 
-  $ python -m pip install --upgrade pip
   $ python -m pip install --user yt
 
 
@@ -93,7 +99,6 @@ one can specify them as, for instance
 
 .. code-block:: bash
 
-  $ python -m pip install --upgrade pip
   $ python -m pip install --user "yt[ramses]"
 
 Extra requirements can be combined, separated by commas (say ``yt[ramses,enzo_e]``).
@@ -105,16 +110,27 @@ Note that all format names are normalized to lower case.
 Building from source
 ++++++++++++++++++++
 
-To build yt from source, you need ``git``, and a C compiler (such as ``gcc``
-or ``clang``).
+There are a couple ways to build yt from source with e.g., ``pip``, all of which
+require a C compiler (such as ``gcc`` or ``clang``).
 
-Then run
+yt is primarily distributed on PyPI, in the form of pre-built binaries (wheels).
+Since version 4.5.0, these binaries are optimized for portability accross Python versions.
 
+If you need a stable release, but pre-built binaries are not available for your platform,
+``pip install`` will automatically select a source distribution and compile the package
+for you. You may opt-into this behavior deliberately by specifying the ``--no-binary``
+flag, in which case the resulting installation might be slightly more performant, because
+it will be compiled specifically for your Python version.
+If, on the other hand, you *specifically* want a portable binary (as the ones we provide on
+PyPI), this is achieved by setting ``YT_LIMITED_API=1`` in your build environment.
+
+You may also want to build yt directly from the github repository (which requires ``git``),
+for instance if you need the latest development version, or if you want to contribute to
+the project. Run
 .. code-block:: bash
 
   $ git clone https://github.com/yt-project/yt
   $ cd yt
-  $ python -m pip install --upgrade pip
   $ python -m pip install --user -e .
 
 

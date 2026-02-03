@@ -9,7 +9,7 @@ vel_units = "code_length / code_time"
 
 
 def velocity_field(j):
-    def _velocity(field, data):
+    def _velocity(data):
         return data["athena_pp", f"mom{j}"] / data["athena_pp", "dens"]
 
     return _velocity
@@ -31,8 +31,8 @@ class AthenaPPFieldInfo(FieldInfoContainer):
         # Add velocity fields
         vel_prefix = "velocity"
         for i, comp in enumerate(self.ds.coordinates.axis_order):
-            vel_field = ("athena_pp", "vel%d" % (i + 1))
-            mom_field = ("athena_pp", "mom%d" % (i + 1))
+            vel_field = ("athena_pp", f"vel{i + 1}")
+            mom_field = ("athena_pp", f"mom{i + 1}")
             if vel_field in self.field_list:
                 self.add_output_field(
                     vel_field, sampling_type="cell", units="code_length/code_time"
@@ -65,7 +65,7 @@ class AthenaPPFieldInfo(FieldInfoContainer):
                 units=unit_system["pressure"],
             )
 
-            def _specific_thermal_energy(field, data):
+            def _specific_thermal_energy(data):
                 return (
                     data["athena_pp", "press"]
                     / (data.ds.gamma - 1.0)
@@ -83,7 +83,7 @@ class AthenaPPFieldInfo(FieldInfoContainer):
                 ("athena_pp", "Etot"), sampling_type="cell", units=pres_units
             )
 
-            def _specific_thermal_energy(field, data):
+            def _specific_thermal_energy(data):
                 eint = data["athena_pp", "Etot"] - data["gas", "kinetic_energy_density"]
                 if ("athena_pp", "B1") in self.field_list:
                     eint -= data["gas", "magnetic_energy_density"]
@@ -97,7 +97,7 @@ class AthenaPPFieldInfo(FieldInfoContainer):
             )
 
         # Add temperature field
-        def _temperature(field, data):
+        def _temperature(data):
             return (
                 (data["gas", "pressure"] / data["gas", "density"])
                 * data.ds.mu
@@ -113,5 +113,5 @@ class AthenaPPFieldInfo(FieldInfoContainer):
         )
 
         setup_magnetic_field_aliases(
-            self, "athena_pp", ["Bcc%d" % ax for ax in (1, 2, 3)]
+            self, "athena_pp", [f"Bcc{ax}" for ax in (1, 2, 3)]
         )

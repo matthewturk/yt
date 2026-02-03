@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 
 from yt.fields.field_info_container import FieldInfoContainer
@@ -13,22 +11,22 @@ from yt.utilities.physical_constants import mu_0, speed_of_light
 
 def setup_poynting_vector(self):
     def _get_poyn(axis):
-        def poynting(field, data):
+        def poynting(data):
             u = mu_0**-1
             if axis in "x":
                 return u * (
-                    data[("openPMD", "E_y")] * data[("gas", "magnetic_field_z")]
-                    - data[("openPMD", "E_z")] * data[("gas", "magnetic_field_y")]
+                    data["openPMD", "E_y"] * data["gas", "magnetic_field_z"]
+                    - data["openPMD", "E_z"] * data["gas", "magnetic_field_y"]
                 )
             elif axis in "y":
                 return u * (
-                    data[("openPMD", "E_z")] * data[("gas", "magnetic_field_x")]
-                    - data[("openPMD", "E_x")] * data[("gas", "magnetic_field_z")]
+                    data["openPMD", "E_z"] * data["gas", "magnetic_field_x"]
+                    - data["openPMD", "E_x"] * data["gas", "magnetic_field_z"]
                 )
             elif axis in "z":
                 return u * (
-                    data[("openPMD", "E_x")] * data[("gas", "magnetic_field_y")]
-                    - data[("openPMD", "E_y")] * data[("gas", "magnetic_field_x")]
+                    data["openPMD", "E_x"] * data["gas", "magnetic_field_y"]
+                    - data["openPMD", "E_y"] * data["gas", "magnetic_field_x"]
                 )
 
         return poynting
@@ -43,7 +41,7 @@ def setup_poynting_vector(self):
 
 
 def setup_kinetic_energy(self, ptype):
-    def _kin_en(field, data):
+    def _kin_en(data):
         p2 = (
             data[ptype, "particle_momentum_x"] ** 2
             + data[ptype, "particle_momentum_y"] ** 2
@@ -65,14 +63,12 @@ def setup_kinetic_energy(self, ptype):
 
 def setup_velocity(self, ptype):
     def _get_vel(axis):
-        def velocity(field, data):
+        def velocity(data):
             c = speed_of_light
             momentum = data[ptype, f"particle_momentum_{axis}"]
             mass = data[ptype, "particle_mass"]
             weighting = data[ptype, "particle_weighting"]
-            return momentum / np.sqrt(
-                (mass * weighting) ** 2 + (momentum**2) / (c**2)
-            )
+            return momentum / np.sqrt((mass * weighting) ** 2 + (momentum**2) / (c**2))
 
         return velocity
 
@@ -87,7 +83,7 @@ def setup_velocity(self, ptype):
 
 def setup_absolute_positions(self, ptype):
     def _abs_pos(axis):
-        def ap(field, data):
+        def ap(data):
             return np.add(
                 data[ptype, f"particle_positionCoarse_{axis}"],
                 data[ptype, f"particle_positionOffset_{axis}"],
@@ -141,7 +137,7 @@ class OpenPMDFieldInfo(FieldInfoContainer):
     * [1] http://yt-project.org/docs/dev/reference/field_list.html#universal-fields
     """
 
-    _mag_fields: List[str] = []
+    _mag_fields: list[str] = []
 
     def __init__(self, ds, field_list):
         f = ds._handle
@@ -218,8 +214,7 @@ class OpenPMDFieldInfo(FieldInfoContainer):
                     except KeyError:
                         if recname != "particlePatches":
                             mylog.info(
-                                "open_pmd - %s_%s does not seem to have "
-                                "unitDimension",
+                                "open_pmd - %s_%s does not seem to have unitDimension",
                                 pname,
                                 recname,
                             )

@@ -4,6 +4,7 @@ Chimera-specific fields
 
 
 """
+
 from yt._typing import KnownFieldsT
 from yt.fields.field_info_container import FieldInfoContainer
 
@@ -53,7 +54,7 @@ class ChimeraFieldInfo(FieldInfoContainer):
         # You can use self.alias, self.add_output_field (for on-disk fields)
         # and self.add_field (for derived fields).
 
-        def _test(field, data):
+        def _test(data):
             return data["chimera", "rho_c"]
 
         self.add_field(

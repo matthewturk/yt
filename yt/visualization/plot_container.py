@@ -1,19 +1,17 @@
 import abc
 import base64
-import builtins
 import os
-import sys
 import warnings
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Dict, Final, List, Literal, Optional, Tuple, Type, Union
+from typing import Any, Final, Literal
 
 import matplotlib
 from matplotlib.colors import LogNorm, Normalize, SymLogNorm
-from matplotlib.font_manager import FontProperties
 from unyt.dimensions import length
 
 from yt._maintenance.deprecation import issue_deprecation_warning
+from yt._maintenance.ipython_compat import IS_IPYTHON
 from yt._typing import FieldKey, Quantity
 from yt.config import ytcfg
 from yt.data_objects.time_series import DatasetSeries
@@ -26,8 +24,8 @@ from yt.visualization._handlers import ColorbarHandler, NormHandler
 from yt.visualization.base_plot_types import PlotMPL
 
 from ._commons import (
-    DEFAULT_FONT_PROPERTIES,
     _get_units_label,
+    get_default_font_properties,
     invalidate_data,
     invalidate_figure,
     invalidate_plot,
@@ -45,6 +43,7 @@ def apply_callback(f):
         "The apply_callback decorator is not used in yt any more and "
         "will be removed in a future version. "
         "Please do not use it.",
+        stacklevel=3,
         since="4.1",
     )
 
@@ -114,14 +113,16 @@ class PlotDictionary(defaultdict):
 class PlotContainer(abc.ABC):
     """A container for generic plots"""
 
-    _plot_dict_type: Type[PlotDictionary] = PlotDictionary
-    _plot_type: Optional[str] = None
+    _plot_dict_type: type[PlotDictionary] = PlotDictionary
+    _plot_type: str | None = None
     _plot_valid = False
 
     _default_figure_size = tuple(matplotlib.rcParams["figure.figsize"])
     _default_font_size = 14.0
 
-    def __init__(self, data_source, figure_size=None, fontsize: Optional[float] = None):
+    def __init__(self, data_source, figure_size=None, fontsize: float | None = None):
+        from matplotlib.font_manager import FontProperties
+
         self.data_source = data_source
         self.ds = data_source.ds
         self.ts = self._initialize_dataset(self.ds)
@@ -131,26 +132,23 @@ class PlotContainer(abc.ABC):
 
         if fontsize is None:
             fontsize = self.__class__._default_font_size
-        if sys.version_info >= (3, 9):
-            font_dict = DEFAULT_FONT_PROPERTIES | {"size": fontsize}
-        else:
-            font_dict = {**DEFAULT_FONT_PROPERTIES, "size": fontsize}
+        font_dict = get_default_font_properties() | {"size": fontsize}
 
         self._font_properties = FontProperties(**font_dict)
         self._font_color = None
         self._xlabel = None
         self._ylabel = None
-        self._minorticks: Dict[FieldKey, bool] = {}
+        self._minorticks: dict[FieldKey, bool] = {}
 
     @accepts_all_fields
     @invalidate_plot
     def set_log(
         self,
         field,
-        log: Optional[bool] = None,
+        log: bool | None = None,
         *,
-        linthresh: Optional[Union[float, Quantity, Literal["auto"]]] = None,
-        symlog_auto: Optional[bool] = None,  # deprecated
+        linthresh: float | Quantity | Literal["auto"] | None = None,
+        symlog_auto: bool | None = None,  # deprecated
     ):
         """set a field to log, linear, or symlog.
 
@@ -241,6 +239,7 @@ class PlotContainer(abc.ABC):
         issue_deprecation_warning(
             "The get_log method is not reliable and is deprecated. "
             "Please do not rely on it.",
+            stacklevel=3,
             since="4.1",
         )
         log = {}
@@ -331,8 +330,9 @@ class PlotContainer(abc.ABC):
           customizations other than plot callbacks (`annotate_*`)
         - testing
         """
-        # this is a pure alias to the historic `_setup_plots` method
-        # which preserves backward compatibility for extension code
+        # this public API method should never be no-op, so we invalidate
+        # the plot to force a fresh render in _setup_plots()
+        self._plot_valid = False
         self._setup_plots()
 
     def _initialize_dataset(self, ts):
@@ -351,8 +351,7 @@ class PlotContainer(abc.ABC):
         if data_source is not None:
             if name != "proj":
                 raise RuntimeError(
-                    "The data_source keyword argument "
-                    "is only defined for projections."
+                    "The data_source keyword argument is only defined for projections."
                 )
             kwargs["data_source"] = data_source
 
@@ -445,6 +444,7 @@ class PlotContainer(abc.ABC):
         ... )
 
         """
+        from matplotlib.font_manager import FontProperties
 
         if font_dict is None:
             font_dict = {}
@@ -453,10 +453,7 @@ class PlotContainer(abc.ABC):
         # Set default values if the user does not explicitly set them.
         # this prevents reverting to the matplotlib defaults.
         _default_size = {"size": self.__class__._default_font_size}
-        if sys.version_info >= (3, 9):
-            font_dict = DEFAULT_FONT_PROPERTIES | _default_size | font_dict
-        else:
-            font_dict = {**DEFAULT_FONT_PROPERTIES, **_default_size, **font_dict}
+        font_dict = get_default_font_properties() | _default_size | font_dict
         self._font_properties = FontProperties(**font_dict)
         return self
 
@@ -503,9 +500,9 @@ class PlotContainer(abc.ABC):
     @validate_plot
     def save(
         self,
-        name: Optional[Union[str, List[str], Tuple[str, ...]]] = None,
-        suffix: Optional[str] = None,
-        mpl_kwargs: Optional[Dict[str, Any]] = None,
+        name: str | list[str] | tuple[str, ...] | None = None,
+        suffix: str | None = None,
+        mpl_kwargs: dict[str, Any] | None = None,
     ):
         """saves the plot to disk.
 
@@ -636,7 +633,7 @@ class PlotContainer(abc.ABC):
             for v in sorted(self.plots.values()):
                 v.show()
         else:
-            if "__IPYTHON__" in dir(builtins):
+            if IS_IPYTHON:
                 from IPython.display import display
 
                 display(self)
@@ -661,7 +658,7 @@ class PlotContainer(abc.ABC):
             img = base64.b64encode(self.plots[field]._repr_png_()).decode()
             ret += (
                 r'<img style="max-width:100%;max-height:100%;" '
-                r'src="data:image/png;base64,{}"><br>'.format(img)
+                rf'src="data:image/png;base64,{img}"><br>'
             )
         return ret
 
@@ -897,7 +894,7 @@ class ImagePlotContainer(PlotContainer, abc.ABC):
 
     def _get_default_handlers(
         self, field, default_display_units: Unit
-    ) -> Tuple[NormHandler, ColorbarHandler]:
+    ) -> tuple[NormHandler, ColorbarHandler]:
         usr_units_str = get_default_from_config(
             self.data_source, field=field, keys="units", defaults=[None]
         )
@@ -982,9 +979,9 @@ class ImagePlotContainer(PlotContainer, abc.ABC):
     def set_zlim(
         self,
         field,
-        zmin: Union[float, Quantity, Literal["min"], Unset] = UNSET,
-        zmax: Union[float, Quantity, Literal["max"], Unset] = UNSET,
-        dynamic_range: Optional[float] = None,
+        zmin: float | Quantity | Literal["min"] | Unset = UNSET,
+        zmax: float | Quantity | Literal["max"] | Unset = UNSET,
+        dynamic_range: float | None = None,
     ):
         """set the scale of the colormap
 
@@ -1023,7 +1020,7 @@ class ImagePlotContainer(PlotContainer, abc.ABC):
                 "If you wish to explicitly set zmin to the minimal "
                 "data value, pass `zmin='min'` instead. "
                 "Otherwise leave this argument unset.",
-                since="4.1.0",
+                since="4.1",
                 stacklevel=5,
             )
             zmin = "min"
@@ -1035,9 +1032,9 @@ class ImagePlotContainer(PlotContainer, abc.ABC):
             issue_deprecation_warning(
                 "Passing `zmax=None` explicitly is deprecated. "
                 "If you wish to explicitly set zmax to the maximal "
-                "data value, pass `zmin='max'` instead. "
+                "data value, pass `zmax='max'` instead. "
                 "Otherwise leave this argument unset.",
-                since="4.1.0",
+                since="4.1",
                 stacklevel=5,
             )
             zmax = "max"
@@ -1105,7 +1102,9 @@ class BaseLinePlot(PlotContainer, abc.ABC):
             return self.plots[field]
         axrect = self._get_axrect()
 
-        pnh = NormHandler(self.data_source, display_units=self.data_source[field].units)
+        pnh = NormHandler(
+            self.data_source, display_units=self.data_source.ds.field_info[field].units
+        )
         finfo = self.data_source.ds._get_field_info(field)
         if not finfo.take_log:
             pnh.norm_type = Normalize

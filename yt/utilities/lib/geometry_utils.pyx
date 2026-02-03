@@ -23,23 +23,17 @@ from yt.utilities.exceptions import YTDomainOverflow
 
 from yt.utilities.lib.vec3_ops cimport L2_norm, cross, dot, subtract
 
-DEF ORDER_MAX=20
-DEF INDEX_MAX_64=2097151
-DEF XSHIFT=2
-DEF YSHIFT=1
-DEF ZSHIFT=0
-
 cdef extern from "math.h":
-    double exp(double x) nogil
-    float expf(float x) nogil
-    long double expl(long double x) nogil
-    double floor(double x) nogil
-    double ceil(double x) nogil
-    double fmod(double x, double y) nogil
-    double fabs(double x) nogil
+    double exp(double x) noexcept nogil
+    float expf(float x) noexcept nogil
+    long double expl(long double x) noexcept nogil
+    double floor(double x) noexcept nogil
+    double ceil(double x) noexcept nogil
+    double fmod(double x, double y) noexcept nogil
+    double fabs(double x) noexcept nogil
 
 cdef extern from "platform_dep.h":
-    long int lrint(double x) nogil
+    long int lrint(double x) noexcept nogil
 
 @cython.cdivision(True)
 @cython.boundscheck(False)

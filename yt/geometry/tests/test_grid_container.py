@@ -10,42 +10,42 @@ from yt.testing import fake_amr_ds
 def setup_test_ds():
     """Prepare setup specific environment"""
     grid_data = [
-        dict(
-            left_edge=[0.0, 0.0, 0.0],
-            right_edge=[1.0, 1.0, 1.0],
-            level=0,
-            dimensions=[16, 16, 16],
-        ),
-        dict(
-            left_edge=[0.25, 0.25, 0.25],
-            right_edge=[0.75, 0.75, 0.75],
-            level=1,
-            dimensions=[16, 16, 16],
-        ),
-        dict(
-            left_edge=[0.25, 0.25, 0.375],
-            right_edge=[0.5, 0.5, 0.625],
-            level=2,
-            dimensions=[16, 16, 16],
-        ),
-        dict(
-            left_edge=[0.5, 0.5, 0.375],
-            right_edge=[0.75, 0.75, 0.625],
-            level=2,
-            dimensions=[16, 16, 16],
-        ),
-        dict(
-            left_edge=[0.3125, 0.3125, 0.4375],
-            right_edge=[0.4375, 0.4375, 0.5625],
-            level=3,
-            dimensions=[16, 16, 16],
-        ),
-        dict(
-            left_edge=[0.5625, 0.5625, 0.4375],
-            right_edge=[0.6875, 0.6875, 0.5625],
-            level=3,
-            dimensions=[16, 16, 16],
-        ),
+        {
+            "left_edge": [0.0, 0.0, 0.0],
+            "right_edge": [1.0, 1.0, 1.0],
+            "level": 0,
+            "dimensions": [16, 16, 16],
+        },
+        {
+            "left_edge": [0.25, 0.25, 0.25],
+            "right_edge": [0.75, 0.75, 0.75],
+            "level": 1,
+            "dimensions": [16, 16, 16],
+        },
+        {
+            "left_edge": [0.25, 0.25, 0.375],
+            "right_edge": [0.5, 0.5, 0.625],
+            "level": 2,
+            "dimensions": [16, 16, 16],
+        },
+        {
+            "left_edge": [0.5, 0.5, 0.375],
+            "right_edge": [0.75, 0.75, 0.625],
+            "level": 2,
+            "dimensions": [16, 16, 16],
+        },
+        {
+            "left_edge": [0.3125, 0.3125, 0.4375],
+            "right_edge": [0.4375, 0.4375, 0.5625],
+            "level": 3,
+            "dimensions": [16, 16, 16],
+        },
+        {
+            "left_edge": [0.5625, 0.5625, 0.4375],
+            "right_edge": [0.6875, 0.6875, 0.5625],
+            "level": 3,
+            "dimensions": [16, 16, 16],
+        },
     ]
 
     for grid in grid_data:
@@ -103,7 +103,7 @@ def test_find_points():
 
     grid_inds = np.zeros((num_points), dtype="int64")
 
-    for ind, ixx, iyy, izz in zip(range(num_points), randx, randy, randz):
+    for ind, ixx, iyy, izz in zip(range(num_points), randx, randy, randz, strict=True):
         pos = np.array([ixx, iyy, izz])
         pt_level = -1
 

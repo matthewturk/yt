@@ -1,6 +1,5 @@
 import os
 from functools import cached_property
-from typing import Tuple
 
 import numpy as np
 
@@ -46,7 +45,7 @@ class EnzoEGrid(AMRGridPatch):
         self.Level = -1
 
     def __repr__(self):
-        return "EnzoEGrid_%04d" % self.id
+        return f"EnzoEGrid_{self.id:04}"
 
     def _prepare_grid(self):
         """Copies all the appropriate attributes from the index."""
@@ -285,11 +284,12 @@ class EnzoEDataset(Dataset):
     Enzo-E-specific output, set at a fixed time.
     """
 
+    _load_requirements = ["h5py", "libconf"]
     refine_by = 2
     _index_class = EnzoEHierarchy
     _field_info_class = EnzoEFieldInfo
     _suffix = ".block_list"
-    particle_types: Tuple[str, ...] = ()
+    particle_types: tuple[str, ...] = ()
     particle_types_raw = None
 
     def __init__(
@@ -408,7 +408,11 @@ class EnzoEDataset(Dataset):
         self.parameters["current_cycle"] = ablock.attrs["cycle"][0]
         gsi = ablock.attrs["enzo_GridStartIndex"]
         gei = ablock.attrs["enzo_GridEndIndex"]
-        self.ghost_zones = gsi[0]
+        assert len(gsi) == len(gei) == 3  # sanity check
+        # Enzo-E technically allows each axis to have different ghost zone
+        # depths (this feature is not really used in practice)
+        self.ghost_zones = gsi
+        assert (self.ghost_zones[self.dimensionality :] == 0).all()  # sanity check
         self.root_block_dimensions = root_blocks
         self.active_grid_dimensions = gei - gsi + 1
         self.grid_dimensions = ablock.attrs["enzo_GridDimension"]
@@ -475,7 +479,7 @@ class EnzoEDataset(Dataset):
             setdefaultattr(self, "velocity_unit", self.quan(k["uvel"], "cm/s"))
         else:
             p = self.parameters
-            for d, u in zip(("length", "time"), ("cm", "s")):
+            for d, u in [("length", "cm"), ("time", "s")]:
                 val = nested_dict_get(p, ("Units", d), default=1)
                 setdefaultattr(self, f"{d}_unit", self.quan(val, u))
             mass = nested_dict_get(p, ("Units", "mass"))
@@ -498,10 +502,14 @@ class EnzoEDataset(Dataset):
         return self.basename[: -len(self._suffix)]
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
         ddir = os.path.dirname(filename)
         if not filename.endswith(cls._suffix):
             return False
+
+        if cls._missing_load_requirements():
+            return False
+
         try:
             with open(filename) as f:
                 block, block_file = f.readline().strip().split()

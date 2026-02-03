@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
 from functools import cached_property
-from typing import Tuple
 
 import numpy as np
 
@@ -38,7 +37,7 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
     _coord_name = "Coordinates"
 
     @cached_property
-    def var_mass(self) -> Tuple[str, ...]:
+    def var_mass(self) -> tuple[str, ...]:
         vm = []
         for i, v in enumerate(self.ds["Massarr"]):
             if v == 0:
@@ -70,7 +69,7 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
     def _yield_coordinates(self, data_file, needed_ptype=None):
         si, ei = data_file.start, data_file.end
         f = h5py.File(data_file.filename, mode="r")
-        pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int")
+        pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int64")
         np.clip(pcount - si, 0, ei - si, out=pcount)
         pcount = pcount.sum()
         for key in f.keys():
@@ -213,6 +212,9 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
                 elif field.startswith("GFM_StellarPhotometrics_"):
                     col = int(field.rsplit("_", 1)[-1])
                     data = g["GFM_StellarPhotometrics"][si:ei, col][mask]
+                elif field.startswith("MetalMasses_"):
+                    col = int(field.rsplit("_", 1)[-1])
+                    data = g["Mass of Metals"][si:ei, col][mask]
                 elif field == "smoothing_length":
                     # This is for frontends which do not store
                     # the smoothing length on-disk, so we do not
@@ -228,7 +230,7 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
                 else:
                     data = g[field][si:ei][mask, ...]
 
-                data_return[(ptype, field)] = data
+                data_return[ptype, field] = data
 
         f.close()
         return data_return
@@ -236,7 +238,7 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
     def _count_particles(self, data_file):
         si, ei = data_file.start, data_file.end
         f = h5py.File(data_file.filename, mode="r")
-        pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int")
+        pcount = f["/Header"].attrs["NumPart_ThisFile"][:].astype("int64")
         f.close()
         if None not in (si, ei):
             np.clip(pcount - si, 0, ei - si, out=pcount)
@@ -283,15 +285,17 @@ class IOHandlerGadgetHDF5(IOHandlerSPH):
                         "GFM_Metals",
                         "PassiveScalars",
                         "GFM_StellarPhotometrics",
+                        "Mass of Metals",
                     )
                     and len(g[k].shape) > 1
                 ):
                     # Vector of metallicity or passive scalar
                     for i in range(g[k].shape[1]):
-                        fields.append((ptype, "%s_%02i" % (k, i)))
+                        key = "MetalMasses" if k == "Mass of Metals" else k
+                        fields.append((ptype, f"{key}_{i:02}"))
                 elif k == "ChemistryAbundances" and len(g[k].shape) > 1:
                     for i in range(g[k].shape[1]):
-                        fields.append((ptype, "Chemistry_%03i" % i))
+                        fields.append((ptype, f"Chemistry_{i:03}"))
                 else:
                     kk = k
                     if not hasattr(g[kk], "shape"):
@@ -351,7 +355,7 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
         super().__init__(ds, *args, **kwargs)
 
     @cached_property
-    def var_mass(self) -> Tuple[str, ...]:
+    def var_mass(self) -> tuple[str, ...]:
         vm = []
         for i, v in enumerate(self.ds["Massarr"]):
             if v == 0:
@@ -420,7 +424,7 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
                     f.seek(poff[ptype, field], os.SEEK_SET)
                     data = self._read_field_from_file(f, tp[ptype], field)
                     data = data[mask, ...]
-                return_data[(ptype, field)] = data
+                return_data[ptype, field] = data
         f.close()
         return return_data
 
@@ -458,10 +462,11 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
                 if needed_ptype is not None and ptype != needed_ptype:
                     continue
                 # The first total_particles * 3 values are positions
-                pp = np.fromfile(f, dtype=dt, count=count * 3).astype(
-                    dt_native, copy=False
+                pp = (
+                    np.fromfile(f, dtype=dt, count=count * 3)
+                    .reshape(count, 3)
+                    .astype(dt_native, copy=False)
                 )
-                pp.shape = (count, 3)
                 yield ptype, pp
 
     def _get_smoothing_length(self, data_file, position_dtype, position_shape):
@@ -505,7 +510,7 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
             pos = offset
         fs = self._field_size
         offsets = {}
-        pcount = dict(zip(self._ptypes, pcount))
+        pcount = dict(zip(self._ptypes, pcount, strict=True))
 
         for field in self._fields:
             if field == "ParticleIDs" and self.ds.long_ids:
@@ -532,7 +537,7 @@ class IOHandlerGadgetBinary(IOHandlerSPH):
                 if field in self._vector_fields:
                     start_offset *= self._vector_fields[field]
                 pos += start_offset
-                offsets[(ptype, field)] = pos
+                offsets[ptype, field] = pos
                 any_ptypes = True
                 remain_offset = (pcount[ptype] - df_start) * fs
                 if field in self._vector_fields:

@@ -1,18 +1,19 @@
 import base64
-import builtins
 import os
 from functools import wraps
-from typing import Any, Dict, Iterable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
-import matplotlib
+import matplotlib as mpl
+import matplotlib.style
 import numpy as np
 from more_itertools.more import always_iterable, unzip
 
+from yt._maintenance.ipython_compat import IS_IPYTHON
 from yt._typing import FieldKey
 from yt.data_objects.profiles import create_profile, sanitize_field_tuple_keys
 from yt.data_objects.static_output import Dataset
 from yt.frontends.ytdata.data_structures import YTProfileDataset
-from yt.funcs import iter_fields, matplotlib_style_context
+from yt.funcs import iter_fields
 from yt.utilities.exceptions import YTNotInsideNotebook
 from yt.visualization._commons import _get_units_label
 from yt.visualization._handlers import ColorbarHandler, NormHandler
@@ -26,6 +27,11 @@ from .plot_container import (
     invalidate_plot,
     validate_plot,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from yt._typing import FieldKey
 
 
 def invalidate_profile(f):
@@ -177,6 +183,7 @@ class ProfilePlot(BaseLinePlot):
     Use set_line_property to change line properties of one or all profiles.
 
     """
+
     _default_figure_size = (10.0, 8.0)
     _default_font_size = 18.0
 
@@ -204,7 +211,7 @@ class ProfilePlot(BaseLinePlot):
         y_fields = list(iter_fields(y_fields))
         logs = {x_field: bool(x_log)}
         if isinstance(y_log, bool):
-            y_log = {y_field: y_log for y_field in y_fields}
+            y_log = dict.fromkeys(y_fields, y_log)
 
         if isinstance(data_source.ds, YTProfileDataset):
             profiles = [data_source.ds.profile]
@@ -223,7 +230,7 @@ class ProfilePlot(BaseLinePlot):
             ]
 
         if plot_spec is None:
-            plot_spec = [dict() for p in profiles]
+            plot_spec = [{} for p in profiles]
         if not isinstance(plot_spec, list):
             plot_spec = [plot_spec.copy() for p in profiles]
 
@@ -255,10 +262,11 @@ class ProfilePlot(BaseLinePlot):
         obj.x_title = None
         obj.label = sanitize_label(labels, len(obj.profiles))
         if plot_specs is None:
-            plot_specs = [dict() for p in obj.profiles]
+            plot_specs = [{} for p in obj.profiles]
         obj.plot_spec = plot_specs
         obj._xlim = (None, None)
         obj._setup_plots()
+        obj._plot_valid = False  # see https://github.com/yt-project/yt/issues/4489
         return obj
 
     def _get_axrect(self):
@@ -267,9 +275,9 @@ class ProfilePlot(BaseLinePlot):
     @validate_plot
     def save(
         self,
-        name: Optional[str] = None,
-        suffix: Optional[str] = None,
-        mpl_kwargs: Optional[Dict[str, Any]] = None,
+        name: str | None = None,
+        suffix: str | None = None,
+        mpl_kwargs: dict[str, Any] | None = None,
     ):
         r"""
         Saves a 1d profile plot.
@@ -290,7 +298,7 @@ class ProfilePlot(BaseLinePlot):
         # Mypy is hardly convinced that we have a `profiles` attribute
         # at this stage, so we're lasily going to deactivate it locally
         unique = set(self.plots.values())
-        iters: Iterable[Tuple[Union[int, FieldKey], PlotMPL]]
+        iters: Iterable[tuple[int | FieldKey, PlotMPL]]
         if len(unique) < len(self.plots):
             iters = enumerate(sorted(unique))
         else:
@@ -312,10 +320,10 @@ class ProfilePlot(BaseLinePlot):
         names = []
         for uid, plot in iters:
             if isinstance(uid, tuple):
-                uid = uid[1]  # type: ignore
+                uid = uid[1]
             uid_name = f"{prefix}_1d-Profile_{xfn}_{uid}{suffix}"
             names.append(uid_name)
-            with matplotlib_style_context():
+            with mpl.style.context("yt.default"):
                 plot.save(uid_name, mpl_kwargs=mpl_kwargs)
         return names
 
@@ -339,7 +347,7 @@ class ProfilePlot(BaseLinePlot):
         >>> pp.show()
 
         """
-        if "__IPYTHON__" in dir(builtins):
+        if IS_IPYTHON:
             from IPython.display import display
 
             display(self)
@@ -357,12 +365,12 @@ class ProfilePlot(BaseLinePlot):
         else:
             iters = self.plots.values()
         for plot in iters:
-            with matplotlib_style_context():
+            with mpl.style.context("yt.default"):
                 img = plot._repr_png_()
             img = base64.b64encode(img).decode()
             ret += (
                 r'<img style="max-width:100%;max-height:100%;" '
-                r'src="data:image/png;base64,{}"><br>'.format(img)
+                rf'src="data:image/png;base64,{img}"><br>'
             )
         return ret
 
@@ -909,6 +917,7 @@ class PhasePlot(ImagePlotContainer):
     >>> plot.annotate_title("This is a phase plot")
 
     """
+
     x_log = None
     y_log = None
     plot_title = None
@@ -977,6 +986,7 @@ class PhasePlot(ImagePlotContainer):
         obj._ylim = (None, None)
         super(PhasePlot, obj).__init__(data_source, figure_size, fontsize)
         obj._setup_plots()
+        obj._plot_valid = False  # see https://github.com/yt-project/yt/issues/4489
         obj._initfinished = True
         return obj
 
@@ -1053,6 +1063,10 @@ class PhasePlot(ImagePlotContainer):
                     fig = self.plots[f].figure
                     axes = self.plots[f].axes
                     cax = self.plots[f].cax
+                else:
+                    fig = None
+                    axes = None
+                    cax = None
             else:
                 pnh, cbh = self._get_default_handlers(
                     field=f, default_display_units=self.profile[f].units
@@ -1072,7 +1086,7 @@ class PhasePlot(ImagePlotContainer):
             # override the colorbar here.
             splat_color = getattr(self, "splat_color", None)
             if splat_color is not None:
-                cbh.cmap = matplotlib.colors.ListedColormap(splat_color, "dummy")
+                cbh.cmap = mpl.colors.ListedColormap(splat_color, "dummy")
 
             masked_data = data.copy()
             masked_data[~self.profile.used] = np.nan
@@ -1213,9 +1227,7 @@ class PhasePlot(ImagePlotContainer):
         return self
 
     @validate_plot
-    def save(
-        self, name: Optional[str] = None, suffix: Optional[str] = None, mpl_kwargs=None
-    ):
+    def save(self, name: str | None = None, suffix: str | None = None, mpl_kwargs=None):
         r"""
         Saves a 2d profile plot.
 
@@ -1308,8 +1320,6 @@ class PhasePlot(ImagePlotContainer):
 
         """
         for f in self._profile.field_data:
-            if isinstance(f, tuple):
-                f = f[1]
             self.plot_title[self.data_source._determine_fields(f)[0]] = title
         return self
 
@@ -1553,6 +1563,6 @@ class PhasePlotMPL(ImagePlotMPL):
             shading=self._shading,
         )
 
-        self._set_axes(norm)
+        self._set_axes()
         self.axes.set_xscale(x_scale)
         self.axes.set_yscale(y_scale)

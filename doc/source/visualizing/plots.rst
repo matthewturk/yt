@@ -293,8 +293,8 @@ argument. Optionally, a ``north_vector`` can be specified to fix the orientation
 of the image plane.
 
 .. note:: Not every data types have support for off-axis slices yet.
-   Currently, this operation is supported for grid based data with cartesian geometry.
-   In some cases (like SPH data) an off-axis projection over a thin region might be used instead.
+   Currently, this operation is supported for grid based and SPH data with cartesian geometry.
+   In some cases an off-axis projection over a thin region might be used instead.
 
 .. _projection-plots:
 
@@ -433,6 +433,8 @@ by applying the
 In this use case, the volume renderer casts a set of plane parallel rays, one
 for each pixel in the image.  The data values along each ray are summed,
 creating the final image buffer.
+For SPH datsets, the coordinates are instead simply rotated before the axis-aligned
+projection function is applied.
 
 .. _off-axis-projection-function:
 
@@ -452,7 +454,6 @@ projection through a simulation.
 
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    L = [1, 1, 0]  # vector normal to cutting plane
-   north_vector = [-1, 1, 0]
    W = [0.02, 0.02, 0.02]
    c = [0.5, 0.5, 0.5]
    N = 512
@@ -652,16 +653,9 @@ simply pass ``all`` as the first argument of the field tuple:
 Additional Notes for Plotting Particle Data
 -------------------------------------------
 
-Below are some important caveats to note when visualizing particle data.
-
-1. Off axis slice plotting is not available for any particle data.
-   However, axis-aligned slice plots (as described in :ref:`slice-plots`)
-   will work.
-
-2. Off axis projections (as in :ref:`off-axis-projections`) will only work
-   for SPH particles, i.e., particles that have a defined smoothing length.
-
-Two workaround methods are available for plotting non-SPH particles with off-axis
+Since version 4.2.0, off-axis projections ares supported for non-SPH particle data.
+Previous to that, this operation was only supported for SPH particles. Two historical
+workaround methods were available for plotting non-SPH particles with off-axis
 projections.
 
 1. :ref:`smooth-non-sph` - this method involves extracting particle data to be
@@ -2027,7 +2021,25 @@ domain:
    p.set_unit(("all", "particle_mass"), "Msun")
    p.save()
 
-and here is an example of using the ``data_source`` argument to :class:`~yt.visualization.particle_plots.ParticlePhasePlot`
+Using :class:`~yt.visualization.particle_plots.ParticleProjectionPlot`, you can also plot particles
+along an off-axis direction:
+
+.. python-script::
+
+   import yt
+
+   ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
+
+   L = [1, 1, 1] # normal or "line of sight" vector
+   N = [0, 1, 0] # north or "up" vector
+
+    p = yt.ParticleProjectionPlot(
+        ds, L, [("all", "particle_mass")], width=(0.05, 0.05), depth=0.3, north_vector=N
+    )
+   p.set_unit(("all", "particle_mass"), "Msun")
+   p.save()
+
+Here is an example of using the ``data_source`` argument to :class:`~yt.visualization.particle_plots.ParticlePhasePlot`
 to only consider the particles that lie within a 50 kpc sphere around the domain center:
 
 .. python-script::
@@ -2121,7 +2133,7 @@ type:
 
 .. code-block:: bash
 
-   yt notebook
+   jupyter lab
 
 at the command line.  This will prompt you for a password (so that if you're on
 a shared user machine no one else can pretend to be you!) and then spawn an
@@ -2424,37 +2436,11 @@ an example that includes slices and phase plots:
 Using yt's style with matplotlib
 --------------------------------
 
-It is possible to use yt's plot style in outside of yt itself, with the
-:func:`~yt.funcs.matplotlib_style_context` context manager
+It is possible to use yt's plot style outside of yt itself, with the
+:func:`~matplotlib.pyplot.style_context` context manager
 
 .. code-block:: python
 
-   import matplotlib.pyplot as plt
-   import numpy as np
-   import yt
-
-   plt.rcParams["font.size"] = 14
-
-   x = np.linspace(-np.pi, np.pi, 100)
-   y = np.sin(x)
-
-   with yt.funcs.matplotlib_style_context():
-       fig, ax = plt.subplots()
-       ax.plot(x, y)
-       ax.set(
-           xlabel=r"$x$",
-           ylabel=r"$y$",
-           title="A yt-styled matplotlib figure",
-       )
-
-Note that :func:`~yt.funcs.matplotlib_style_context` doesn't control the font
-size, so we adjust it manually in the preamble.
-
-With matplotlib 3.7 and newer, you can avoid importing yt altogether
-
-.. code-block:: python
-
-   # requires matplotlib>=3.7
    import matplotlib.pyplot as plt
    import numpy as np
 
@@ -2472,11 +2458,12 @@ With matplotlib 3.7 and newer, you can avoid importing yt altogether
            title="A yt-styled matplotlib figure",
        )
 
-and you can also enable yt's style without a context manager as
+Note that :func:`~matplotlib.pyplot.style_context` doesn't control the font
+size, so we adjust it manually in the preamble.
+You may also enable yt's style without a context manager as
 
 .. code-block:: python
 
-   # requires matplotlib>=3.7
    import matplotlib.pyplot as plt
    import numpy as np
 

@@ -229,8 +229,8 @@ Clump Finder Callback
    ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
    data_source = ds.disk([0.5, 0.5, 0.5], [0.0, 0.0, 1.0], (8.0, "kpc"), (1.0, "kpc"))
 
-   c_min = 10 ** np.floor(np.log10(data_source[("gas", "density")]).min())
-   c_max = 10 ** np.floor(np.log10(data_source[("gas", "density")]).max() + 1)
+   c_min = 10 ** np.floor(np.log10(data_source["gas", "density"]).min())
+   c_max = 10 ** np.floor(np.log10(data_source["gas", "density"]).max() + 1)
 
    master_clump = Clump(data_source, ("gas", "density"))
    master_clump.add_validator("min_cells", 20)
@@ -247,17 +247,17 @@ Clump Finder Callback
 Overplot Contours
 ~~~~~~~~~~~~~~~~~
 
-.. function:: annotate_contour(self, field, ncont=5, factor=4, take_log=False,\
+.. function:: annotate_contour(self, field, levels=5, factor=4, take_log=False,\
                                clim=None, plot_args=None, label=False, \
                                text_args=None, data_source=None)
 
    (This is a proxy for
    :class:`~yt.visualization.plot_modifications.ContourCallback`.)
 
-   Add contours in ``field`` to the plot.  ``ncont`` governs the number of
+   Add contours in ``field`` to the plot.  ``levels`` governs the number of
    contours generated, ``factor`` governs the number of points used in the
    interpolation, ``take_log`` governs how it is contoured and ``clim`` gives
-   the (upper, lower) limits for contouring.
+   the (lower, upper) limits for contouring.
 
 .. python-script::
 
@@ -577,9 +577,8 @@ Overplot a Circle on a Plot
 Overplot Streamlines
 ~~~~~~~~~~~~~~~~~~~~
 
-.. function:: annotate_streamlines(self, field_x, field_y, *, factor=16, \
-                                   density=1, display_threshold=None, \
-                                   **kwargs)
+.. function:: annotate_streamlines(self, field_x, field_y, *, linewidth=1.0, linewidth_upscaling=1.0, \
+                                   color=None, color_threshold=float('-inf'), factor=16, **kwargs)
 
    (This is a proxy for
    :class:`~yt.visualization.plot_modifications.StreamlineCallback`.)
@@ -590,6 +589,9 @@ Overplot Streamlines
    plot, set ``start_at_xedge`` to ``True``; for the bottom edge, use
    ``start_at_yedge``.  A line with the qmean vector magnitude will cover
    1.0/``factor`` of the image.
+
+   Additional keyword arguments are passed down to
+   `matplotlib.axes.Axes.streamplot <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.streamplot.html>`_
 
 .. python-script::
 

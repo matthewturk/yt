@@ -18,17 +18,17 @@ Communication Channels
 
 There are three main communication channels for yt:
 
- * Many yt developers participate in the yt Slack community. Slack is a free
-   chat service that many teams use to organize their work. You can get an
-   invite to yt's Slack organization by clicking the "Join us @ Slack" button
-   on this page: https://yt-project.org/community.html
- * `yt-users <https://mail.python.org/archives/list/yt-users@python.org/>`_
-   is a relatively high-traffic mailing list where people are encouraged to ask
-   questions about the code, figure things out and so on.
- * `yt-dev <https://mail.python.org/archives/list/yt-dev@python.org/>`_ is
-   a much lower-traffic mailing list designed to focus on discussions of
-   improvements to the code, ideas about planning, development issues, and so
-   on.
+* Many yt developers participate in the yt Slack community. Slack is a free
+  chat service that many teams use to organize their work. You can get an
+  invite to yt's Slack organization by clicking the "Join us @ Slack" button
+  on this page: https://yt-project.org/community.html
+* `yt-users <https://mail.python.org/archives/list/yt-users@python.org/>`_
+  is a relatively high-traffic mailing list where people are encouraged to ask
+  questions about the code, figure things out and so on.
+* `yt-dev <https://mail.python.org/archives/list/yt-dev@python.org/>`_ is
+  a much lower-traffic mailing list designed to focus on discussions of
+  improvements to the code, ideas about planning, development issues, and so
+  on.
 
 The easiest way to get involved with yt is to read the mailing lists, hang out
 in IRC or slack chat, and participate.  If someone asks a question you know the
@@ -65,7 +65,7 @@ Gallery Images and Videos
 -------------------------
 
 If you have an image or video you'd like to display in the image or video
-galleries, getting it included it easy!  You can either fork the `yt homepage
+galleries, getting it included is easy!  You can either fork the `yt homepage
 repository <https://github.com/yt-project/website>`_ and add it there, or
 email it to us and we'll add it to the `Gallery
 <https://yt-project.org/gallery.html>`_.
@@ -273,10 +273,9 @@ How To Get The Source Code For Editing
 ++++++++++++++++++++++++++++++++++++++
 
 yt is hosted on GitHub, and you can see all of the yt repositories at
-https://github.com/yt-project/.  With the yt installation script you should have a
-copy of git for checking out pieces of code.  Make sure you have followed
-the steps above for bootstrapping your development (to assure you have a
-GitHub account, etc.)
+https://github.com/yt-project/. To fetch and modify source code, make sure you
+have followed the steps above for bootstrapping your development (to assure you
+have a GitHub account, etc.).
 
 In order to modify the source code for yt, we ask that you make a "fork" of the
 main yt repository on GitHub.  A fork is simply an exact copy of the main
@@ -340,25 +339,13 @@ branch.
 Lastly, if you want to use this new downloaded version of your yt repository as
 the *active* version of yt on your computer (i.e. the one which is executed when
 you run yt from the command line or the one that is loaded when you do ``import
-yt``), then you must "activate" it using the following commands from within the
-repository directory.
-
-.. code-block:: bash
-
-   $ python setup.py develop
-
-This will rebuild all C modules as well.
+yt``), then you must "activate" by building yt from source as described in
+:ref:`install-from-source`.
 
 .. _reading-source:
 
 How To Read The Source Code
 +++++++++++++++++++++++++++
-
-If you just want to *look* at the source code, you may already have it on your
-computer.  If you build yt using the install script, the source is available at
-``$YT_DEST/src/yt-git``.  See :ref:`install-from-source` for more details about
-to obtain the yt source code if you did not build yt using the install
-script.
 
 The root directory of the yt git repository contains a number of
 subdirectories with different components of the code.  Most of the yt source
@@ -463,7 +450,7 @@ For all types of contributions, it is required that all tests pass, or that all 
     future. (See :ref:`testing`)
   * At a minimum, a minimal, self-contained example demonstrating the bug should
     because included in the body of the Pull Request, or as part of an
-    indepedent issue.
+    independent issue.
 
 When submitting, you will be asked to make sure that your changes meet all of
 these requirements.  They are pretty easy to meet, and we're also happy to help
@@ -553,10 +540,8 @@ Here's a more detailed flowchart of how to submit changes.
 
 #. Fork yt on GitHub.  (This step only has to be done once.)  You can do
    this at: https://github.com/yt-project/yt/fork.
-#. If you have used the installation script, the source code for yt can be
-   found in ``$YT_DEST/src/yt-git``.  Alternatively see
-   :ref:`install-from-source` for instructions on how to build yt from the
-   git repository. (Below, in :ref:`reading-source`, we describe how to
+#. Follow :ref:`install-from-source` for instructions on how to build yt
+   from the git repository. (Below, in :ref:`reading-source`, we describe how to
    find items of interest.) If you have already forked the repository then
    you can clone your fork locally::
 
@@ -728,57 +713,55 @@ enforced.
 Source code style guide
 -----------------------
 
- * In general, follow PEP-8 guidelines.
-   https://www.python.org/dev/peps/pep-0008/
- * Classes are ``ConjoinedCapitals``, methods and functions are
-   ``lowercase_with_underscores``.
- * Do not use nested classes unless you have a very good reason to, such as
-   requiring a namespace or class-definition modification.  Classes should live
-   at the top level.  ``__metaclass__`` is exempt from this.
- * Avoid copying memory when possible. For example, don't do
-   ``a = a.reshape(3, 4)`` when ``a.shape = (3, 4)`` will do, and ``a = a * 3``
-   should be ``np.multiply(a, 3, a)``.
- * In general, avoid all double-underscore method names: ``__something`` is
-   usually unnecessary.
- * When writing a subclass, use the super built-in to access the super class,
-   rather than explicitly.
-   Ex: ``super().__init__()`` rather than ``SpecialGrid.__init__()``.
- * Docstrings should describe input, output, behavior, and any state changes
-   that occur on an object.  See :ref:`docstrings` below for a fiducial example
-   of a docstring.
- * Unless there is a good reason not to (e.g., to avoid circular imports),
-   imports should happen at the top of the file.
- * If you are comparing with a numpy boolean array, just refer to the array.
-   Ex: do ``np.all(array)`` instead of ``np.all(array == True)``.
- * Only declare local variables if they will be used later. If you do not use the
-   return value of a function, do not store it in a variable.
+* In general, follow PEP-8 guidelines.
+  https://www.python.org/dev/peps/pep-0008/
+* Classes are ``ConjoinedCapitals``, methods and functions are
+  ``lowercase_with_underscores``.
+* Do not use nested classes unless you have a very good reason to, such as
+  requiring a namespace or class-definition modification.  Classes should live
+  at the top level.  ``__metaclass__`` is exempt from this.
+* Avoid copying memory when possible.
+* In general, avoid all double-underscore method names: ``__something`` is
+  usually unnecessary.
+* When writing a subclass, use the super built-in to access the super class,
+  rather than explicitly.
+  Ex: ``super().__init__()`` rather than ``SpecialGrid.__init__()``.
+* Docstrings should describe input, output, behavior, and any state changes
+  that occur on an object.  See :ref:`docstrings` below for a fiducial example
+  of a docstring.
+* Unless there is a good reason not to (e.g., to avoid circular imports),
+  imports should happen at the top of the file.
+* If you are comparing with a numpy boolean array, just refer to the array.
+  Ex: do ``np.all(array)`` instead of ``np.all(array == True)``.
+* Only declare local variables if they will be used later. If you do not use the
+  return value of a function, do not store it in a variable.
 
 API Style Guide
 ---------------
 
- * Internally, only import from source files directly -- instead of:
+* Internally, only import from source files directly -- instead of:
 
-     ``from yt.visualization.api import ProjectionPlot``
+    ``from yt.visualization.api import ProjectionPlot``
 
-   do:
+  do:
 
-     ``from yt.visualization.plot_window import ProjectionPlot``
+    ``from yt.visualization.plot_window import ProjectionPlot``
 
- * Import symbols from the module where they are defined, avoid transitive
-   imports.
- * Import standard library modules, functions, and classes from builtins, do not
-   import them from other yt files.
- * Numpy is to be imported as ``np``.
- * Do not use too many keyword arguments.  If you have a lot of keyword
-   arguments, then you are doing too much in ``__init__`` and not enough via
-   parameter setting.
- * Don't create a new class to replicate the functionality of an old class --
-   replace the old class.  Too many options makes for a confusing user
-   experience.
- * Parameter files external to yt are a last resort.
- * The usage of the ``**kwargs`` construction should be avoided.  If they cannot
-   be avoided, they must be documented, even if they are only to be passed on to
-   a nested function.
+* Import symbols from the module where they are defined, avoid transitive
+  imports.
+* Import standard library modules, functions, and classes from builtins, do not
+  import them from other yt files.
+* Numpy is to be imported as ``np``.
+* Do not use too many keyword arguments.  If you have a lot of keyword
+  arguments, then you are doing too much in ``__init__`` and not enough via
+  parameter setting.
+* Don't create a new class to replicate the functionality of an old class --
+  replace the old class.  Too many options makes for a confusing user
+  experience.
+* Parameter files external to yt are a last resort.
+* The usage of the ``**kwargs`` construction should be avoided.  If they cannot
+  be avoided, they must be documented, even if they are only to be passed on to
+  a nested function.
 
 .. _docstrings:
 
@@ -884,25 +867,25 @@ Variable Names and Enzo-isms
 ----------------------------
 Avoid Enzo-isms.  This includes but is not limited to:
 
- * Hard-coding parameter names that are the same as those in Enzo.  The
-   following translation table should be of some help.  Note that the
-   parameters are now properties on a ``Dataset`` subclass: you access them
-   like ds.refine_by .
+* Hard-coding parameter names that are the same as those in Enzo.  The
+  following translation table should be of some help.  Note that the
+  parameters are now properties on a ``Dataset`` subclass: you access them
+  like ds.refine_by .
 
-    - ``RefineBy `` => `` refine_by``
-    - ``TopGridRank `` => `` dimensionality``
-    - ``TopGridDimensions `` => `` domain_dimensions``
-    - ``InitialTime `` => `` current_time``
-    - ``DomainLeftEdge `` => `` domain_left_edge``
-    - ``DomainRightEdge `` => `` domain_right_edge``
-    - ``CurrentTimeIdentifier `` => `` unique_identifier``
-    - ``CosmologyCurrentRedshift `` => `` current_redshift``
-    - ``ComovingCoordinates `` => `` cosmological_simulation``
-    - ``CosmologyOmegaMatterNow `` => `` omega_matter``
-    - ``CosmologyOmegaLambdaNow `` => `` omega_lambda``
-    - ``CosmologyHubbleConstantNow `` => `` hubble_constant``
+  - ``RefineBy `` => `` refine_by``
+  - ``TopGridRank `` => `` dimensionality``
+  - ``TopGridDimensions `` => `` domain_dimensions``
+  - ``InitialTime `` => `` current_time``
+  - ``DomainLeftEdge `` => `` domain_left_edge``
+  - ``DomainRightEdge `` => `` domain_right_edge``
+  - ``CurrentTimeIdentifier `` => `` unique_identifier``
+  - ``CosmologyCurrentRedshift `` => `` current_redshift``
+  - ``ComovingCoordinates `` => `` cosmological_simulation``
+  - ``CosmologyOmegaMatterNow `` => `` omega_matter``
+  - ``CosmologyOmegaLambdaNow `` => `` omega_lambda``
+  - ``CosmologyHubbleConstantNow `` => `` hubble_constant``
 
- * Do not assume that the domain runs from 0 .. 1.  This is not true
-   everywhere.
- * Variable names should be short but descriptive.
- * No globals!
+* Do not assume that the domain runs from 0 .. 1.  This is not true
+  everywhere.
+* Variable names should be short but descriptive.
+* No globals!

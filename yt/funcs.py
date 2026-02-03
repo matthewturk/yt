@@ -1,5 +1,4 @@
 import base64
-import builtins
 import contextlib
 import copy
 import errno
@@ -13,28 +12,23 @@ import subprocess
 import sys
 import time
 import traceback
-import urllib
 from collections import UserDict
+from collections.abc import Callable
 from copy import deepcopy
 from functools import lru_cache, wraps
 from numbers import Number as numeric_type
-from typing import Any, Callable, Optional, Type
+from typing import Any
 
 import numpy as np
 from more_itertools import always_iterable, collapse, first
-from packaging.version import Version
 
 from yt._maintenance.deprecation import issue_deprecation_warning
+from yt._maintenance.ipython_compat import IS_IPYTHON
 from yt.config import ytcfg
 from yt.units import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound, YTInvalidWidthError
 from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.on_demand_imports import _requests as requests
-
-if sys.version_info >= (3, 9):
-    import importlib.resources as importlib_resources
-else:
-    import importlib_resources
 
 # Some functions for handling sequences and other types
 
@@ -143,7 +137,7 @@ def humanize_time(secs):
     """
     mins, secs = divmod(secs, 60)
     hours, mins = divmod(mins, 60)
-    return "%02d:%02d:%02d" % (hours, mins, secs)
+    return ":".join(f"{int(t):02}" for t in (hours, mins, secs))
 
 
 #
@@ -226,8 +220,7 @@ def rootonly(func):
     .. code-block:: python
 
        @rootonly
-       def some_root_only_function(*args, **kwargs):
-           ...
+       def some_root_only_function(*args, **kwargs): ...
     """
 
     @wraps(func)
@@ -281,16 +274,12 @@ def insert_ipython(num_up=1):
     """
     import IPython
     from IPython.terminal.embed import InteractiveShellEmbed
-
-    try:
-        from traitlets.config.loader import Config
-    except ImportError:
-        from IPython.config.loader import Config
+    from traitlets.config.loader import Config
 
     frame = inspect.stack()[num_up]
     loc = frame[0].f_locals.copy()
     glo = frame[0].f_globals
-    dd = dict(fname=frame[3], filename=frame[1], lineno=frame[2])
+    dd = {"fname": frame[3], "filename": frame[1], "lineno": frame[2]}
     cfg = Config()
     cfg.InteractiveShellEmbed.local_ns = loc
     cfg.InteractiveShellEmbed.global_ns = glo
@@ -522,7 +511,7 @@ def update_git(path):
 def rebuild_modules(path, f):
     f.write("Rebuilding modules\n\n")
     p = subprocess.Popen(
-        [sys.executable, "setup.py", "build_ext", "-i"],
+        [sys.executable, "setup.py", "build_clib", "build_ext", "-i"],
         cwd=path,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -553,6 +542,8 @@ def get_git_version(path):
 
 
 def get_yt_version():
+    import importlib.resources as importlib_resources
+
     version = get_git_version(os.path.dirname(importlib_resources.files("yt")))
     if version is None:
         return version
@@ -566,8 +557,10 @@ def get_yt_version():
 def get_version_stack():
     import matplotlib
 
+    from yt._version import __version__ as yt_version
+
     version_info = {}
-    version_info["yt"] = get_yt_version()
+    version_info["yt"] = yt_version
     version_info["numpy"] = np.version.version
     version_info["matplotlib"] = matplotlib.__version__
     return version_info
@@ -620,19 +613,24 @@ def fancy_download_file(url, filename, requests=None):
 
 
 def simple_download_file(url, filename):
-    class MyURLopener(urllib.request.FancyURLopener):
-        def http_error_default(self, url, fp, errcode, errmsg, headers):
-            raise RuntimeError(
-                f"Attempt to download file from {url} failed with error {errcode}: {errmsg}."
-            )
+    import urllib.error
+    import urllib.request
 
-    fn, h = MyURLopener().retrieve(url, filename)
+    try:
+        fn, h = urllib.request.urlretrieve(url, filename)
+    except urllib.error.HTTPError as err:
+        raise RuntimeError(
+            f"Attempt to download file from {url} failed with error {err.code}: {err.msg}."
+        ) from None
+
     return fn
 
 
 # This code snippet is modified from Georg Brandl
 def bb_apicall(endpoint, data, use_pass=True):
     import getpass
+    import urllib.parse
+    import urllib.request
 
     uri = f"https://api.bitbucket.org/1.0/{endpoint}/"
     # since bitbucket doesn't return the required WWW-Authenticate header when
@@ -693,11 +691,9 @@ def parallel_profile(prefix):
     """
     import cProfile
 
-    fn = "%s_%04i_%04i.cprof" % (
-        prefix,
-        ytcfg.get("yt", "internals", "topcomm_parallel_size"),
-        ytcfg.get("yt", "internals", "topcomm_parallel_rank"),
-    )
+    topcomm_parallel_size = ytcfg.get("yt", "internals", "topcomm_parallel_size")
+    topcomm_parallel_rank = ytcfg.get("yt", "internals", "topcomm_parallel_rank")
+    fn = f"{prefix}_{topcomm_parallel_size:04}_{topcomm_parallel_rank}.cprof"
     p = cProfile.Profile()
     p.enable()
     yield fn
@@ -1000,14 +996,14 @@ def matplotlib_style_context(style="yt.default", after_reset=False):
     Arguments are passed to matplotlib.style.context() if specified. Defaults
     to setting yt's "yt.default" style, after resetting to the default config parameters.
     """
-    # FUTURE: this function should be deprecated in favour of matplotlib.style.context
-    # after support for matplotlib 3.6 and older versions is dropped.
     import matplotlib.style
 
-    from yt.visualization._commons import MPL_VERSION
-
-    if style == "yt.default" and MPL_VERSION < Version("3.7"):
-        style = importlib_resources.files("yt") / "default.mplstyle"
+    issue_deprecation_warning(
+        "yt.funcs.matplotlib_style_context is deprecated.\n"
+        f"Use matplotlib.style.context({style=!r}) instead.",
+        since="4.5",
+        stacklevel=3,
+    )
 
     return matplotlib.style.context(style, after_reset=after_reset)
 
@@ -1021,7 +1017,7 @@ def toggle_interactivity():
     global interactivity
     interactivity = not interactivity
     if interactivity:
-        if "__IPYTHON__" in dir(builtins):
+        if IS_IPYTHON:
             import IPython
 
             shell = IPython.get_ipython()
@@ -1084,18 +1080,27 @@ def array_like_field(data, x, field):
         return data.ds.quan(x, units)
 
 
+def _full_type_name(obj: object = None, /, *, cls: type | None = None) -> str:
+    if cls is not None and obj is not None:
+        raise TypeError("_full_type_name takes an object or a class, but not both")
+    if cls is None:
+        cls = obj.__class__
+    prefix = f"{cls.__module__}." if cls.__module__ != "builtins" else ""
+    return f"{prefix}{cls.__name__}"
+
+
 def validate_3d_array(obj):
     if not is_sequence(obj) or len(obj) != 3:
         raise TypeError(
-            "Expected an array of size (3,), received '{}' of "
-            "length {}".format(str(type(obj)).split("'")[1], len(obj))
+            f"Expected an array of size (3,), "
+            f"received {_full_type_name(obj)!r} of length {len(obj)}"
         )
 
 
 def validate_float(obj):
     """Validates if the passed argument is a float value.
 
-    Raises an exception if `obj` is a single float value
+    Raises an exception if `obj` is not a single float value
     or a YTQuantity of size 1.
 
     Parameters
@@ -1132,23 +1137,21 @@ def validate_float(obj):
         ):
             raise TypeError(
                 "Expected a numeric value (or tuple of format "
-                "(float, String)), received an inconsistent tuple "
-                "'%s'." % str(obj)
+                f"(float, String)), received an inconsistent tuple {str(obj)!r}."
             )
         else:
             return
     if is_sequence(obj) and (len(obj) != 1 or not isinstance(obj[0], numeric_type)):
         raise TypeError(
             "Expected a numeric value (or size-1 array), "
-            "received '{}' of length {}".format(str(type(obj)).split("'")[1], len(obj))
+            f"received {_full_type_name(obj)!r} of length {len(obj)}"
         )
 
 
 def validate_sequence(obj):
     if obj is not None and not is_sequence(obj):
         raise TypeError(
-            "Expected an iterable object, "
-            "received '%s'" % str(type(obj)).split("'")[1]
+            f"Expected an iterable object, received {_full_type_name(obj)!r}"
         )
 
 
@@ -1178,16 +1181,15 @@ def is_valid_field_key(key):
 def validate_object(obj, data_type):
     if obj is not None and not isinstance(obj, data_type):
         raise TypeError(
-            "Expected an object of '{}' type, received '{}'".format(
-                str(data_type).split("'")[1], str(type(obj)).split("'")[1]
-            )
+            f"Expected an object of {_full_type_name(cls=data_type)!r} type, "
+            f"received {_full_type_name(obj)!r}"
         )
 
 
 def validate_axis(ds, axis):
     if ds is not None:
         valid_axis = sorted(
-            list(ds.coordinates.axis_name.keys()), key=lambda k: str(k).swapcase()
+            ds.coordinates.axis_name.keys(), key=lambda k: str(k).swapcase()
         )
     else:
         valid_axis = [0, 1, 2, "x", "y", "z", "X", "Y", "Z"]
@@ -1206,17 +1208,17 @@ def validate_center(center):
             raise TypeError(
                 "Expected 'center' to be in ['c', 'center', "
                 "'m', 'max', 'min'] or the prefix to be "
-                "'max_'/'min_', received '%s'." % center
+                f"'max_'/'min_', received {center!r}."
             )
     elif not isinstance(center, (numeric_type, YTQuantity)) and not is_sequence(center):
         raise TypeError(
             "Expected 'center' to be a numeric object of type "
             "list/tuple/np.ndarray/YTArray/YTQuantity, "
-            "received '%s'." % str(type(center)).split("'")[1]
+            f"received {_full_type_name(center)}."
         )
 
 
-def parse_center_array(center, ds, axis: Optional[int] = None):
+def parse_center_array(center, ds, axis: int | None = None):
     known_shortnames = {"m": "max", "c": "center", "l": "left", "r": "right"}
     valid_single_str_values = ("center", "left", "right")
     valid_field_loc_str_values = ("min", "max")
@@ -1321,9 +1323,8 @@ def parse_center_array(center, ds, axis: Optional[int] = None):
 
     # make sure the return value shares all
     # unit symbols with ds.unit_registry
-    center = ds.arr(center)
     # we rely on unyt to invalidate unit dimensionality here
-    center.convert_to_units("code_length")
+    center = ds.arr(center).in_units("code_length")
 
     if not ds._is_within_domain(center):
         mylog.warning(
@@ -1347,7 +1348,7 @@ def sglob(pattern):
     return sorted(glob.glob(pattern))
 
 
-def dictWithFactory(factory: Callable[[Any], Any]) -> Type:
+def dictWithFactory(factory: Callable[[Any], Any]) -> type:
     """
     Create a dictionary class with a default factory function.
     Contrary to `collections.defaultdict`, the factory takes
@@ -1367,6 +1368,7 @@ def dictWithFactory(factory: Callable[[Any], Any]) -> Type:
     issue_deprecation_warning(
         "yt.funcs.dictWithFactory will be removed in a future version of yt, please do not rely on it. "
         "If you need it, copy paste this function from yt's source code",
+        stacklevel=3,
         since="4.1",
     )
 
@@ -1448,3 +1450,24 @@ def validate_moment(moment, weight_field):
             "Weighted projections can only be made of averages "
             "(moment = 1) or standard deviations (moment = 2)!"
         )
+
+
+def setdefault_mpl_metadata(save_kwargs: dict[str, Any], name: str) -> None:
+    """
+    Set a default Software metadata entry for use with Matplotlib outputs.
+    """
+    _, ext = os.path.splitext(name.lower())
+    if ext in (".eps", ".ps", ".svg", ".pdf"):
+        key = "Creator"
+    elif ext == ".png":
+        key = "Software"
+    else:
+        return
+    default_software = (
+        "Matplotlib version{matplotlib}, https://matplotlib.org|NumPy-{numpy}|yt-{yt}"
+    ).format(**get_version_stack())
+
+    if "metadata" in save_kwargs:
+        save_kwargs["metadata"].setdefault(key, default_software)
+    else:
+        save_kwargs["metadata"] = {key: default_software}

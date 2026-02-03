@@ -7,9 +7,11 @@ on:
   pull_request:
     paths:
       - yt/**/*.py
-      - setup.cfg
+      - pyproject.toml
       - .github/workflows/type-checking.yaml
   workflow_dispatch:
+
+permissions: {}
 
 jobs:
   build:
@@ -24,20 +26,22 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867 # v7.1.6
       with:
-        # run with oldest support python version
+        # run with oldest supported python version
         # so that we always get compatible versions of
         # core dependencies at type-check time
-        python-version: '3.8'
+        python-version: '3.10'
+        prune-cache: false
+        cache-suffix: typecheck
 
     - name: Build
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -e .[typecheck]
+      run: uv sync --group typecheck
 
     - name: Run mypy
-      run: mypy yt
+      run: uv run --no-sync mypy yt

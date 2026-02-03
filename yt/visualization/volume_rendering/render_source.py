@@ -2,7 +2,7 @@ import abc
 import warnings
 from functools import wraps
 from types import ModuleType
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import numpy as np
 
@@ -39,7 +39,7 @@ from .utils import (
 )
 from .zbuffer_array import ZBuffer
 
-OptionalModule = Union[ModuleType, NotAModule]
+OptionalModule = ModuleType | NotAModule
 mesh_traversal: OptionalModule = NotAModule("pyembree")
 mesh_construction: OptionalModule = NotAModule("pyembree")
 
@@ -144,7 +144,7 @@ class RenderSource(ParallelAnalysisInterface, abc.ABC):
 
     """
 
-    volume_method: Optional[str] = None
+    volume_method: str | None = None
 
     def __init__(self):
         super().__init__()
@@ -290,7 +290,7 @@ class VolumeSource(RenderSource, abc.ABC):
         if not isinstance(value, valid_types):
             raise RuntimeError(
                 "transfer_function not a valid type, "
-                "received object of type %s" % type(value)
+                f"received object of type {type(value)}"
             )
         if isinstance(value, ProjectionTransferFunction):
             self.sampler_type = "projection"
@@ -336,8 +336,8 @@ class VolumeSource(RenderSource, abc.ABC):
         if len(field) > 1:
             raise RuntimeError(
                 "VolumeSource.field can only be a single field but received "
-                "multiple fields: %s"
-            ) % field
+                f"multiple fields: {field}"
+            )
         field = field[0]
         if self._field != field:
             log_field = self.data_source.ds.field_info[field].take_log
@@ -529,7 +529,7 @@ class VolumeSource(RenderSource, abc.ABC):
         image: :class:`yt.data_objects.image_array.ImageArray` instance
             A reference to an image to fill
         """
-        image.shape = camera.resolution[0], camera.resolution[1], 4
+        image = image.reshape(*camera.resolution, 4)
         # If the call is from VR, the image is rotated by 180 to get correct
         # up direction
         if not self.transfer_function.grey_opacity:
@@ -607,7 +607,11 @@ class KDTreeVolumeSource(VolumeSource):
 
     def finalize_image(self, camera, image):
         if self._volume is not None:
-            image = self.volume.reduce_tree_images(image, camera.lens.viewpoint)
+            image = self.volume.reduce_tree_images(
+                image,
+                camera.lens.viewpoint,
+                use_opacity=self.transfer_function.grey_opacity,
+            )
 
         return super().finalize_image(camera, image)
 
@@ -662,8 +666,8 @@ class OctreeVolumeSource(VolumeSource):
 
         data = self.data_source
 
-        dx = data["dx"].to("unitary").value[:, None]
-        xyz = np.stack([data[_].to("unitary").value for _ in "x y z".split()], axis=-1)
+        dx = data["dx"].to_value("unitary")[:, None]
+        xyz = np.stack([data[_].to_value("unitary") for _ in "xyz"], axis=-1)
         LE = xyz - dx / 2
         RE = xyz + dx / 2
 
@@ -1291,10 +1295,11 @@ class BoxSource(LineSource):
         assert right_edge.shape == (3,)
 
         if color is None:
-            color = np.array([1.0, 1.0, 1.0, 1.0])
+            color = np.array([[1.0, 1.0, 1.0, 1.0]])
+        else:
+            color = np.atleast_2d(ensure_numpy_array(color))
+        assert color.shape == (1, 4)
 
-        color = ensure_numpy_array(color)
-        color.shape = (1, 4)
         corners = get_corners(left_edge.copy(), right_edge.copy())
         order = [0, 1, 1, 2, 2, 3, 3, 0]
         order += [4, 5, 5, 6, 6, 7, 7, 4]
@@ -1439,6 +1444,8 @@ class CoordinateVectorSource(OpaqueSource):
         ignored.
     alpha : float, optional
         The opacity of the vectors.
+    thickness : int, optional
+        The line thickness
 
     Examples
     --------
@@ -1458,7 +1465,7 @@ class CoordinateVectorSource(OpaqueSource):
 
     """
 
-    def __init__(self, colors=None, alpha=1.0):
+    def __init__(self, colors=None, alpha=1.0, *, thickness=1):
         super().__init__()
         # If colors aren't individually set, make black with full opacity
         if colors is None:
@@ -1468,6 +1475,7 @@ class CoordinateVectorSource(OpaqueSource):
             colors[2, 2] = 1.0  # z is blue
             colors[:, 3] = alpha
         self.colors = colors
+        self.thick = thickness
 
     def _validate(self):
         pass
@@ -1551,15 +1559,29 @@ class CoordinateVectorSource(OpaqueSource):
         py = py.astype("int64")
 
         if len(px.shape) == 1:
-            zlines(empty, z, px, py, dz, self.colors.astype("float64"))
+            zlines(
+                empty, z, px, py, dz, self.colors.astype("float64"), thick=self.thick
+            )
         else:
             # For stereo-lens, two sets of pos for each eye are contained
             # in px...pz
             zlines(
-                empty, z, px[0, :], py[0, :], dz[0, :], self.colors.astype("float64")
+                empty,
+                z,
+                px[0, :],
+                py[0, :],
+                dz[0, :],
+                self.colors.astype("float64"),
+                thick=self.thick,
             )
             zlines(
-                empty, z, px[1, :], py[1, :], dz[1, :], self.colors.astype("float64")
+                empty,
+                z,
+                px[1, :],
+                py[1, :],
+                dz[1, :],
+                self.colors.astype("float64"),
+                thick=self.thick,
             )
 
         # Set the new zbuffer

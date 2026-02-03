@@ -66,10 +66,10 @@ class Orion2FieldInfo(ChomboFieldInfo):
 
     def setup_particle_fields(self, ptype):
         def _get_vel(axis):
-            def velocity(field, data):
+            def velocity(data):
                 return (
-                    data[(ptype, f"particle_momentum_{axis}")]
-                    / data[(ptype, "particle_mass")]
+                    data[ptype, f"particle_momentum_{axis}"]
+                    / data[ptype, "particle_mass"]
                 )
 
             return velocity
@@ -89,53 +89,51 @@ class Orion2FieldInfo(ChomboFieldInfo):
 
         unit_system = self.ds.unit_system
 
-        def _thermal_energy_density(field, data):
+        def _thermal_energy_density(data):
             try:
                 return (
-                    data[("chombo", "energy-density")]
-                    - data[("gas", "kinetic_energy_density")]
-                    - data[("gas", "magnetic_energy_density")]
+                    data["chombo", "energy-density"]
+                    - data["gas", "kinetic_energy_density"]
+                    - data["gas", "magnetic_energy_density"]
                 )
             except YTFieldNotFound:
                 return (
-                    data[("chombo", "energy-density")]
-                    - data[("gas", "kinetic_energy_density")]
+                    data["chombo", "energy-density"]
+                    - data["gas", "kinetic_energy_density"]
                 )
 
-        def _specific_thermal_energy(field, data):
-            return data[("gas", "thermal_energy_density")] / data[("gas", "density")]
+        def _specific_thermal_energy(data):
+            return data["gas", "thermal_energy_density"] / data["gas", "density"]
 
-        def _magnetic_energy_density(field, data):
-            ret = data[("chombo", "X-magnfield")] ** 2
+        def _magnetic_energy_density(data):
+            ret = data["chombo", "X-magnfield"] ** 2
             if data.ds.dimensionality > 1:
-                ret = ret + data[("chombo", "Y-magnfield")] ** 2
+                ret = ret + data["chombo", "Y-magnfield"] ** 2
             if data.ds.dimensionality > 2:
-                ret = ret + data[("chombo", "Z-magnfield")] ** 2
+                ret = ret + data["chombo", "Z-magnfield"] ** 2
             return ret / 8.0 / np.pi
 
-        def _specific_magnetic_energy(field, data):
-            return data[("gas", "specific_magnetic_energy")] / data[("gas", "density")]
+        def _specific_magnetic_energy(data):
+            return data["gas", "specific_magnetic_energy"] / data["gas", "density"]
 
-        def _kinetic_energy_density(field, data):
-            p2 = data[("chombo", "X-momentum")] ** 2
+        def _kinetic_energy_density(data):
+            p2 = data["chombo", "X-momentum"] ** 2
             if data.ds.dimensionality > 1:
-                p2 = p2 + data[("chombo", "Y-momentum")] ** 2
+                p2 = p2 + data["chombo", "Y-momentum"] ** 2
             if data.ds.dimensionality > 2:
-                p2 = p2 + data[("chombo", "Z-momentum")] ** 2
-            return 0.5 * p2 / data[("gas", "density")]
+                p2 = p2 + data["chombo", "Z-momentum"] ** 2
+            return 0.5 * p2 / data["gas", "density"]
 
-        def _specific_kinetic_energy(field, data):
-            return data[("gas", "kinetic_energy_density")] / data[("gas", "density")]
+        def _specific_kinetic_energy(data):
+            return data["gas", "kinetic_energy_density"] / data["gas", "density"]
 
-        def _temperature(field, data):
+        def _temperature(data):
             c_v = data.ds.quan(data.ds.parameters["radiation.const_cv"], "erg/g/K")
-            return data[("gas", "specific_thermal_energy")] / c_v
+            return data["gas", "specific_thermal_energy"] / c_v
 
         def _get_vel(axis):
-            def velocity(field, data):
-                return (
-                    data[("gas", f"momentum_density_{axis}")] / data[("gas", "density")]
-                )
+            def velocity(data):
+                return data["gas", f"momentum_density_{axis}"] / data["gas", "density"]
 
             return velocity
 
@@ -264,16 +262,16 @@ class ChomboPICFieldInfo3D(FieldInfoContainer):
         self.setup_smoothed_fields(ptype, num_neighbors=num_neighbors, ftype=ftype)
 
 
-def _dummy_position(field, data):
-    return 0.5 * np.ones_like(data[("all", "particle_position_x")])
+def _dummy_position(data):
+    return 0.5 * np.ones_like(data["all", "particle_position_x"])
 
 
-def _dummy_velocity(field, data):
-    return np.zeros_like(data[("all", "particle_velocity_x")])
+def _dummy_velocity(data):
+    return np.zeros_like(data["all", "particle_velocity_x"])
 
 
-def _dummy_field(field, data):
-    return 0.0 * data[("chombo", "gravitational_field_x")]
+def _dummy_field(data):
+    return 0.0 * data["chombo", "gravitational_field_x"]
 
 
 fluid_field_types = ["chombo", "gas"]

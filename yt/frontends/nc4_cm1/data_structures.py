@@ -1,7 +1,6 @@
 import os
 import weakref
 from collections import OrderedDict
-from typing import Optional
 
 import numpy as np
 
@@ -9,7 +8,7 @@ from yt._typing import AxisOrder
 from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.static_output import Dataset
 from yt.geometry.grid_geometry_handler import GridIndex
-from yt.utilities.file_handler import NetCDF4FileHandler, warn_netcdf
+from yt.utilities.file_handler import NetCDF4FileHandler, valid_netcdf_signature
 from yt.utilities.logger import ytLogger as mylog
 
 from .fields import CM1FieldInfo
@@ -66,6 +65,7 @@ class CM1Hierarchy(GridIndex):
 
 
 class CM1Dataset(Dataset):
+    _load_requirements = ["netCDF4"]
     _index_class = CM1Hierarchy
     _field_info_class = CM1FieldInfo
 
@@ -89,7 +89,7 @@ class CM1Dataset(Dataset):
         )
         self.storage_filename = storage_filename
 
-    def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
+    def _setup_coordinate_handler(self, axis_order: AxisOrder | None) -> None:
         # ensure correct ordering of axes so plots aren't rotated (z should always be
         # on the vertical axis).
         super()._setup_coordinate_handler(axis_order)
@@ -168,11 +168,15 @@ class CM1Dataset(Dataset):
         self.hubble_constant = 0.0
 
     @classmethod
-    def _is_valid(cls, filename, *args, **kwargs):
+    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
+        if not valid_netcdf_signature(filename):
+            return False
 
-        warn_netcdf(filename)
+        if cls._missing_load_requirements():
+            return False
+
         try:
             nc4_file = NetCDF4FileHandler(filename)
             with nc4_file.open_ds(keepweakref=True) as _handle:
