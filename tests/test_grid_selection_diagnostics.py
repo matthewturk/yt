@@ -103,6 +103,15 @@ def check_grid_consistency(ds, obj):
     mask = selector.select_grids(left_edges, right_edges, levels)
     old_grids = grids[mask.astype("bool")]
 
+    # Apply level filtering if present on the object
+    min_level = getattr(obj, "min_level", None)
+    max_level = getattr(obj, "max_level", None)
+
+    if min_level is not None:
+        old_grids = np.array([g for g in old_grids if g.Level >= min_level])
+    if max_level is not None:
+        old_grids = np.array([g for g in old_grids if g.Level <= max_level])
+
     # Calculate cell count for old grids
     old_cell_count = 0
     for g in old_grids:
@@ -206,22 +215,74 @@ def benchmark_selection(ds, name):
     print("\n")
 
 
+def benchmark_smoothed_covering_grid(ds, name):
+    print("=" * 60)
+    print(f"BENCHMARK SCG: {name}")
+
+    # Find a highly refined point
+    center = ds.domain_center
+    width = ds.domain_width[0] / 4.0  # smaller box
+    left_edge = center - width / 2
+    dims = [16, 16, 16]  # small dims, but high level
+    # Pick a level that exists
+    level = min(ds.index.max_level, 5)  # Go deep
+
+    # 1. Measure Data Access Time (The actual benchmark)
+    t0 = time.time()
+    scg = ds.smoothed_covering_grid(level, left_edge, dims)
+    # Access a field to trigger generation
+    _ = scg["index", "ones"]
+    t1 = time.time()
+    print(f"  SCG (Level {level}) Access Time: {t1-t0:.6f}s")
+
+    # 2. Check Consistency of components
+    # SCG constructs regions for each level 0..level
+    # We verify that for these regions, grid selection is consistent
+    results = []
+    print("  Verifying constituent level selections:")
+    for l in range(level + 1):
+        # Create a region mimicking the SCG requirement at this level
+        # SCG uses a buffer of current_dx.
+        # We'll just check a Region covering the SCG volume, strictly at level l
+        # This exercises the selector for that level.
+
+        # Note: we use ds.region (which is 'box' or 'region')
+        reg = ds.region(center, left_edge, left_edge + width)
+        reg.min_level = l
+        reg.max_level = l
+
+        print(f"    Checking Level {l} Region...")
+        if not check_grid_consistency(ds, reg):
+            print(f"    >>> FAILED CHECK at Level {l}")
+            results.append(False)
+        else:
+            results.append(True)
+
+    if all(results):
+        print("  [OK] SCG Consistency Check Passed")
+
+
 def run_all_tests():
     # Refine by 2 Deep
     ds_deep = make_deep_ds(levels=8, refine_by=2)
     benchmark_selection(ds_deep, "Deep AMR (Levels=8, Refine=2)")
+    benchmark_smoothed_covering_grid(ds_deep, "Deep AMR (Levels=8, Refine=2)")
 
     # Refine by 4 Deep
     ds_deep4 = make_deep_ds(levels=5, refine_by=4)
     benchmark_selection(ds_deep4, "Deep AMR (Levels=5, Refine=4)")
+    benchmark_smoothed_covering_grid(ds_deep4, "Deep AMR (Levels=5, Refine=4)")
 
     # Wide
     ds_wide = make_wide_ds(n_tiles=12)
     benchmark_selection(ds_wide, "Wide Shallow AMR (Tiles=12^3)")
+    # Wide usually doesn't have deep levels, max level is 0
+    benchmark_smoothed_covering_grid(ds_wide, "Wide Shallow AMR (Tiles=12^3)")
 
     # Default fake (Standard IsolatedGalaxy like)
     ds_std = fake_amr_ds()
     benchmark_selection(ds_std, "Standard Fake AMR")
+    benchmark_smoothed_covering_grid(ds_std, "Standard Fake AMR")
 
 
 if __name__ == "__main__":
