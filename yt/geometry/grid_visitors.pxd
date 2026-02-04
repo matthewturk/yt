@@ -74,9 +74,9 @@ cdef class GridVisitor:
     cdef void visit(self, GridTreeNode *grid, np.uint8_t selected) noexcept nogil
 
     cdef void free_tuples(self) noexcept nogil
-    cdef void setup_tuples(self, GridTreeNode *grid) nogil
-    cdef np.uint8_t check_child_masked(self) nogil
-    cdef void expand_mask(self, np.uint8_t[:,:,:]) nogil
+    cdef void setup_tuples(self, GridTreeNode *grid) noexcept nogil
+    cdef np.uint8_t check_child_masked(self) noexcept nogil
+    cdef void expand_mask(self, np.uint8_t[:,:,:]) noexcept nogil
 
 cdef class CountGridCells(GridVisitor):
     cdef np.uint64_t count

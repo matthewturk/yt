@@ -38,7 +38,7 @@ cdef class GridVisitor:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void setup_tuples(self, GridTreeNode *grid) nogil:
+    cdef void setup_tuples(self, GridTreeNode *grid) noexcept nogil:
         # This sets up child-mask tuples.  Rather than a single mask that covers
         # everything, we instead allocate pairs of integers that are start/stop
         # positions for child masks.  This may not be considerably more efficient
@@ -63,7 +63,7 @@ cdef class GridVisitor:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef void expand_mask(self, np.uint8_t[:,:,:] child_mask) nogil:
+    cdef void expand_mask(self, np.uint8_t[:,:,:] child_mask) noexcept nogil:
         cdef int ti, i, j, k
         cdef int *tup
         # Is it faster to do a broadcast?
@@ -83,7 +83,7 @@ cdef class GridVisitor:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef np.uint8_t check_child_masked(self) nogil:
+    cdef np.uint8_t check_child_masked(self) noexcept nogil:
         # This simply checks if we're inside any of the tuples.  Probably not the
         # most efficient way, but the GVD* passed in has a position affiliated with
         # it, and we can very easily look for that inside here.
