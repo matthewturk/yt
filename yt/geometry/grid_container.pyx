@@ -28,7 +28,7 @@ from yt.geometry.grid_visitors cimport (
     MaskGridCells,
 )
 from yt.geometry.selection_routines cimport SelectorObject
-from yt.utilities.lib.bitarray cimport bitarray
+from yt.utilities.lib.bitarray cimport bitarray, ba_get_value, ba_set_value
 
 
 @cython.boundscheck(False)
@@ -189,15 +189,23 @@ cdef class GridTreeSelector:
         cdef np.ndarray[np.int64_t, ndim=1] grid_indices = None
 
         if grid_selection is None:
-            grid_mask = np.ones(self.tree.num_grids, dtype="uint8")
+            # We don't initialize it here, we do it below.
+            pass
         elif getattr(grid_selection, "dtype", None) == np.uint8:
             grid_mask = grid_selection
         else:
             grid_indices = grid_selection
 
-        self.grid_mask = grid_mask
-        
         if grid_mask is not None:
+             # We create a new bitarray for our mask
+            self.grid_mask = bitarray(self.tree.num_grids)
+            self.grid_mask._set_range(0, self.tree.num_grids, 0)
+            # This is not efficient, but we can optimise it later if needed.
+            # We could do a cast, but that's dangerous.
+            for i in range(self.tree.num_grids):
+                if grid_mask[i] != 0:
+                    ba_set_value(self.grid_mask.buf, i, 1)
+
             for i in range(self.tree.num_grids):
                 if grid_mask[i] == 0: continue
                 ngrids += 1
@@ -212,6 +220,19 @@ cdef class GridTreeSelector:
                 size += (self.tree.grids[grid_indices[i]].dims[0] *
                          self.tree.grids[grid_indices[i]].dims[1] *
                          self.tree.grids[grid_indices[i]].dims[2])
+        else:
+            # This is the case where we have no selection, so we select everyone.
+            self.grid_mask = bitarray(self.tree.num_grids)
+            # We set all of them to 1
+            self.grid_mask._set_range(0, self.grid_mask.size, 1)
+            # We don't need to count size or ngrids, because we iterate over
+            # root grids anyway.  But we do need 'size' for the bit_mask.
+            for i in range(self.tree.num_grids):
+                size += (self.tree.grids[i].dims[0] *
+                         self.tree.grids[i].dims[1] *
+                         self.tree.grids[i].dims[2])
+            # We allocate grid_order just in case
+            self.grid_order = np.empty(self.tree.num_grids, dtype="int64")
 
         self.size = size
         self.bit_mask = bitarray(size)
@@ -278,8 +299,11 @@ cdef class GridTreeSelector:
         # function.  We early terminate if we are not selected by the selector.
         cdef int i
         
+        if selector.select_bbox(grid.left_edge, grid.right_edge) == 0:
+            return
+
         # We only visit if we're selected
-        if self.grid_mask[grid.index] == 1:
+        if ba_get_value(self.grid_mask.buf, grid.index) == 1:
             self.visit_one_grid(visitor, selector, grid)
 
         # But we always recurse
@@ -349,6 +373,17 @@ cdef class GridTreeSelector:
         self.visit_grids(visitor, selector)
         return np.asarray(visitor.fwidth)
 
+    cdef void _recursively_select_grids(self, GridTreeNode *grid, SelectorObject selector, np.uint8_t *mask):
+        cdef int i
+        # 0 = False. If 0 (no overlap), return.
+        if selector.select_bbox(grid.left_edge, grid.right_edge) == 0:
+            return
+
+        mask[grid.index] = 1
+
+        for i in range(grid.num_children):
+            self._recursively_select_grids(grid.children[i], selector, mask)
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
@@ -356,12 +391,10 @@ cdef class GridTreeSelector:
         cdef int i
         cdef np.ndarray[np.uint8_t, ndim=1] mask
         mask = np.zeros(self.tree.num_grids, dtype='uint8')
-        cdef GridTreeNode *grid
-        
-        for i in range(self.tree.num_grids):
-            grid = &self.tree.grids[i]
-            if selector.select_bbox(grid.left_edge, grid.right_edge) == 1:
-                mask[i] = 1
+        # print("Using recursive selector with %s root grids" % self.tree.num_root_grids)
+
+        for i in range(self.tree.num_root_grids):
+            self._recursively_select_grids(&self.tree.root_grids[i], selector, <np.uint8_t *> mask.data)
         return mask.view("bool")
     
 cdef class MatchPointsToGrids:

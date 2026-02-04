@@ -215,7 +215,7 @@ def benchmark_selection(ds, name):
     print("\n")
 
 
-def benchmark_smoothed_covering_grid(ds, name):
+def benchmark_smoothed_covering_grid(ds, name, n_iter=10):
     print("=" * 60)
     print(f"BENCHMARK SCG: {name}")
 
@@ -229,9 +229,10 @@ def benchmark_smoothed_covering_grid(ds, name):
 
     # 1. Measure Data Access Time (The actual benchmark)
     t0 = time.time()
-    scg = ds.smoothed_covering_grid(level, left_edge, dims)
-    # Access a field to trigger generation
-    _ = scg["index", "ones"]
+    for i in range(n_iter):
+        scg = ds.smoothed_covering_grid(level, left_edge, dims)
+        # Access a field to trigger generation
+        _ = scg["index", "ones"]
     t1 = time.time()
     print(f"  SCG (Level {level}) Access Time: {t1-t0:.6f}s")
 

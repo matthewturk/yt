@@ -43,7 +43,7 @@ cdef class GridTreeSelector:
     cdef GridTree tree
     cdef np.uint8_t[:] mask
     cdef bitarray bit_mask
-    cdef np.uint8_t[:] grid_mask
+    cdef bitarray grid_mask
     cdef public np.int64_t[:] grid_order
     cdef np.uint64_t size
     cdef np.uint64_t cell_count
@@ -57,6 +57,11 @@ cdef class GridTreeSelector:
                           GridVisitor visitor,
                           SelectorObject selector,
                           GridTreeNode *grid)
+
+    cdef void _recursively_select_grids(self,
+                          GridTreeNode *grid,
+                          SelectorObject selector,
+                          np.uint8_t *mask)
 
 
 cdef class MatchPointsToGrids:

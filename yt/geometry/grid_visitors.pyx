@@ -11,7 +11,7 @@ Grid visitor functions
 
 cimport cython
 cimport numpy as np
-from libc.stdlib cimport free, malloc
+from libc.stdlib cimport free, malloc, realloc
 
 from yt.utilities.lib.fp_utils cimport iclip
 from yt.utilities.lib.bitarray cimport ba_set_value
@@ -21,19 +21,18 @@ cdef class GridVisitor:
         self.index = 0
         self.global_index = 0
         self.n_tuples = 0
+        self.allocated_tuples = 0
         self.child_tuples = NULL
         self.ref_factor = 2 #### FIX THIS
 
-    cdef void free_tuples(self) noexcept nogil:
-        # This wipes out the tuples, which is necessary since they are
-        # heap-allocated
-        cdef int i
-        if self.child_tuples == NULL: return
-        for i in range(self.n_tuples):
-            free(self.child_tuples[i])
-        free(self.child_tuples)
+    def __dealloc__(self):
+        if self.child_tuples != NULL:
+            free(self.child_tuples)
         self.child_tuples = NULL
-        self.n_tuples = 0
+
+    cdef void free_tuples(self) noexcept nogil:
+        # We perform lazy deallocation
+        return
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -47,17 +46,20 @@ cdef class GridVisitor:
         cdef int i, j
         cdef np.int64_t si, ei
         cdef GridTreeNode *c
-        self.free_tuples()
-        self.child_tuples = <int**> malloc(sizeof(int*) * grid.num_children)
+        
+        if self.allocated_tuples < grid.num_children:
+            self.allocated_tuples = grid.num_children
+            self.child_tuples = <int*> realloc(self.child_tuples,
+                sizeof(int) * 6 * self.allocated_tuples)
+
         for i in range(grid.num_children):
             c = grid.children[i]
-            self.child_tuples[i] = <int *>malloc(sizeof(int) * 6)
             # Now we fill them in
             for j in range(3):
                 si = (c.start_index[j] / self.ref_factor) - grid.start_index[j]
                 ei = si + c.dims[j]/self.ref_factor - 1
-                self.child_tuples[i][j*2+0] = iclip(si, 0, grid.dims[j] - 1)
-                self.child_tuples[i][j*2+1] = iclip(ei, 0, grid.dims[j] - 1)
+                self.child_tuples[i*6 + j*2 + 0] = iclip(si, 0, grid.dims[j] - 1)
+                self.child_tuples[i*6 + j*2 + 1] = iclip(ei, 0, grid.dims[j] - 1)
         self.n_tuples = grid.num_children
 
     @cython.boundscheck(False)
@@ -74,7 +76,7 @@ cdef class GridVisitor:
         for ti in range(self.n_tuples):
             # k is if we're inside a given child tuple.  We check each one
             # individually, and invalidate if we're outside.
-            tup = self.child_tuples[ti]
+            tup = self.child_tuples + ti * 6
             for i in range(tup[0], tup[1] + 1):
                 for j in range(tup[2], tup[3] + 1):
                     for k in range(tup[4], tup[5] + 1):
@@ -93,7 +95,7 @@ cdef class GridVisitor:
             # k is if we're inside a given child tuple.  We check each one
             # individually, and invalidate if we're outside.
             k = 1
-            tup = self.child_tuples[i]
+            tup = self.child_tuples + i * 6
             for j in range(3):
                 # Check if pos is outside in any of the three dimensions
                 if self.pos[j] < tup[j*2+0] or self.pos[j] > tup[j*2+1]:

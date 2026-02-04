@@ -65,7 +65,8 @@ cdef class GridVisitor:
     cdef np.uint64_t global_index
     cdef np.int64_t pos[3]       # position in ints
     cdef int n_tuples
-    cdef int **child_tuples # [N_child][6], where 0-1 are x_start, x_end, etc.
+    cdef int *child_tuples 
+    cdef int allocated_tuples
     cdef int ref_factor # This may change on a grid-by-grid basis
                         # It is the number of cells a child grid has per
                         # dimension in a cell of this grid.
